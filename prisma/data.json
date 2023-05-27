@@ -1,0 +1,26 @@
+[
+    {
+        "id": 1,
+        "username": "Alice",
+        "email": "alice@prisma.io",
+        "role": "ADMIN"
+    },
+    {
+        "id": 2,
+        "username": "Nilu",
+        "email": "nilu@prisma.io",
+        "role": "MODERATOR"
+    },
+    {
+        "id": 3,
+        "username": "Mahmoud",
+        "email": "mahmoud@prisma.io",
+        "role": "USER"
+    },
+    {
+        "id": 4,
+        "username": "Sonia",
+        "email": "lomo@prisma.io",
+        "role": "USER"
+    }
+]
