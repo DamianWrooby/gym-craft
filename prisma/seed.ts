@@ -1,13 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import userData from './data.json' assert { type: 'json' };
 
-const prisma = new PrismaClient();
+const db = new PrismaClient();
 
 async function main() {
     console.log(`Start seeding ...`);
 
     for (const p of userData) {
-        const user = await prisma.user.create({
+        const user = await db.user.create({
             data: {
                 username: p.username,
                 email: p.email,
@@ -21,10 +21,10 @@ async function main() {
 
 main()
     .then(async () => {
-        await prisma.$disconnect();
+        await db.$disconnect();
     })
     .catch(async (e) => {
         console.error(e);
-        await prisma.$disconnect();
+        await db.$disconnect();
         process.exit(1);
     });
