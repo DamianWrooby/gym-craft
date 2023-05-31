@@ -1,17 +1,18 @@
 {
-	"useTabs": false,
-	"singleQuote": true,
-	"tabWidth": 4,
-	"printWidth": 100,
-	"plugins": ["prettier-plugin-svelte"],
-	"pluginSearchDirs": ["."],
-	"overrides": [
-		{ "files": "*.svelte", "options": { "parser": "svelte" } },
-		{
-			"files": "*.prisma",
-			"options": {
-				"parser": "prisma"
-			}
-		}
-	]
+    "useTabs": false,
+    "singleQuote": true,
+    "tabWidth": 4,
+    "printWidth": 100,
+    "bracketSameLine": true,
+    "plugins": ["prettier-plugin-svelte"],
+    "pluginSearchDirs": ["."],
+    "overrides": [
+        { "files": "*.svelte", "options": { "parser": "svelte" } },
+        {
+            "files": "*.prisma",
+            "options": {
+                "parser": "prisma"
+            }
+        }
+    ]
 }
