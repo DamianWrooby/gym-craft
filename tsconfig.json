@@ -11,9 +11,11 @@
         "strict": true,
         "baseUrl": ".",
         "paths": {
-            "@components": ["src/lib/components"],
-            "@lib": ["src/lib"],
-            "@utils": ["src/lib/utils"]
+            "$lib": ["./src/lib"],
+            "$lib/*": ["./src/lib/*"],
+            "@/*": ["src/*"],
+            "@components/*": ["src/lib/components/*"],
+            "@assets/*": ["src/assets/*"]
         }
     }
     // Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias
