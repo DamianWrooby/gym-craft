@@ -1,3 +1,7 @@
+<script lang="ts">
+    import SurveyForm from '@components/survey/SurveyForm.svelte';
+</script>
+
 <div class="flex flex-row">
     <div class="basis-1/2">
         <section class="p-5 pt-20 flex flex-col justify-items-center">
@@ -13,5 +17,7 @@
             </p>
         </section>
     </div>
-    <div class="basis-1/2" />
+    <div class="basis-1/2">
+        <SurveyForm />
+    </div>
 </div>
