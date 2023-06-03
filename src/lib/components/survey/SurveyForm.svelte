@@ -1,39 +1,28 @@
 <script lang="ts">
-    const sexOptions = {
-        male: {
-            label: 'Male',
-            value: 'male',
-        },
-        female: {
-            label: 'Female',
-            value: 'female',
-        },
-        other: {
-            label: 'Other',
-            value: 'other',
-        },
-    };
+    import { ArrowRightIcon, ArrowLeftIcon } from 'svelte-feather-icons';
+    import SurveyFormStep1 from '@components/survey/step-1/SurveyFormStep1.svelte';
+    import SurveyFormStep2 from '@components/survey/step-2/SurveyFormStep2.svelte';
+    import SurveyFormStep3 from '@components/survey/step-3/SurveyFormStep3.svelte';
+
+    let step = 1;
+
+    function handleNextClick() {
+        step++;
+    }
+    function handlePrevClick() {
+        step--;
+    }
 </script>
 
-<div class="card w-3/5">
-    <header class="card-header text-center text-xl">
-        Fill out the survey and generate a training plan tailored to you
-    </header>
-    <section class="p-4 w-full">
-        <div class="flex flex-row gap-x-4">
-            <label class="label pb-2 grow">
-                <span>Sex</span>
-                <select class="select" title="Sex selection">
-                    {#each Object.values(sexOptions) as option}
-                        <option value={option.value}>{option.label}</option>
-                    {/each}
-                </select>
-            </label>
-            <label class="label pb-2 grow">
-                <span>Age</span>
-                <input class="input" title="Type your age" type="number" max="150" min="10" />
-            </label>
-        </div>
-    </section>
-    <footer class="card-footer">(footer)</footer>
+<h1 class="h1 text-center text-xl py-10">
+    Fill out the survey and generate a training plan tailored to you
+</h1>
+<div class="card w-1/2 m-auto px-2">
+    {#if step === 1}
+        <SurveyFormStep1 on:nextClick={handleNextClick} />
+    {:else if step === 2}
+        <SurveyFormStep2 on:nextClick={handleNextClick} on:prevClick={handlePrevClick} />
+    {:else if step === 3}
+        <SurveyFormStep3 on:nextClick={handleNextClick} on:prevClick={handlePrevClick} />
+    {/if}
 </div>
