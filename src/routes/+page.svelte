@@ -1,9 +1,12 @@
 <script lang="ts">
-    import SurveyForm from '@components/survey/SurveyForm.svelte';
+    import { page } from '$app/stores';
+    import { Edit2Icon } from 'svelte-feather-icons';
+
+    const user = $page.data.user;
 </script>
 
-<div class="flex flex-row">
-    <div class="basis-1/2">
+<div class="flex flex-col md:flex-row">
+    <div class="basis-full md:basis-1/2">
         <section class="p-5 pt-20 flex flex-col justify-items-center">
             <h1 class="h1 text-5xl text-center">
                 <span
@@ -17,7 +20,16 @@
             </p>
         </section>
     </div>
-    <div class="basis-1/2">
-        <SurveyForm />
+    <div class="basis-full md:basis-1/2 flex justify-center py-24">
+        {#if user}
+            <a href="/survey" class="btn variant-filled-primary group">
+                <Edit2Icon size="20" class="group-hover:animate-pulse" />
+                <span>Fill the survey</span>
+            </a>
+        {:else}
+            <a href="/login" class="btn variant-filled-primary group">
+                <span>Log in</span>
+            </a>
+        {/if}
     </div>
 </div>

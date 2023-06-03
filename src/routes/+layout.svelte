@@ -17,7 +17,9 @@
 <AppShell>
     <svelte:fragment slot="header">
         <AppBar background="bg-primary-500">
-            <svelte:fragment slot="lead">{appConfig.name}</svelte:fragment>
+            <svelte:fragment slot="lead">
+                <a class="px-4 hover:text-tertiary-500" href="/">{appConfig.name}</a>
+            </svelte:fragment>
             <svelte:fragment slot="trail">
                 <Navigation />
                 <LightSwitch />

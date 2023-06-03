@@ -9,7 +9,7 @@
         <a class="px-4 hover:text-tertiary-500" href="/login">Login</a>
         <a class="px-4 hover:text-tertiary-500" href="/register">Register</a>
     {:else}
-        <a class="px-4 hover:text-tertiary-500" href="/admin">Admin</a>
+        <a class="px-4 hover:text-tertiary-500" href="/my-plan">My plan</a>
 
         <form action="/logout" method="POST">
             <button type="submit">Log out</button>
