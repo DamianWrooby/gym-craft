@@ -6,8 +6,10 @@
     // Most of your app wide CSS should be put in this file
     import '../app.postcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
-    import { appConfig } from '../constants/app.constants';
+    import { HomeIcon } from 'svelte-feather-icons';
     import Navigation from '@components/navigation/Navigation.svelte';
+
+    const currentDate = new Date();
 </script>
 
 <svelte:head>
@@ -18,7 +20,7 @@
     <svelte:fragment slot="header">
         <AppBar background="bg-primary-500">
             <svelte:fragment slot="lead">
-                <a class="px-4 hover:text-tertiary-500" href="/">{appConfig.name}</a>
+                <a class="px-4 text-surface-500 hover:text-tertiary-500" href="/"><HomeIcon /></a>
             </svelte:fragment>
             <svelte:fragment slot="trail">
                 <Navigation />
@@ -27,11 +29,11 @@
         </AppBar>
     </svelte:fragment>
     <!-- Router Slot -->
-    <main>
-        <slot />
-    </main>
+    <slot />
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
-        <div class="bg-primary-500">FOOTER</div>
+        <div class="bg-primary-500 text-surface-500 text-center py-4 font-semibold">
+            © {currentDate.getFullYear()} GYM CRAFT - Your AI powered personal trainer
+        </div>
     </svelte:fragment>
 </AppShell>
