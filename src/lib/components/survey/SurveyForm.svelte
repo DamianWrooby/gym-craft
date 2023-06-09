@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { ArrowRightIcon, ArrowLeftIcon } from 'svelte-feather-icons';
     import SurveyFormStep1 from '@components/survey/step-1/SurveyFormStep1.svelte';
     import SurveyFormStep2 from '@components/survey/step-2/SurveyFormStep2.svelte';
     import SurveyFormStep3 from '@components/survey/step-3/SurveyFormStep3.svelte';
