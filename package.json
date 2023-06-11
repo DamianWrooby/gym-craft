@@ -46,6 +46,7 @@
     "type": "module",
     "dependencies": {
         "@prisma/client": "^4.14.1",
-        "bcrypt": "^5.1.0"
+        "bcrypt": "^5.1.0",
+        "lodash": "^4.17.21"
     }
 }
