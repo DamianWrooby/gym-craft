@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Action, Actions, PageServerLoad } from './$types';
 import { Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { validatePasswordComplexity } from '$lib/utils/formValidation';
 
 import { db } from '$lib/database';
 
@@ -24,11 +25,11 @@ const register: Action = async ({ request }) => {
         !password ||
         !confirmPassword
     ) {
-        return fail(400, { invalid: true });
+        return fail(400, { invalidEntry: true });
     }
 
     if (password !== confirmPassword) {
-        return fail(400, { passwords: true });
+        return fail(400, { passwordsExact: true });
     }
 
     const user = await db.user.findUnique({
@@ -36,7 +37,11 @@ const register: Action = async ({ request }) => {
     });
 
     if (user) {
-        return fail(400, { user: true });
+        return fail(400, { userExists: true });
+    }
+
+    if (!validatePasswordComplexity(password)) {
+        return fail(400, { passwordComplexity: true });
     }
 
     if (!existingRole) {

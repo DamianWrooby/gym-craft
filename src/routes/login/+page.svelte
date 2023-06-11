@@ -1,5 +1,4 @@
 <script lang="ts">
-    import Logo from '$lib/images/gym-craft-logo.png';
     export let form;
 </script>
 
