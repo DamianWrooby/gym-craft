@@ -3,7 +3,7 @@
 </script>
 
 <div class="h-full flex items-center justify-center">
-    <div class="card p-16">
+    <div class="card p-16 min-w-[30%]">
         <section class="grow flex flex-col justify-center">
             <h1 class="h1 text-2xl text-center font-bold">
                 <span>Hello!</span>
@@ -21,18 +21,18 @@
                 </div>
 
                 {#if form?.invalid}
-                    <p class="text-primary-500 pb-2">Username and password is required.</p>
+                    <p class="text-primary-500 pb-5">Username and password are required.</p>
                 {/if}
 
                 {#if form?.credentials}
-                    <p class="text-primary-500 pb-2">You have entered the wrong credentials.</p>
+                    <p class="text-primary-500 pb-5">You have entered the wrong credentials.</p>
                 {/if}
 
                 <div class="text-center">
                     <button class="btn variant-filled-primary" type="submit">Log in</button>
                 </div>
 
-                <p class="pt-5">
+                <p class="pt-5 text-center">
                     Don't have an account? <a
                         class="text-primary-500 hover:text-primary-700"
                         href="/register">Register.</a>

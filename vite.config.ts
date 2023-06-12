@@ -8,6 +8,7 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
             '@assets': path.resolve(__dirname, './src/assets'),
             '@components': path.resolve(__dirname, './src/lib/components'),
+            '@models': path.resolve('./src/models'),
         },
     },
     plugins: [sveltekit()],

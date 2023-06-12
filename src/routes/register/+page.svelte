@@ -32,7 +32,7 @@
 </script>
 
 <div class="h-full flex items-center justify-center">
-    <div class="card p-16">
+    <div class="card p-16 min-w-[30%]">
         <section class="grow flex flex-col justify-center">
             <h1 class="h1 text-2xl text-center font-bold">
                 <span>Welcome to Gym Craft!</span>
