@@ -1,4 +1,6 @@
 <script lang="ts">
+    export let data: any;
+
     const goalsOptions = [
         {
             label: 'General fitness and health',
@@ -40,20 +42,24 @@
                 {#each goalsOptions as option}
                     <label class="flex items-center space-x-2">
                         <input
-                            class="radio"
-                            type="radio"
-                            checked
-                            name="radio-direct"
-                            value={option.value} />
+                            class="checkbox"
+                            type="checkbox"
+                            bind:checked={data.mainGoals[option.value]} />
                         <p>{option.label}</p>
                     </label>
                 {/each}
             </div>
         </label>
     </div>
-    <div class="flex flex-row gap-x-4 py-4">
-        <label class="label pb-2 grow">
-            <textarea class="textarea" rows="4" placeholder="Describe your fitness goals..." />
-        </label>
-    </div>
+    {#if data.mainGoals['other']}
+        <div class="flex flex-row gap-x-4 py-4">
+            <label class="label pb-2 grow">
+                <textarea
+                    class="textarea"
+                    rows="4"
+                    placeholder="Describe your fitness goals..."
+                    bind:value={data.otherGoalsDescription} />
+            </label>
+        </div>
+    {/if}
 </section>

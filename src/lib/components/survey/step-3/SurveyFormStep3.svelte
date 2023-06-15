@@ -1,4 +1,6 @@
 <script lang="ts">
+    export let data: any;
+
     const experienceOptions = [
         {
             label: 'No experience',
@@ -32,7 +34,7 @@
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
             <div>Your fitness activity experience</div>
-            <select class="select" title="Sex selection">
+            <select class="select" title="Sex selection" bind:value={data.activityLevel}>
                 {#each experienceOptions as option}
                     <option value={option.value}>{option.label}</option>
                 {/each}
@@ -45,7 +47,8 @@
             <textarea
                 class="textarea"
                 rows="4"
-                placeholder="Describe your fitness activity history..." />
+                placeholder="Describe your fitness activity history..."
+                bind:value={data.activityHistory} />
         </label>
     </div>
     <div class="flex flex-row gap-x-4 py-4">
@@ -56,7 +59,8 @@
             <textarea
                 class="textarea"
                 rows="4"
-                placeholder="Describe the type of exercises you enjoyed the most..." />
+                placeholder="Describe the type of exercises you enjoyed the most..."
+                bind:value={data.enjoyedExercises} />
         </label>
     </div>
     <div class="flex flex-row gap-x-4 py-4">
@@ -65,7 +69,8 @@
             <textarea
                 class="textarea"
                 rows="4"
-                placeholder="Describe the type of exercises you want to avoid..." />
+                placeholder="Describe the type of exercises you want to avoid..."
+                bind:value={data.dislikedExercises} />
         </label>
     </div>
 </section>
