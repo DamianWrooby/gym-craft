@@ -3,7 +3,8 @@
     import SurveyFormStep1 from '@components/survey/step-1/SurveyFormStep1.svelte';
     import SurveyFormStep2 from '@components/survey/step-2/SurveyFormStep2.svelte';
     import SurveyFormStep3 from '@components/survey/step-3/SurveyFormStep3.svelte';
-    import type { SurveyFormModel } from '@models/survey/survey-form.model';
+    import SurveyFormStep4 from '@components/survey/step-4/SurveyFormStep4.svelte';
+    import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 
     let steps = ['PersonalInfo', 'Goals', 'Experience'],
         currentActive = 1;
@@ -17,14 +18,28 @@
             medicalConditions: '',
         },
         goals: {
-            goals: '',
-            goalsDescription: '',
+            mainGoals: {
+                'general-fitness-and-health': false,
+                'lose-weight': false,
+                'gain-muscle': false,
+                'body-definition': false,
+                'athletic-performance': false,
+                'stress-reduction': false,
+                other: false,
+            },
+            otherGoalsDescription: '',
         },
         experience: {
             activityLevel: '',
             activityHistory: '',
             enjoyedExercises: '',
             dislikedExercises: '',
+        },
+        lifestyle: {
+            job: '',
+            hourCapacity: '',
+            timePreferences: '',
+            commitments: '',
         },
     };
 
@@ -43,11 +58,13 @@
     </h1>
     <div class="card md:w-[50%] m-auto p-16 mb-8">
         {#if currentActive === 1}
-            <SurveyFormStep1 bind:personalInfo={formData.personalInfo} />
+            <SurveyFormStep1 bind:data={formData.personalInfo} />
         {:else if currentActive === 2}
-            <SurveyFormStep2 />
+            <SurveyFormStep2 bind:data={formData.goals} />
         {:else if currentActive === 3}
-            <SurveyFormStep3 />
+            <SurveyFormStep3 bind:data={formData.experience} />
+        {:else if currentActive === 4}
+            <SurveyFormStep4 bind:data={formData.experience} />
         {/if}
         <footer class="card-footer flex justify-between">
             {#if currentActive !== 1}

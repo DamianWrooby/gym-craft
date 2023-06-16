@@ -2,6 +2,7 @@ export interface SurveyFormModel {
     personalInfo: PersonalInfoModel;
     goals: GoalsModel;
     experience: ExperienceModel;
+    lifestyle: LifestyleModel;
 }
 
 interface PersonalInfoModel {
@@ -13,8 +14,12 @@ interface PersonalInfoModel {
 }
 
 interface GoalsModel {
-    goals: string;
-    goalsDescription: string;
+    mainGoals: GoalOptionsModel;
+    otherGoalsDescription: string;
+}
+
+interface GoalOptionsModel {
+    [key: string]: boolean;
 }
 
 interface ExperienceModel {
@@ -22,4 +27,11 @@ interface ExperienceModel {
     activityHistory: string;
     enjoyedExercises: string;
     dislikedExercises: string;
+}
+
+interface LifestyleModel {
+    job: string;
+    hourCapacity: string;
+    timePreferences: string;
+    commitments: string;
 }
