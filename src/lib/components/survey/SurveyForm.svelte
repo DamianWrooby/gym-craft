@@ -6,7 +6,7 @@
     import SurveyFormStep4 from '@components/survey/step-4/SurveyFormStep4.svelte';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 
-    let steps = ['PersonalInfo', 'Goals', 'Experience'],
+    let steps = ['PersonalInfo', 'Goals', 'Experience', 'Schedule', 'FitnessLevel'],
         currentActive = 1;
 
     let formData: SurveyFormModel = {
@@ -39,7 +39,20 @@
             job: '',
             hourCapacity: '',
             timePreferences: '',
-            commitments: '',
+            trainingDays: {
+                monday: false,
+                tuesday: false,
+                wednesday: false,
+                thursday: false,
+                friday: false,
+                saturday: false,
+                sunday: false,
+            },
+        },
+        fitnessLevel: {
+            fitnessLevel: 0,
+            currentActivities: '',
+            physicalLimitations: '',
         },
     };
 
@@ -56,7 +69,7 @@
     <h1 class="h1 text-center text-xl py-10">
         Fill out the survey and generate a training plan tailored to you
     </h1>
-    <div class="card md:w-[50%] m-auto p-16 mb-8">
+    <div class="card md:w-[50%] p-16 mb-8">
         {#if currentActive === 1}
             <SurveyFormStep1 bind:data={formData.personalInfo} />
         {:else if currentActive === 2}
@@ -64,7 +77,7 @@
         {:else if currentActive === 3}
             <SurveyFormStep3 bind:data={formData.experience} />
         {:else if currentActive === 4}
-            <SurveyFormStep4 bind:data={formData.experience} />
+            <SurveyFormStep4 bind:data={formData.lifestyle} />
         {/if}
         <footer class="card-footer flex justify-between">
             {#if currentActive !== 1}
