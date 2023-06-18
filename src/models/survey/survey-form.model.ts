@@ -3,6 +3,7 @@ export interface SurveyFormModel {
     goals: GoalsModel;
     experience: ExperienceModel;
     lifestyle: LifestyleModel;
+    fitnessLevel: FitnessLevelModel;
 }
 
 interface PersonalInfoModel {
@@ -33,5 +34,13 @@ interface LifestyleModel {
     job: string;
     hourCapacity: string;
     timePreferences: string;
-    commitments: string;
+    trainingDays: {
+        [key: string]: boolean;
+    };
+}
+
+interface FitnessLevelModel {
+    fitnessLevel: number;
+    currentActivities: string;
+    physicalLimitations: string;
 }
