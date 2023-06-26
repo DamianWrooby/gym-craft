@@ -4,6 +4,7 @@ export interface SurveyFormModel {
     experience: ExperienceModel;
     lifestyle: LifestyleModel;
     fitnessLevel: FitnessLevelModel;
+    equipment: EquipmentModel;
 }
 
 interface PersonalInfoModel {
@@ -43,4 +44,10 @@ interface FitnessLevelModel {
     fitnessLevel: number;
     currentActivities: string;
     physicalLimitations: string;
+}
+
+interface EquipmentModel {
+    equipment: {
+        [key: string]: boolean;
+    };
 }

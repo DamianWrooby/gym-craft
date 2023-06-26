@@ -4,9 +4,18 @@
     import SurveyFormStep2 from '@components/survey/step-2/SurveyFormStep2.svelte';
     import SurveyFormStep3 from '@components/survey/step-3/SurveyFormStep3.svelte';
     import SurveyFormStep4 from '@components/survey/step-4/SurveyFormStep4.svelte';
+    import SurveyFormStep5 from '@components/survey/step-5/SurveyFormStep5.svelte';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 
-    let steps = ['PersonalInfo', 'Goals', 'Experience', 'Schedule', 'FitnessLevel'],
+    let steps = [
+            'PersonalInfo',
+            'Goals',
+            'Experience',
+            'Schedule',
+            'FitnessLevel',
+            'Nutrition',
+            'GymAndEquipment',
+        ],
         currentActive = 1;
 
     let formData: SurveyFormModel = {
@@ -54,6 +63,19 @@
             currentActivities: '',
             physicalLimitations: '',
         },
+        equipment: {
+            equipment: {
+                freeWeights: false,
+                trainingMachines: false,
+                treadmill: false,
+                rowingMachine: false,
+                stationaryBike: false,
+                elliptical: false,
+                stairMaster: false,
+                resistanceBands: false,
+                trx: false,
+            },
+        },
     };
 
     const handleProgress = (stepIncrement: number) => {
@@ -78,6 +100,8 @@
             <SurveyFormStep3 bind:data={formData.experience} />
         {:else if currentActive === 4}
             <SurveyFormStep4 bind:data={formData.lifestyle} />
+        {:else if currentActive === 5}
+            <SurveyFormStep5 bind:data={formData.fitnessLevel} />
         {/if}
         <footer class="card-footer flex justify-between">
             {#if currentActive !== 1}
