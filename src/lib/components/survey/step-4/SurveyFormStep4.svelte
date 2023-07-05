@@ -1,5 +1,7 @@
 <script lang="ts">
-    export let data: any;
+    import type { LifestyleModel } from '@/models/survey/survey-form.model';
+
+    export let data: LifestyleModel;
 
     const proffesionOptions: Array<{ label: string; value: string }> = [
         {
