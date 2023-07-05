@@ -1,5 +1,7 @@
 <script lang="ts">
-    export let data: any;
+    import type { GoalsModel } from '@/models/survey/survey-form.model';
+
+    export let data: GoalsModel;
 
     const goalsOptions = [
         {

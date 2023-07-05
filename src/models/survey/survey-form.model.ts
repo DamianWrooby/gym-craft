@@ -7,7 +7,7 @@ export interface SurveyFormModel {
     equipment: EquipmentModel;
 }
 
-interface PersonalInfoModel {
+export interface PersonalInfoModel {
     sex: string;
     age: number;
     height: number;
@@ -15,23 +15,23 @@ interface PersonalInfoModel {
     medicalConditions: string;
 }
 
-interface GoalsModel {
+export interface GoalsModel {
     mainGoals: GoalOptionsModel;
     otherGoalsDescription: string;
 }
 
-interface GoalOptionsModel {
+export interface GoalOptionsModel {
     [key: string]: boolean;
 }
 
-interface ExperienceModel {
+export interface ExperienceModel {
     activityLevel: string;
     activityHistory: string;
     enjoyedExercises: string;
     dislikedExercises: string;
 }
 
-interface LifestyleModel {
+export interface LifestyleModel {
     job: string;
     hourCapacity: string;
     timePreferences: string;
@@ -40,14 +40,23 @@ interface LifestyleModel {
     };
 }
 
-interface FitnessLevelModel {
+export interface FitnessLevelModel {
     fitnessLevel: number;
     currentActivities: string;
     physicalLimitations: string;
 }
 
-interface EquipmentModel {
-    equipment: {
-        [key: string]: boolean;
-    };
+export interface EquipmentModel {
+    freeWeights: boolean;
+    trainingMachines: boolean;
+    treadmill: boolean;
+    rowingMachine: boolean;
+    stationaryBike: boolean;
+    elliptical: boolean;
+    stairMaster: boolean;
+    resistanceBands: boolean;
+    trx: boolean;
+    calisthenics: boolean;
+    mtbBike: boolean;
+    roadBike: boolean;
 }

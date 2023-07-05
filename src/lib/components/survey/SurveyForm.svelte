@@ -5,6 +5,7 @@
     import SurveyFormStep3 from '@components/survey/step-3/SurveyFormStep3.svelte';
     import SurveyFormStep4 from '@components/survey/step-4/SurveyFormStep4.svelte';
     import SurveyFormStep5 from '@components/survey/step-5/SurveyFormStep5.svelte';
+    import SurveyFormStep6 from '@components/survey/step-6/SurveyFormStep6.svelte';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 
     let steps = [
@@ -14,7 +15,7 @@
             'Schedule',
             'FitnessLevel',
             'Nutrition',
-            'GymAndEquipment',
+            'Equipment',
         ],
         currentActive = 1;
 
@@ -64,17 +65,18 @@
             physicalLimitations: '',
         },
         equipment: {
-            equipment: {
-                freeWeights: false,
-                trainingMachines: false,
-                treadmill: false,
-                rowingMachine: false,
-                stationaryBike: false,
-                elliptical: false,
-                stairMaster: false,
-                resistanceBands: false,
-                trx: false,
-            },
+            freeWeights: false,
+            trainingMachines: false,
+            treadmill: false,
+            rowingMachine: false,
+            stationaryBike: false,
+            elliptical: false,
+            stairMaster: false,
+            resistanceBands: false,
+            trx: false,
+            calisthenics: false,
+            mtbBike: false,
+            roadBike: false,
         },
     };
 
@@ -102,6 +104,8 @@
             <SurveyFormStep4 bind:data={formData.lifestyle} />
         {:else if currentActive === 5}
             <SurveyFormStep5 bind:data={formData.fitnessLevel} />
+        {:else if currentActive === 6}
+            <SurveyFormStep6 bind:data={formData.equipment} />
         {/if}
         <footer class="card-footer flex justify-between">
             {#if currentActive !== 1}

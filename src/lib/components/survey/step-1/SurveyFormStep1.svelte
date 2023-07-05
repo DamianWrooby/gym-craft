@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { SexOptions } from '@/models/survey/sex-option.model';
+    import type { PersonalInfoModel } from '@/models/survey/survey-form.model';
 
-    export let data: any;
+    export let data: PersonalInfoModel;
 
     const sexOptions: SexOptions = {
         male: {

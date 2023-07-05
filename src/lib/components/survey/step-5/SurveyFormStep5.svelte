@@ -1,5 +1,7 @@
 <script lang="ts">
-    export let data: any;
+    import type { FitnessLevelModel } from '@/models/survey/survey-form.model';
+
+    export let data: FitnessLevelModel;
 </script>
 
 <header class="card-header text-center text-xl">Current fitness level</header>
