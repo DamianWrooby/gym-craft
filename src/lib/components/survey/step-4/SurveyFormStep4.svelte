@@ -106,7 +106,7 @@
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
             <div>What is your profession? Do you have a sedentary(office) or active job?</div>
-            <select class="select" title="Proffession" bind:value={data.job}>
+            <select class="select" title="Proffession" bind:value={data.job} required aria-required>
                 {#each proffesionOptions as option}
                     <option value={option.value}>{option.label}</option>
                 {/each}
@@ -116,7 +116,12 @@
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
             <div>How many hours per week can you commit to exercise?</div>
-            <select class="select" title="Hour capacity" bind:value={data.hourCapacity}>
+            <select
+                class="select"
+                title="Hour capacity"
+                bind:value={data.hourCapacity}
+                required
+                aria-required>
                 {#each capacityOptions as option}
                     <option value={option.value}>{option.label}</option>
                 {/each}
@@ -128,7 +133,12 @@
             <div>Do you have any time restrictions or preferences for training?</div>
             <div class="flex flex-row items-center justify-stretch">
                 <span class="whitespace-nowrap pr-4">I prefer to train</span>
-                <select class="select" title="Time preferences" bind:value={data.timePreferences}>
+                <select
+                    class="select"
+                    title="Time preferences"
+                    bind:value={data.timePreferences}
+                    required
+                    aria-required>
                     {#each timePreferencesOptions as option}
                         <option value={option.value}>{option.label}</option>
                     {/each}
@@ -145,6 +155,8 @@
                         <input
                             class="checkbox"
                             type="checkbox"
+                            required
+                            aria-required
                             bind:checked={data.trainingDays[option.value]} />
                         <p>{option.label}</p>
                     </label>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ArrowRightIcon, ArrowLeftIcon } from 'svelte-feather-icons';
+    import { ArrowRightIcon, ArrowLeftIcon, ChevronsRightIcon } from 'svelte-feather-icons';
     import SurveyFormStep1 from '@components/survey/step-1/SurveyFormStep1.svelte';
     import SurveyFormStep2 from '@components/survey/step-2/SurveyFormStep2.svelte';
     import SurveyFormStep3 from '@components/survey/step-3/SurveyFormStep3.svelte';
@@ -8,16 +8,10 @@
     import SurveyFormStep6 from '@components/survey/step-6/SurveyFormStep6.svelte';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 
-    let steps = [
-            'PersonalInfo',
-            'Goals',
-            'Experience',
-            'Schedule',
-            'FitnessLevel',
-            'Nutrition',
-            'Equipment',
-        ],
-        currentActive = 1;
+    let steps = ['PersonalInfo', 'Goals', 'Experience', 'Schedule', 'FitnessLevel', 'Equipment'];
+    let currentActive = 1;
+    let formElement: HTMLFormElement;
+    let formValidation = true;
 
     let formData: SurveyFormModel = {
         personalInfo: {
@@ -81,10 +75,14 @@
     };
 
     const handleProgress = (stepIncrement: number) => {
-        if (stepIncrement === 1) {
-            currentActive++;
+        const setCurrentActive = () => {
+            stepIncrement === 1 ? currentActive++ : currentActive--;
+        };
+
+        if (formValidation) {
+            formElement.reportValidity() && setCurrentActive();
         } else {
-            currentActive--;
+            setCurrentActive();
         }
     };
 </script>
@@ -93,7 +91,7 @@
     <h1 class="h1 text-center text-xl py-10">
         Fill out the survey and generate a training plan tailored to you
     </h1>
-    <div class="card md:w-[50%] p-16 mb-8">
+    <form bind:this={formElement} class="card md:w-[50%] p-16 mb-8">
         {#if currentActive === 1}
             <SurveyFormStep1 bind:data={formData.personalInfo} />
         {:else if currentActive === 2}
@@ -125,7 +123,12 @@
                     <span>Next</span>
                     <ArrowRightIcon class="group-hover:animate-pulse" />
                 </button>
+            {:else}
+                <button class="btn variant-filled-primary group" type="button" on:click={() => {}}>
+                    <span>Generate plan</span>
+                    <ChevronsRightIcon class="group-hover:animate-pulse" />
+                </button>
             {/if}
         </footer>
-    </div>
+    </form>
 </div>

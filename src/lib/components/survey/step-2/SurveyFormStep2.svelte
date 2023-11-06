@@ -46,6 +46,8 @@
                         <input
                             class="checkbox"
                             type="checkbox"
+                            required
+                            aria-required
                             bind:checked={data.mainGoals[option.value]} />
                         <p>{option.label}</p>
                     </label>
@@ -60,6 +62,8 @@
                     class="textarea"
                     rows="4"
                     placeholder="Describe your fitness goals..."
+                    required
+                    aria-required
                     bind:value={data.otherGoalsDescription} />
             </label>
         </div>
