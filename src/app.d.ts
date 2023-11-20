@@ -3,6 +3,7 @@ declare namespace App {
         user: {
             name: string;
             role: string;
+            generatedPlans: number;
         };
     }
     // interface PageData {}
