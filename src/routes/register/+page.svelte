@@ -1,6 +1,6 @@
 <script lang="ts">
     import { debounce } from 'lodash';
-    import { validatePasswordComplexity } from '$lib/utils/formValidation.js';
+    import { validatePasswordComplexity } from '$lib/utils/form-validation.js';
     export let form;
 
     let formData = {
