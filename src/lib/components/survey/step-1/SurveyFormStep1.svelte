@@ -21,12 +21,12 @@
 </script>
 
 <header class="card-header text-center text-xl">Personal information</header>
-<section class="p-4 w-full">
+<section class="md:p-4 w-full">
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
             <div>Sex</div>
             <select
-                class="select w-1/2"
+                class="select w-9/12 md:w-1/2"
                 title="Sex selection"
                 bind:value={data.sex}
                 required
@@ -39,7 +39,7 @@
         <label class="label pb-2 grow">
             <div>Age</div>
             <input
-                class="input w-1/2"
+                class="input w-9/12 md:w-1/2"
                 title="Type your age"
                 type="number"
                 required
@@ -53,7 +53,7 @@
         <label class="label pb-2 grow">
             <div>Height</div>
             <input
-                class="input w-1/2"
+                class="input w-9/12 md:w-1/2"
                 title="Your height"
                 type="number"
                 required
@@ -65,7 +65,7 @@
         <label class="label pb-2 grow">
             <div>Weight</div>
             <input
-                class="input w-1/2"
+                class="input w-9/12 md:w-1/2"
                 title="Your weight"
                 type="number"
                 required
