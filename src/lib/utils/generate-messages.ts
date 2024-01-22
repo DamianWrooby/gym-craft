@@ -48,7 +48,7 @@ export const generateAPIMessages = (formData: SurveyFormModel): Array<ChatMessag
             
             Equipment:
             Equipment I have access to: ${equipmentText}
-            
+
             Additional information:
             Length of the training cycle: ${formData.additionalInfo.cycleLength} weeks`,
         },
@@ -56,7 +56,7 @@ export const generateAPIMessages = (formData: SurveyFormModel): Array<ChatMessag
     const formatMessage = {
         role: 'user',
         content:
-            'Based on the information above, prepare a detailed training plan with a breakdown of days of the week, exercises, series and repetitions. Include training periodization and progression. Also add a general description of the training plan with justification for the choice of exercises. Format the plan using HTML tags. It will be displayed in the application so you don;t need to include html, head and body tags. Start with the <h2> tag. To every h2 tag include CSS classes: "h2 text-xl py-2". To every h3 tag include CSS classes: "h3 text-lg py-2".',
+            'Based on the information above, prepare a detailed training plan with a breakdown of days of the week, exercises, sets and repetitions. Include training periodization and progression. Also add a general description of the training plan with justification for the choice of exercises. Format the plan using HTML tags. It will be displayed in the application so you don;t need to include html, head and body tags. Start with the <h2> tag. To every h2 tag include CSS classes: "h2 text-xl py-2". To every h3 tag include CSS classes: "h3 text-lg py-2".',
     };
 
     const messages: Array<ChatMessage> = [
@@ -87,6 +87,7 @@ const generateDaysOfWeekText = (formData: SurveyFormModel): string =>
         .join(', ');
 
 const generateEquipmentText = (formData: SurveyFormModel): string =>
+    // TODO: second word is not capitalized
     Object.entries(formData.equipment)
         .filter(([, value]) => value === true)
         .map(([key]) => key)
