@@ -3,7 +3,7 @@
     import { Avatar } from '@skeletonlabs/skeleton';
 
     const user = $page.data.user;
-    const firstLetter = user.name[0].toUpperCase();
+    const firstLetter = user?.name[0].toUpperCase();
 </script>
 
 <nav class="flex items-center text-surface-500 font-semibold whitespace-nowrap">
