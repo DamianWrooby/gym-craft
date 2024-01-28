@@ -171,7 +171,7 @@
                     <button
                         class="btn variant-filled-primary group"
                         type="button"
-                        disabled={user.generatedPlans > 10 || $loadingState}
+                        disabled={user.generatedPlansNumber > 10 || $loadingState}
                         on:click={() => onGeneratePlanClick()}>
                         <span>Generate plan</span>
                         <ChevronsRightIcon class="group-hover:animate-pulse" />

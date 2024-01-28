@@ -4,7 +4,7 @@ declare namespace App {
             id: string;
             name: string;
             role: string;
-            generatedPlans: number;
+            generatedPlansNumber: number;
         };
     }
     // interface PageData {}
