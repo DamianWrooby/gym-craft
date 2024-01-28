@@ -2,8 +2,8 @@
     import { page } from '$app/stores';
     import { loadingState } from '@/stores';
     import SurveyForm from '@components/survey/SurveyForm.svelte';
-    import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
-    import TextLoader from '$lib/components/loading/text-loader/TextLoader.svelte';
+    import GeneratedPlan from '@components/generated-plan/GeneratedPlan.svelte';
+    import Loader from '@components/loading/loader/Loader.svelte';
 
     import { appConfig } from '@/constants/app.constants';
     import { generateAPIMessages } from '$lib/utils/generate-messages';
@@ -13,37 +13,37 @@
     const user = $page.data.user;
 
     let generatedPlan: string;
+    let generatedPlansNumber: number;
 
     const generatePlan = async (event: CustomEvent<{ formData: SurveyFormModel }>) => {
         const formData = event.detail.formData;
         loadingState.set(true);
 
-        // const messages = generateAPIMessages(formData);
-        // const body = JSON.stringify({ user, messages });
+        const messages = generateAPIMessages(formData);
+        const body = JSON.stringify({ user, messages });
 
-        // const response = await fetch(appConfig.internalApiUrl, {
-        //     method: 'POST',
-        //     body,
-        // });
-        // const data: Plan = await response.json();
-        // generatedPlan = data.description;
-        setTimeout(() => {
-            generatedPlan = 'test data';
-            loadingState.set(false);
-        }, 3000);
+        const response = await fetch(appConfig.internalApiUrl, {
+            method: 'POST',
+            body,
+        });
+        const data: { generatedPlan: Plan; generatedPlansNumber: number } = await response.json();
+        // TODO: add error handling
+        generatedPlan = data.generatedPlan.description;
+        generatedPlansNumber = data.generatedPlansNumber;
+
+        loadingState.set(false);
+        // setTimeout(() => {
+        //     generatedPlan =
+        //         'Day 1: Upper Body Strength, Bench Press: 4 sets x 8-10 repsBent Over Rows: 3 sets x 10 repsOverhead Shoulder Press: 3 sets x 12 repsBicep Curls: 3 sets x 12 repsTricep Dips: 3 sets x 12 repsDay 2: Cardiovascular Exercise30 minutes of moderate-intensity cardio (e.g., running, cycling, elliptical)Day 3: Lower Body StrengthSquats: 4 sets x 10 repsDeadlifts: 3 sets x 8 repsLunges: 3 sets x 12 reps (each leg)Leg Press: 3 sets x 12 repsCalf Raises: 3 sets x 15 repsDay 4: Rest or Active RecoveryTake a day off from intense training or engage in light activities like walking, yoga, or stretchingDay 5: Cardiovascular Exercis30 minutes of high-intensity interval training (HIIT) or any other preferred cardio activityDay 6: Full Body Workout  Pull-ups or Lat Pulldowns: 3 sets x 10 rep Push-ups or Chest Flyes: 3 sets x 12 rep Leg Extensions: 3 sets x 12 rep Plank: 3 sets, hold for 60 seconds eac Russian Twists: 3 sets x 20 reps (for core Day 7: Res Allow your body to recover completely Remember to adjust the weights and intensity based on your fitness level and gradually progress over time. Additionally, proper warm-u and cool-down sessions are essential before and after each workout to prevent injuries and enhance flexibility. Its always a good ide to consult with a fitness professional or your healthcare provider before starting a new workout routine, especially if you have an existing health concerns or conditions.Day 1: Upper Body Strength, Bench Press: 4 sets x 8-10 repsBent Over Rows: 3 sets x 10 repsOverhead Shoulder Press: 3 sets x 12 repsBicep Curls: 3 sets x 12 repsTricep Dips: 3 sets x 12 repsDay 2: Cardiovascular Exercise30 minutes of moderate-intensity cardio (e.g., running, cycling, elliptical)Day 3: Lower Body StrengthSquats: 4 sets x 10 repsDeadlifts: 3 sets x 8 repsLunges: 3 sets x 12 reps (each leg)Leg Press: 3 sets x 12 repsCalf Raises: 3 sets x 15 repsDay 4: Rest or Active RecoveryTake a day off from intense training or engage in light activities like walking, yoga, or stretchingDay 5: Cardiovascular Exercis30 minutes of high-intensity interval training (HIIT) or any other preferred cardio activityDay 6: Full Body Workout  Pull-ups or Lat Pulldowns: 3 sets x 10 rep Push-ups or Chest Flyes: 3 sets x 12 rep Leg Extensions: 3 sets x 12 rep Plank: 3 sets, hold for 60 seconds eac Russian Twists: 3 sets x 20 reps (for core Day 7: Res Allow your body to recover completely Remember to adjust the weights and intensity based on your fitness level and gradually progress over time. Additionally, proper warm-u and cool-down sessions are essential before and after each workout to prevent injuries and enhance flexibility. Its always a good ide to consult with a fitness professional or your healthcare provider before starting a new workout routine, especially if you have an existing health concerns or conditions.Day 1: Upper Body Strength, Bench Press: 4 sets x 8-10 repsBent Over Rows: 3 sets x 10 repsOverhead Shoulder Press: 3 sets x 12 repsBicep Curls: 3 sets x 12 repsTricep Dips: 3 sets x 12 repsDay 2: Cardiovascular Exercise30 minutes of moderate-intensity cardio (e.g., running, cycling, elliptical)Day 3: Lower Body StrengthSquats: 4 sets x 10 repsDeadlifts: 3 sets x 8 repsLunges: 3 sets x 12 reps (each leg)Leg Press: 3 sets x 12 repsCalf Raises: 3 sets x 15 repsDay 4: Rest or Active RecoveryTake a day off from intense training or engage in light activities like walking, yoga, or stretchingDay 5: Cardiovascular Exercis30 minutes of high-intensity interval training (HIIT) or any other preferred cardio activityDay 6: Full Body Workout  Pull-ups or Lat Pulldowns: 3 sets x 10 rep Push-ups or Chest Flyes: 3 sets x 12 rep Leg Extensions: 3 sets x 12 rep Plank: 3 sets, hold for 60 seconds eac Russian Twists: 3 sets x 20 reps (for core Day 7: Res Allow your body to recover completely Remember to adjust the weights and intensity based on your fitness level and gradually progress over time. Additionally, proper warm-u and cool-down sessions are essential before and after each workout to prevent injuries and enhance flexibility. Its always a good ide to consult with a fitness professional or your healthcare provider before starting a new workout routine, especially if you have an existing health concerns or conditions.Day 1: Upper Body Strength, Bench Press: 4 sets x 8-10 repsBent Over Rows: 3 sets x 10 repsOverhead Shoulder Press: 3 sets x 12 repsBicep Curls: 3 sets x 12 repsTricep Dips: 3 sets x 12 repsDay 2: Cardiovascular Exercise30 minutes of moderate-intensity cardio (e.g., running, cycling, elliptical)Day 3: Lower Body StrengthSquats: 4 sets x 10 repsDeadlifts: 3 sets x 8 repsLunges: 3 sets x 12 reps (each leg)Leg Press: 3 sets x 12 repsCalf Raises: 3 sets x 15 repsDay 4: Rest or Active RecoveryTake a day off from intense training or engage in light activities like walking, yoga, or stretchingDay 5: Cardiovascular Exercis30 minutes of high-intensity interval training (HIIT) or any other preferred cardio activityDay 6: Full Body Workout  Pull-ups or Lat Pulldowns: 3 sets x 10 rep Push-ups or Chest Flyes: 3 sets x 12 rep Leg Extensions: 3 sets x 12 rep Plank: 3 sets, hold for 60 seconds eac Russian Twists: 3 sets x 20 reps (for core Day 7: Res Allow your body to recover completely Remember to adjust the weights and intensity based on your fitness level and gradually progress over time. Additionally, proper warm-u and cool-down sessions are essential before and after each workout to prevent injuries and enhance flexibility. Its always a good ide to consult with a fitness professional or your healthcare provider before starting a new workout routine, especially if you have an existing health concerns or conditions.Day 1: Upper Body Strength, Bench Press: 4 sets x 8-10 repsBent Over Rows: 3 sets x 10 repsOverhead Shoulder Press: 3 sets x 12 repsBicep Curls: 3 sets x 12 repsTricep Dips: 3 sets x 12 repsDay 2: Cardiovascular Exercise30 minutes of moderate-intensity cardio (e.g., running, cycling, elliptical)Day 3: Lower Body StrengthSquats: 4 sets x 10 repsDeadlifts: 3 sets x 8 repsLunges: 3 sets x 12 reps (each leg)Leg Press: 3 sets x 12 repsCalf Raises: 3 sets x 15 repsDay 4: Rest or Active RecoveryTake a day off from intense training or engage in light activities like walking, yoga, or stretchingDay 5: Cardiovascular Exercis30 minutes of high-intensity interval training (HIIT) or any other preferred cardio activityDay 6: Full Body Workout  Pull-ups or Lat Pulldowns: 3 sets x 10 rep Push-ups or Chest Flyes: 3 sets x 12 rep Leg Extensions: 3 sets x 12 rep Plank: 3 sets, hold for 60 seconds eac Russian Twists: 3 sets x 20 reps (for core Day 7: Res Allow your body to recover completely Remember to adjust the weights and intensity based on your fitness level and gradually progress over time. Additionally, proper warm-u and cool-down sessions are essential before and after each workout to prevent injuries and enhance flexibility. Its always a good ide to consult with a fitness professional or your healthcare provider before starting a new workout routine, especially if you have an existing health concerns or conditions.Day 1: Upper Body Strength, Bench Press: 4 sets x 8-10 repsBent Over Rows: 3 sets x 10 repsOverhead Shoulder Press: 3 sets x 12 repsBicep Curls: 3 sets x 12 repsTricep Dips: 3 sets x 12 repsDay 2: Cardiovascular Exercise30 minutes of moderate-intensity cardio (e.g., running, cycling, elliptical)Day 3: Lower Body StrengthSquats: 4 sets x 10 repsDeadlifts: 3 sets x 8 repsLunges: 3 sets x 12 reps (each leg)Leg Press: 3 sets x 12 repsCalf Raises: 3 sets x 15 repsDay 4: Rest or Active RecoveryTake a day off from intense training or engage in light activities like walking, yoga, or stretchingDay 5: Cardiovascular Exercis30 minutes of high-intensity interval training (HIIT) or any other preferred cardio activityDay 6: Full Body Workout  Pull-ups or Lat Pulldowns: 3 sets x 10 rep Push-ups or Chest Flyes: 3 sets x 12 rep Leg Extensions: 3 sets x 12 rep Plank: 3 sets, hold for 60 seconds eac Russian Twists: 3 sets x 20 reps (for core Day 7: Res Allow your body to recover completely Remember to adjust the weights and intensity based on your fitness level and gradually progress over time. Additionally, proper warm-u and cool-down sessions are essential before and after each workout to prevent injuries and enhance flexibility. Its always a good ide to consult with a fitness professional or your healthcare provider before starting a new workout routine, especially if you have an existing health concerns or conditions.';
+        //     loadingState.set(false);
+        // }, 1000);
     };
 </script>
 
 {#if $loadingState}
-    <TextLoader />
-    <Spinner size={10} />
+    <Loader />
 {:else if generatedPlan}
-    <div class="h-full flex flex-col items-center justify-center">
-        <div class="card md:w-[50%] p-16 mb-8">
-            <h2 class="h2 text-center text-xl py-10">Generated plan:</h2>
-            {@html generatedPlan}
-        </div>
-    </div>
+    <GeneratedPlan plan={generatedPlan} {generatedPlansNumber} />
 {:else}
     <SurveyForm on:complete={generatePlan} />
 {/if}

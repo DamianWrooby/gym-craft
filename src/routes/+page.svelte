@@ -25,12 +25,12 @@
             </h2>
         </section>
         <section class="p-5 text-center">
-            {#if user && user.generatedPlans < appConfig.planLimit}
+            {#if user && user.generatedPlansNumber < appConfig.planLimit}
                 <a href="/create-plan" class="btn variant-filled-primary group">
                     <Edit2Icon size="20" class="group-hover:animate-pulse" />
                     <span>Create training plan</span>
                 </a>
-            {:else if user && user.generatedPlans >= appConfig.planLimit}
+            {:else if user && user.generatedPlansNumber >= appConfig.planLimit}
                 <h3 class="h3 text-lg text-center pb-3 text-warning-500">
                     <span>You have created maximum number of plans</span>
                 </h3>
