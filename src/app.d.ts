@@ -1,13 +1,17 @@
-declare namespace App {
-    interface Locals {
-        user: {
-            id: string;
-            name: string;
-            role: string;
-            generatedPlansNumber: number;
-        };
+import { User } from './models/user.model';
+
+declare global {
+    declare namespace App {
+        interface Locals {
+            user: User;
+        }
+
+        interface Platform {}
+
+        interface Session {}
+
+        interface Stuff {}
+
+        interface PageData {}
     }
-    // interface PageData {}
-    // interface Error {}
-    // interface Platform {}
 }

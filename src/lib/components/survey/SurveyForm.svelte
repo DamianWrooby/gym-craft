@@ -4,6 +4,7 @@
     import { ArrowRightIcon, ArrowLeftIcon, ChevronsRightIcon } from 'svelte-feather-icons';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
+    import type { User } from '@/models/user/user.model';
 
     import SurveyFormStep1 from '@components/survey/step-1/SurveyFormStep1.svelte';
     import SurveyFormStep2 from '@components/survey/step-2/SurveyFormStep2.svelte';
@@ -16,7 +17,7 @@
     import { loadingState } from '@/stores';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 
-    const user = $page.data.user;
+    const user: User = $page.data.user;
     const dispatch = createEventDispatcher<{ complete: { formData: SurveyFormModel } }>();
     const modalStore = getModalStore();
 
