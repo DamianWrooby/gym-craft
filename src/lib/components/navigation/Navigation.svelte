@@ -1,8 +1,9 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { Avatar } from '@skeletonlabs/skeleton';
+    import type { User } from '@/models/user/user.model';
 
-    const user = $page.data.user;
+    const user: User = $page.data.user;
     const firstLetter = user?.name[0].toUpperCase();
 </script>
 
