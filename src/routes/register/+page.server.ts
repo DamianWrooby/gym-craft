@@ -1,14 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
-import type { Action, Actions, PageServerLoad } from './$types';
+import type { Action, Actions } from './$types';
 import { Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { validatePasswordComplexity } from '$lib/utils/form-validation';
 
 import { db } from '$lib/database';
-
-export const load: PageServerLoad = async () => {
-    // todo
-};
 
 const register: Action = async ({ request }) => {
     const data = await request.formData();

@@ -1,6 +1,11 @@
 <script lang="ts">
+    import { enhance, applyAction } from '$app/forms';
+    import { loadingState } from '@/stores';
     import { debounce } from 'lodash';
     import { validatePasswordComplexity } from '$lib/utils/form-validation.js';
+    import { getToastStore } from '@skeletonlabs/skeleton';
+    import type { ToastSettings } from '@skeletonlabs/skeleton';
+
     export let form;
 
     let formData = {
@@ -12,6 +17,15 @@
     let isFormValid = false;
     let isFormDirty = false;
     let isFormFilled = false;
+
+    const toastStore = getToastStore();
+    const makeToast = (message: string, background: string) => {
+        const toast: ToastSettings = {
+            message,
+            background,
+        };
+        toastStore.trigger(toast);
+    };
 
     function validateForm() {
         isFormValid =
@@ -29,6 +43,24 @@
             }
         }, 1500)();
     }
+
+    interface FormCallbackResult {
+        result: any;
+        update: () => void;
+    }
+    type FormCallback = () => (result: FormCallbackResult) => Promise<void>;
+    const formCallback: FormCallback = () => {
+        loadingState.set(true);
+        return async ({ result, update }) => {
+            await applyAction(result);
+            loadingState.set(false);
+            if (result.type === 'redirect') {
+                makeToast('Your account has been created. Now you can sign in.', 'variant-filled-success');
+            } else if (result.type === 'error') {
+                makeToast(result.message, 'variant-filled-error');
+            }
+        };
+    };
 </script>
 
 <div class="h-full flex items-center justify-center">
@@ -38,7 +70,7 @@
                 <span>Welcome to Gym Craft!</span>
             </h1>
             <p class="pb-8 text-center">Create your account</p>
-            <form action="?/register" method="POST">
+            <form action="?/register" method="POST" use:enhance={formCallback}>
                 <div class="p-1">
                     <label class="label" for="username">Username</label>
                     <input
@@ -65,8 +97,8 @@
                         required />
                     {#if form?.passwordComplexity}
                         <p class="text-error-500">
-                            Password should have at least 8 characters and contain upper and lower
-                            case, numeric, and special character.
+                            Password should have at least 8 characters and contain upper and lower case, numeric, and
+                            special character.
                         </p>
                     {:else if form?.passwordsExact}
                         <p class="text-primary-500 pb-2">Passwords do not match.</p>
@@ -88,8 +120,8 @@
                     <p class="text-error-500">One of the fields has incorrect value</p>
                 {:else if isFormDirty && !isFormValid && isFormFilled}
                     <p class="text-error-500 pb-2 w-72">
-                        Password should have at least 8 characters and contain upper and lower case,
-                        numeric, and special character. Passwords should match.
+                        Password should have at least 8 characters and contain upper and lower case, numeric, and
+                        special character. Passwords should match.
                     </p>
                 {/if}
 
@@ -97,7 +129,7 @@
                     <button
                         class="btn variant-filled-primary"
                         type="submit"
-                        disabled={!isFormValid || !isFormFilled}>Register</button>
+                        disabled={!isFormValid || !isFormFilled || $loadingState}>Register</button>
                 </div>
             </form>
         </section>
