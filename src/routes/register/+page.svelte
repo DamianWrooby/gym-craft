@@ -4,9 +4,11 @@
     import { debounce } from 'lodash';
     import { validatePasswordComplexity } from '$lib/utils/form-validation.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
-    import type { ToastSettings } from '@skeletonlabs/skeleton';
+    import { makeToast } from '$lib/utils/toasts.js';
 
     export let form;
+
+    const toastStore = getToastStore();
 
     let formData = {
         username: '',
@@ -17,15 +19,6 @@
     let isFormValid = false;
     let isFormDirty = false;
     let isFormFilled = false;
-
-    const toastStore = getToastStore();
-    const makeToast = (message: string, background: string) => {
-        const toast: ToastSettings = {
-            message,
-            background,
-        };
-        toastStore.trigger(toast);
-    };
 
     function validateForm() {
         isFormValid =
@@ -55,9 +48,9 @@
             await applyAction(result);
             loadingState.set(false);
             if (result.type === 'redirect') {
-                makeToast('Your account has been created. Now you can sign in.', 'variant-filled-success');
+                makeToast(toastStore, 'Your account has been created. Now you can sign in.', 'variant-filled-success');
             } else if (result.type === 'error') {
-                makeToast(result.message, 'variant-filled-error');
+                makeToast(toastStore, result.message, 'variant-filled-error');
             }
         };
     };

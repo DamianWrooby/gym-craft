@@ -1,5 +1,34 @@
 <script lang="ts">
+    import { enhance, applyAction } from '$app/forms';
+    import { makeToast } from '$lib/utils/toasts.js';
+    import { getToastStore } from '@skeletonlabs/skeleton';
+
     export let form;
+
+    const toastStore = getToastStore();
+    let loading = false;
+
+    interface FormCallbackResult {
+        result: any;
+        update: () => void;
+    }
+    type FormCallback = () => (result: FormCallbackResult) => Promise<void>;
+    const formCallback: FormCallback = () => {
+        loading = true;
+        return async ({ result }) => {
+            await applyAction(result);
+            if (result.type === 'redirect') {
+                setTimeout(() => {
+                    makeToast(toastStore, 'You are logged in.', 'variant-filled-success');
+                }, 2000);
+                
+            } else if (result.type === 'error') {
+                setTimeout(() => {
+                    makeToast(toastStore, result.message, 'variant-filled-error');
+                }, 2000);
+            }
+        };
+    };
 </script>
 
 <div class="h-full flex items-center justify-center">
@@ -9,7 +38,8 @@
                 <span>Hello!</span>
             </h1>
             <p class="pb-8 text-center">Sign in to your account</p>
-            <form action="?/login" method="POST">
+            <form action="?/login" method="POST"
+                    use:enhance={formCallback}>
                 <div class="p-1">
                     <label class="label" for="username">Username</label>
                     <input class="input" id="username" name="username" type="text" required />
@@ -29,7 +59,7 @@
                 {/if}
 
                 <div class="text-center">
-                    <button class="btn variant-filled-primary" type="submit">Log in</button>
+                    <button class="btn variant-filled-primary" type="submit" disabled={loading}>Log in</button>
                 </div>
 
                 <p class="pt-5 text-center">
