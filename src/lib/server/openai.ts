@@ -15,6 +15,8 @@ export const createCompletion = async (messages: Array<ChatMessage>) => {
         }),
         body: JSON.stringify({
             model: appConfig.model,
+            seed: appConfig.openAIcompletionSeed,
+            temperature: appConfig.openAIcompletionTemperature,
             messages,
         }),
     });
