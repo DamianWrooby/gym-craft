@@ -41,6 +41,23 @@ export async function updateGeneratedPlansNumber(userId: string): Promise<number
     return plansCount;
 }
 
+export async function updatePlanName(planId: string, newName: string): Promise<Plan | Error> {
+    const plan = await db.plan.findUnique({
+        where: { id: planId },
+    });
+
+    if (!plan) {
+        return new Error('Plan not found');
+    }
+
+    return await db.plan.update({
+        where: { id: planId },
+        data: {
+            name: newName,
+        },
+    });
+}
+
 export async function getPlans(userId: string): Promise<Plan[]> {
     return await db.plan.findMany({
         where: { userId: userId },

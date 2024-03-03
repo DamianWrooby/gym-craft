@@ -3,15 +3,29 @@
     import { onMount } from 'svelte';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import { Edit2Icon, CheckIcon, XIcon } from 'svelte-feather-icons';
+    import { makeToast } from '$lib/utils/toasts.js';
+    import { getToastStore } from '@skeletonlabs/skeleton';
+    import { appConfig } from '@/constants/app.constants';
     import type { Plan } from '@/models/plan/plan.model';
 
-    const modalStore = getModalStore();
+    interface MappedPlan {
+        id: string;
+        position: number;
+        name: string;
+        edittedName: string;
+        createdAt: string;
+    }
 
+    const modalStore = getModalStore();
+    const toastStore = getToastStore();
+
+    // TODO: sort by date
     const plans: Plan[] = $page.data.plans;
-    const mappedPlans = plans.map((plan, index) => ({
+    const mappedPlans: MappedPlan[] = plans.map((plan, index) => ({
         id: plan.id,
         position: index + 1,
         name: plan.name,
+        edittedName: plan.name,
         createdAt: formatDate(plan.createdAt),
     }));
     let editNameEnabledIndex: number = -1;
@@ -26,6 +40,25 @@
 
     function formatDate(date: Date): string {
         return `${date.toDateString()} ${date.toLocaleTimeString()}`;
+    }
+
+    async function saveName(plan: MappedPlan) {
+        const initialName = plan.name;
+        plan.name = plan.edittedName;
+
+        const body = JSON.stringify({ name: plan.edittedName });
+        try {
+            await fetch(`${appConfig.plansApiUrl}/${plan.id}`, {
+                method: 'POST',
+                body,
+            });
+        } catch (error) {
+            makeToast(toastStore, 'Cannot save name', 'variant-filled-error');
+            console.error({ error });
+            plan.name = initialName;
+        }
+
+        editNameEnabledIndex = -1;
     }
 </script>
 
@@ -44,10 +77,10 @@
                                     class="input"
                                     title="Plan name input"
                                     type="text"
-                                    value={plan.name}
+                                    bind:value={plan.edittedName}
                                     required
                                     aria-required />
-                                <button type="button" class="py-2 px-1">
+                                <button type="button" class="py-2 px-1" on:click={() => saveName(plan)}>
                                     <CheckIcon class="w-4 text-success-700 hover:text-success-500 transition-colors" />
                                 </button>
                                 <button type="button" class="py-2 px-1">
