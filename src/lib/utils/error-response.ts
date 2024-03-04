@@ -1,0 +1,1 @@
+export const createErrorResponse = (status: number, message: string) => new Response(JSON.stringify({ error: message }), { status });

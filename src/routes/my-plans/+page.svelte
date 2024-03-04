@@ -21,13 +21,15 @@
 
     // TODO: sort by date
     const plans: Plan[] = $page.data.plans;
-    const mappedPlans: MappedPlan[] = plans.map((plan, index) => ({
-        id: plan.id,
-        position: index + 1,
-        name: plan.name,
-        edittedName: plan.name,
-        createdAt: formatDate(plan.createdAt),
-    }));
+    const mappedPlans: MappedPlan[] = plans
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((plan, index) => ({
+            id: plan.id,
+            position: index + 1,
+            name: plan.name,
+            edittedName: plan.name,
+            createdAt: formatDate(plan.createdAt),
+        }));
     let editNameEnabledIndex: number = -1;
 
     onMount(() => {
@@ -45,20 +47,24 @@
     async function saveName(plan: MappedPlan) {
         const initialName = plan.name;
         plan.name = plan.edittedName;
+        editNameEnabledIndex = -1;
 
         const body = JSON.stringify({ name: plan.edittedName });
         try {
-            await fetch(`${appConfig.plansApiUrl}/${plan.id}`, {
+            const response: Response = await fetch(`${appConfig.plansApiUrl}/${plan.id}`, {
                 method: 'POST',
                 body,
             });
+            if (!response.ok) {
+                const { error } = await response.json();
+                makeToast(toastStore, error, 'variant-filled-error');
+                plan.name = initialName;
+            }
         } catch (error) {
-            makeToast(toastStore, 'Cannot save name', 'variant-filled-error');
-            console.error({ error });
+            makeToast(toastStore, 'Cannot save name due to server error', 'variant-filled-error');
+            console.error(error);
             plan.name = initialName;
         }
-
-        editNameEnabledIndex = -1;
     }
 </script>
 
