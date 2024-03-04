@@ -1,20 +1,20 @@
+import { json } from '@sveltejs/kit';
 import { updatePlanName } from '$lib/prisma/prisma';
+import { createErrorResponse } from '$lib/utils/error-response';
 
 export async function POST({ request, params }: { request: Request; params: { id: string } }): Promise<Response> {
     const body = await request.json();
     let updatedPlan;
-
+    
     if (!params.id) {
-        throw new Error('Invalid plan ID');
+        return createErrorResponse(404, 'Plan not found');
     }
 
     try {
         updatedPlan = await updatePlanName(params.id, body.name);
     } catch (error) {
-        throw new Error(error as string);
+        return createErrorResponse(502, 'Database error');
     }
 
-    return new Response(JSON.stringify(updatedPlan), {
-        headers: { 'Content-Type': 'application/json' },
-    });
+    return json(updatedPlan);
 }
