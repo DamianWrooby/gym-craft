@@ -24,7 +24,6 @@
     </div>
     <!-- Actions -->
     <div class="alert-actions flex justify-end w-full">
-        <button on:click={() => onAccept()} type="button" class="btn variant-filled-primary"
-            >Accept</button>
+        <button on:click={() => onAccept()} type="button" class="btn variant-filled-primary">Accept</button>
     </div>
 </aside>
