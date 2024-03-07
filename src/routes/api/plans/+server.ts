@@ -2,6 +2,7 @@ import { createCompletion } from '$lib/server/openai';
 import type { ChatMessage } from '@/models/open-ai/chat-gpt.model';
 import { appConfig } from '@/constants/app.constants';
 import { addPlan, updateGeneratedPlansNumber } from '$lib/prisma/prisma';
+import { createErrorResponse } from '$lib/utils/error-response';
 
 export async function POST({ request }: { request: Request }): Promise<Response> {
     const body = await request.json();
@@ -10,8 +11,7 @@ export async function POST({ request }: { request: Request }): Promise<Response>
     const userId = body.user.id;
 
     if (generatedPlansNumber > appConfig.planLimit) {
-        // TODO: add error handling
-        return new Response(JSON.stringify({ error: 'No plans left' }), { status: 400 });
+        return createErrorResponse(400, 'No plans left');
     }
 
     const planDescription = await createCompletion(messages);
