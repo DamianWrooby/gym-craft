@@ -1,7 +1,8 @@
-import { db } from '$lib/database';
+import { getPlans } from '$lib/prisma/prisma';
 
-export async function load() {
+export async function load({ locals }) {
+	const userId = locals?.user?.id;
 	return {
-		plans: await db.plan.findMany(),
+		plans: await getPlans(userId),
 	};
 }

@@ -1,5 +1,6 @@
 import { db } from '$lib/database';
 import type { Plan, User } from '@prisma/client';
+import { fail } from 'assert';
 
 type newPlan = {
     name: string;
@@ -19,6 +20,26 @@ export async function addPlan(plan: newPlan): Promise<Plan> {
     });
 }
 
+export async function deletePlan(planId: string, userId: string): Promise<Plan> {
+    const plan = await db.plan.findUnique({
+        where: { id: planId },
+    });
+
+    if (!plan) {
+        return fail('Plan not found');
+    }
+
+    if (plan.userId !== userId) {
+        return fail('User not authorized');
+    }
+
+    return await db.plan.delete({
+        where: {
+            id: planId,
+        },
+    });
+}
+
 export async function updateGeneratedPlansNumber(userId: string): Promise<number | Error> {
     const user = await db.user.findUnique({
         where: { id: userId },
@@ -26,7 +47,7 @@ export async function updateGeneratedPlansNumber(userId: string): Promise<number
     });
 
     if (!user) {
-        return new Error('User not found');
+        return fail('User not found');
     }
 
     const plansCount = user.plans.length;
@@ -41,15 +62,7 @@ export async function updateGeneratedPlansNumber(userId: string): Promise<number
     return plansCount;
 }
 
-export async function updatePlanName(planId: string, newName: string): Promise<Plan | Error> {
-    const plan = await db.plan.findUnique({
-        where: { id: planId },
-    });
-
-    if (!plan) {
-        return new Error('Plan not found');
-    }
-
+export async function updatePlanName(planId: string, newName: string): Promise<Plan> {
     return await db.plan.update({
         where: { id: planId },
         data: {
@@ -82,7 +95,7 @@ export async function getGeneratedPlansNumber(userId: string): Promise<number | 
     });
 
     if (!user) {
-        return new Error('User not found');
+        return fail('User not found');
     }
     return user.generatedPlansNumber;
 }

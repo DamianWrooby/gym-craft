@@ -3,6 +3,7 @@ import type { ChatMessage } from '@/models/open-ai/chat-gpt.model';
 import { appConfig } from '@/constants/app.constants';
 import { addPlan, updateGeneratedPlansNumber } from '$lib/prisma/prisma';
 import { createErrorResponse } from '$lib/utils/error-response';
+import { json } from '@sveltejs/kit';
 
 export async function POST({ request }: { request: Request }): Promise<Response> {
     const body = await request.json();
@@ -34,7 +35,5 @@ export async function POST({ request }: { request: Request }): Promise<Response>
         generatedPlansNumber: newGeneratedPlansNumber,
     };
 
-    return new Response(JSON.stringify(responseBody), {
-        headers: { 'Content-Type': 'application/json' },
-    });
+    return json(responseBody);
 }
