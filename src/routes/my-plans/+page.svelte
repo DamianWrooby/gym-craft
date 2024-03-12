@@ -23,18 +23,13 @@
     const toastStore = getToastStore();
 
     let plans: Plan[] = $page.data.plans;
-    $: mappedPlans = plans.map((plan, index) => ({
-        id: plan.id,
-        position: index + 1,
-        name: plan.name,
-        edittedName: plan.name,
-        createdAt: formatDate(new Date(plan.createdAt)),
-    }));
+    let tableRows = generateTableRows(plans);
 
     let editNameEnabledIndex: number = -1;
 
     onMount(() => {
         clearModals();
+        console.log(user.id)
     });
 
     function clearModals() {
@@ -43,6 +38,16 @@
 
     function formatDate(date: Date): string {
         return `${date.toDateString()} ${date.toLocaleTimeString()}`;
+    }
+
+    function generateTableRows(plans: Plan[]): MappedPlan[] {
+        return plans.map((plan, index) => ({
+            id: plan.id,
+            position: index + 1,
+            name: plan.name,
+            edittedName: plan.name,
+            createdAt: formatDate(new Date(plan.createdAt)),
+        }));
     }
 
     async function saveName(plan: MappedPlan) {
@@ -70,7 +75,7 @@
 
     function cancelNameChange(index: number) {
         editNameEnabledIndex = -1;
-        mappedPlans[index].edittedName = mappedPlans[index].name;
+        tableRows[index].edittedName = tableRows[index].name;
     }
 
     function onDeleteClick(plan: MappedPlan) {
@@ -93,6 +98,7 @@
                         }
                         makeToast(toastStore, 'Selected plan has been removed', 'variant-filled-warning');
                         plans = await fetchPlans(user.id);
+                        tableRows = generateTableRows(plans);
                     } catch (error) {
                         makeToast(toastStore, 'Cannot delete plan', 'variant-filled-error');
                         console.error(error);
@@ -126,7 +132,7 @@
         <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
         <div class="md:w-[75%] m-auto">
             <ul class="list border rounded-2xl border-surface-500">
-                {#each mappedPlans as plan, index}
+                {#each tableRows as plan, index}
                     <li
                         class="group !m-0 px-4 py-2 text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-900 even:bg-surface-800">
                         <span class="w-1/12">#{plan.position}</span>
