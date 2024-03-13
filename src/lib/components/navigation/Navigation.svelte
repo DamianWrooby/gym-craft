@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { page } from '$app/stores';
     import { Avatar } from '@skeletonlabs/skeleton';
     import type { User } from '@/models/user/user.model';
 
-    const user: User = $page.data.user;
-    const firstLetter = user?.name[0].toUpperCase();
+    export let user: User;
+
+    $: firstLetter = user?.name[0].toUpperCase();
 </script>
 
 <nav class="flex items-center text-surface-500 font-semibold whitespace-nowrap">
