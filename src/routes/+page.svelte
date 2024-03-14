@@ -13,15 +13,11 @@
     };
 </script>
 
-<div class="h-full flex items-center justify-center">
-    <div class="card p-16 min-w-[30%]">
+<div class="h-full flex flex-col items-center justify-center">
         <section class="p-5 pt-10">
-            <h1 class="h1 text-2xl text-center font-bold">
-                <span>Welcome to</span>
-            </h1>
             <img class="m-auto py-5" src={Logo} alt="Gym Craft Logo" />
             <h2 class="h1 text-lg text-center">
-                <span>Your AI powered personal trainer</span>
+                <span>AI powered personal trainer</span>
             </h2>
         </section>
         <section class="p-5 text-center">
@@ -45,7 +41,6 @@
             {/if}
         </section>
     </div>
-</div>
 
 {#if $cookieBannerOpened}
     <Banner
