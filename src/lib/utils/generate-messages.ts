@@ -9,7 +9,7 @@ export const generateAPIMessages = (formData: SurveyFormModel): Array<ChatMessag
     const systemRoleMessage = {
         role: 'system',
         content:
-            'Act like expierenced personal trainer with 10+ years of expierence in creating training plans for the clients.',
+            'Act like experienced personal trainer with 10+ years of expierence in creating training plans for the clients.',
     };
     const taskMessage = {
         role: 'user',
