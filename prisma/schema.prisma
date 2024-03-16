@@ -8,16 +8,16 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(uuid())
-  username       String   @unique
-  passwordHash   String
-  userAuthToken  String   @unique
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  roleId         Int
-  role           Roles    @relation(fields: [roleId], references: [id])
+  id                   String   @id @default(uuid())
+  username             String   @unique
+  passwordHash         String
+  userAuthToken        String   @unique
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  roleId               Int
+  role                 Roles    @relation(fields: [roleId], references: [id])
   generatedPlansNumber Int      @default(0)
-  plans          Plan[]
+  plans                Plan[]
 }
 
 model Roles {
@@ -40,4 +40,12 @@ enum Role {
   ADMIN
   MODERATOR
   USER
+}
+
+model Configuration {
+  id        String   @id @default(uuid())
+  name      String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
