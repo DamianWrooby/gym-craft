@@ -3,6 +3,7 @@
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
     import { appConfig } from '@/constants/app.constants';
+    import Card from '@components/card/Card.svelte';
 
     export let plan: string;
     export let generatedPlansNumber: number;
@@ -25,11 +26,7 @@
     };
 </script>
 
-<div class="h-full flex flex-col items-center justify-center pt-8">
-    <div class="card md:w-[50%] p-16 mb-8">
-        <h2 class="h2 text-center text-xl py-10">
-            We have crafted a plan based on the data you entered:
-        </h2>
-        {@html plan}
-    </div>
-</div>
+<Card>
+    <h2 class="h2 text-center text-xl py-10">We have crafted a plan based on the data you entered:</h2>
+    {@html plan}
+</Card>
