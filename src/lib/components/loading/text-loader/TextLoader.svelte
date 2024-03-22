@@ -1,6 +1,3 @@
-<script lang="ts">
-</script>
-
 <div class="h-full flex flex-col items-center justify-center select-none">
     <div id="container" class="font-bold text-surface-100 text-4xl text-center uppercase">
         We are
