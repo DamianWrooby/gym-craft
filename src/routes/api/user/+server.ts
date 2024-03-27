@@ -1,6 +1,7 @@
 import { db } from '$lib/database';
 import { createErrorResponse } from '$lib/utils/error-response';
 import bcrypt from 'bcrypt';
+import { json } from '@sveltejs/kit';
 
 export async function DELETE({ request }: { request: Request }): Promise<Response> {
     const body = await request.json();
@@ -27,7 +28,5 @@ export async function DELETE({ request }: { request: Request }): Promise<Respons
         message: 'User deleted',
     };
 
-    return new Response(JSON.stringify(responseBody), {
-        headers: { 'Content-Type': 'application/json' },
-    });
+    return json(responseBody);
 }
