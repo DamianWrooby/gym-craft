@@ -1,7 +1,6 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { slide } from 'svelte/transition';
-    import { appConfig } from '@/constants/app.constants';
     import type { User } from '@/models/user/user.model';
     import DeleteAccountForm from '$lib/components/delete-account-form/DeleteAccountForm.svelte';
     import { getToastStore } from '@skeletonlabs/skeleton';
@@ -9,7 +8,6 @@
     import Card from '@components/card/Card.svelte';
 
     const user: User = $page.data.user;
-    const { planLimit } = appConfig;
     const formData = { password: '' };
     const toastStore = getToastStore();
     let deleteAccountFormOpened = false;
@@ -52,7 +50,7 @@
     <h2 class="h2 text-center text-xl py-10">Manage your account</h2>
     <p>Name: <span class="text-secondary-400 font-bold">{user.name}</span></p>
     <p>Generated plans number: {user.generatedPlansNumber}</p>
-    <p>Plans left: {planLimit - user.generatedPlansNumber}</p>
+    <p>Plans left: {user.plansLeft}</p>
     <div class="relative flex flex-col justify-center mt-8 border rounded border-solid border-red-500">
         <div class="absolute top-0">
             <p class="text-red-500 font-thin pl-1">Danger zone</p>

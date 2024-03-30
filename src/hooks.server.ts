@@ -25,13 +25,16 @@ export const handle: Handle = async ({ event, resolve }) => {
         select: { id: true, username: true, role: true, generatedPlansNumber: true },
     });
 
+    const configuration = await db.configuration.findFirst({
+        where: { name: 'generalPlanLimit' },
+        select: { value: true },
+    });
+
+    const plansLeft = configuration && user ? +configuration.value - user.generatedPlansNumber : 0;
+
     if (user) {
-        event.locals.user = {
-            id: user.id,
-            name: user.username,
-            role: user.role.name,
-            generatedPlansNumber: user.generatedPlansNumber,
-        };
+        const { id, username, role, generatedPlansNumber } = user;
+        event.locals.user = { id, name: username, role: role.name, generatedPlansNumber, plansLeft };
     }
 
     return await resolve(event);

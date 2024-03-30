@@ -62,6 +62,15 @@ export async function updateGeneratedPlansNumber(userId: string): Promise<number
     return plansCount;
 }
 
+export async function getGeneralPlanLimit(): Promise<number> {
+    const generalPlanLimit = await db.configuration.findFirst({
+        where: { name: 'generalPlanLimit' },
+        select: { value: true },
+    });
+
+    return generalPlanLimit ? +generalPlanLimit.value : 0;
+}
+
 export async function updatePlanName(planId: string, newName: string): Promise<Plan> {
     return await db.plan.update({
         where: { id: planId },
@@ -74,6 +83,12 @@ export async function updatePlanName(planId: string, newName: string): Promise<P
 export async function getPlans(userId: string): Promise<Plan[]> {
     return await db.plan.findMany({
         where: { userId: userId },
+    });
+}
+
+export async function getPlan(planId: string, userId: string): Promise<Plan | null> {
+    return await db.plan.findUnique({
+        where: { userId: userId, id: planId },
     });
 }
 
