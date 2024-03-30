@@ -2,9 +2,7 @@
     import { page } from '$app/stores';
     import { cookieBannerOpened } from '@/stores';
     import { Edit2Icon, ArrowRightIcon } from 'svelte-feather-icons';
-    import { appConfig } from '@/constants/app.constants';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
-    import BackgroundImg from '$lib/images/gym-craft-ai-7.jpg';
     import Banner from '$lib/components/banner/Banner.svelte';
 
     const user = $page.data.user;
@@ -25,12 +23,12 @@
             </h1>
         </div>
         <div class="p-5 text-center">
-            {#if user && user.generatedPlansNumber < appConfig.planLimit}
+            {#if user && user.plansLeft > 0}
                 <a href="/create-plan" class="btn variant-filled-primary group">
                     <Edit2Icon size="20" class="group-hover:animate-pulse" />
                     <span>Create training plan</span>
                 </a>
-            {:else if user && user.generatedPlansNumber >= appConfig.planLimit}
+            {:else if user && user.plansLeft <= 0}
                 <h3 class="h3 text-lg text-center pb-3 text-warning-500">
                     <span>You have created maximum number of plans</span>
                 </h3>
@@ -76,10 +74,10 @@
 
     @keyframes slidein {
         from {
-            background-size: 100vh;
+            background-size: 110vh;
         }
         to {
-            background-size: 150vh;
+            background-size: 180vh;
         }
     }
 </style>

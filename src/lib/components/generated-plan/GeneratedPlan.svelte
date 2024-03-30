@@ -2,14 +2,12 @@
     import { onMount } from 'svelte';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
-    import { appConfig } from '@/constants/app.constants';
     import Card from '@components/card/Card.svelte';
 
     export let plan: string;
-    export let generatedPlansNumber: number;
+    export let plansLeft: number;
 
     const modalStore = getModalStore();
-    const plansLeft = appConfig.planLimit - generatedPlansNumber;
 
     onMount(() => {
         openInfoModal();

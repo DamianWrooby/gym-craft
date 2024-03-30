@@ -3,4 +3,5 @@ export interface User {
 	name: string;
 	role: string;
 	generatedPlansNumber: number;
+	plansLeft: number;
 }
