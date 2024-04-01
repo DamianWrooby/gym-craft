@@ -12,7 +12,6 @@
     import SurveyFormStep4 from '@components/survey/step-4/SurveyFormStep4.svelte';
     import SurveyFormStep5 from '@components/survey/step-5/SurveyFormStep5.svelte';
     import SurveyFormStep6 from '@components/survey/step-6/SurveyFormStep6.svelte';
-    import SurveyFormStep7 from '@components/survey/step-7/SurveyFormStep7.svelte';
     import ProgressBar from '@components/progress-bar/ProgressBar.svelte';
     import { loadingState } from '@/stores';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
@@ -84,9 +83,6 @@
             mtbBike: false,
             roadBike: false,
         },
-        additionalInfo: {
-            cycleLength: 4,
-        },
     };
 
     let stepsNumber = Object.keys(formData).length;
@@ -111,7 +107,8 @@
         const modal: ModalSettings = {
             type: 'alert',
             title: 'Information',
-            body: 'With any physical activity, safety and technique of the exercises performed are crucial. If you are inexperienced, you should enlist the help of a professional personal trainer who will gradually introduce you to the world of sports, minimizing the risk of injury. <br><br> This app is not a substitute for a training plan prepared by a professional trainer, and is only an auxiliary tool designed to support the work of a personal trainer.',
+            body: '<p>With any physical activity, safety and technique of the exercises performed are crucial. If you are inexperienced, you should enlist the help of a professional personal trainer who will gradually introduce you to the world of sports, minimizing the risk of injury.</p><br><p>This app is not a substitute for a training plan prepared by a professional trainer, and is only an auxiliary tool designed to support the work of a personal trainer.</p>',
+            modalClasses: 'max-h-fit',
             buttonTextCancel: 'Proceed',
         };
         modalStore.trigger(modal);
@@ -143,8 +140,6 @@
             <SurveyFormStep5 bind:data={formData.fitnessLevel} />
         {:else if currentActive === 6}
             <SurveyFormStep6 bind:data={formData.equipment} />
-        {:else if currentActive === 7}
-            <SurveyFormStep7 bind:data={formData.additionalInfo} />
         {/if}
         <footer class="card-footer flex">
             <div class="w-1/2 flex justify-start">
