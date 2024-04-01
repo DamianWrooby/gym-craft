@@ -5,7 +5,6 @@ export interface SurveyFormModel {
     lifestyle: LifestyleModel;
     fitnessLevel: FitnessLevelModel;
     equipment: EquipmentModel;
-    additionalInfo: AdditionalInfoModel;
 }
 
 export interface PersonalInfoModel {
@@ -60,8 +59,4 @@ export interface EquipmentModel {
     calisthenics: boolean;
     mtbBike: boolean;
     roadBike: boolean;
-}
-
-export interface AdditionalInfoModel {
-    cycleLength: number;
 }
