@@ -3,6 +3,7 @@
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
+    import { ArrowRightIcon, ChevronsRightIcon } from 'svelte-feather-icons';
 
     export let plan: string;
     export let plansLeft: number;
@@ -27,4 +28,14 @@
 <Card>
     <h2 class="h2 text-center text-xl py-10">We have crafted a plan based on the data you entered:</h2>
     {@html plan}
+    <div class="w-100 pt-12 flex justify-end">
+        <a href="/my-plans" class="btn variant-filled-tertiary group mr-6">
+            <span>My plans</span>
+            <ArrowRightIcon class="group-hover:animate-pulse" />
+        </a>
+        <a href="/create-plan" class="btn variant-filled-primary group">
+            <span>Create another plan</span>
+            <ChevronsRightIcon class="group-hover:animate-pulse" />
+        </a>
+    </div>
 </Card>
