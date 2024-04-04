@@ -1,13 +1,29 @@
 <script lang="ts">
     import '../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
+    import { page } from '$app/stores';
     import { initializeStores } from '@skeletonlabs/skeleton';
-    import { Modal } from '@skeletonlabs/skeleton';
+    import { Modal, Toast } from '@skeletonlabs/skeleton';
     import { HomeIcon } from 'svelte-feather-icons';
     import Navigation from '@components/navigation/Navigation.svelte';
+    import { onNavigate } from '$app/navigation';
+    import Logo from '$lib/images/gym-craft-logo-crop.png';
 
     const currentDate = new Date();
+    $: user = $page.data.user;
+
     initializeStores();
+
+    onNavigate((navigation) => {
+        if (!document.startViewTransition) return;
+
+        return new Promise((resolve) => {
+            document.startViewTransition(async () => {
+                resolve();
+                await navigation.complete;
+            });
+        });
+    });
 </script>
 
 <svelte:head>
@@ -15,16 +31,21 @@
 </svelte:head>
 
 <Modal />
+<Toast position={'br'} />
 
 <AppShell>
     <svelte:fragment slot="header">
         <AppBar background="bg-primary-500">
             <svelte:fragment slot="lead">
-                <a class="px-4 text-surface-500 hover:text-tertiary-500" href="/"
-                    ><HomeIcon></HomeIcon></a>
+                <a class="px-4 text-surface-500 hover:text-tertiary-500 block md:hidden" href="/">
+                    <HomeIcon />
+                </a>
+                <a class="px-4 text-surface-500 hover:text-tertiary-500 w-40 hidden md:block" href="/">
+                    <img class="m-auto" src={Logo} alt="Gym Craft Logo" />
+                </a>
             </svelte:fragment>
             <svelte:fragment slot="trail">
-                <Navigation></Navigation>
+                <Navigation {user}></Navigation>
                 <LightSwitch></LightSwitch>
             </svelte:fragment>
         </AppBar>
