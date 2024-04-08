@@ -46,7 +46,7 @@
     };
 </script>
 
-<Card width="50">
+<Card width="1/2">
     <h2 class="h2 text-center text-xl py-10">Manage your account</h2>
     <p>Name: <span class="text-secondary-400 font-bold">{user.name}</span></p>
     <p>Generated plans number: {user.generatedPlansNumber}</p>
