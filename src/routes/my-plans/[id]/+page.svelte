@@ -13,7 +13,7 @@
     }
 </script>
 
-<Card width="75">
+<Card width="[75%]">
     {#if $navigating}
         <Spinner size={10} />
     {:else}
