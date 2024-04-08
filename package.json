@@ -4,13 +4,14 @@
     "private": true,
     "scripts": {
         "dev": "vite dev",
-        "build": "vite build",
+        "build": "prisma generate && vite build",
         "preview": "vite preview",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test:unit": "vitest",
         "lint": "prettier --plugin-search-dir . --check . && eslint .",
-        "format": "prettier --plugin-search-dir . --write ."
+        "format": "prettier --plugin-search-dir . --write .",
+        "postinstall": "prisma generate"
     },
     "devDependencies": {
         "@floating-ui/dom": "^1.5.3",
