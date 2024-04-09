@@ -5,7 +5,7 @@
     import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import Spinner from '@components/loading/spinner/Spinner.svelte';
-    import { Edit2Icon, CheckIcon, XIcon, TrashIcon } from 'svelte-feather-icons';
+    import { Edit2Icon, CheckIcon, XIcon, TrashIcon, EyeIcon } from 'svelte-feather-icons';
     import { makeToast } from '$lib/utils/toasts.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { appConfig } from '@/constants/app.constants';
@@ -137,7 +137,7 @@
     }
 </script>
 
-<Card width="75">
+<Card width="[75%]">
     {#if $navigating}
         <Spinner size={10} />
     {:else}
@@ -145,11 +145,8 @@
         <div class="md:w-[75%] m-auto">
             <ul class="list border rounded-2xl border-surface-500">
                 {#each tableRows as plan, index}
-                    <!-- svelte-ignore a11y-click-events-have-key-events -->
-                    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
                     <li
-                        class="group !m-0 px-4 py-2 text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-900 even:bg-surface-800 hover:bg-surface-600 hover:cursor-pointer"
-                        on:click={() => showPlan(plan)}>
+                        class="group !m-0 px-4 py-2 text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-900 even:bg-surface-800 hover:bg-surface-600">
                         <span class="w-1/12">#{plan.position}</span>
                         <div class="w-5/12 flex flex-row items-center">
                             {#if editNameEnabledIndex === index}
@@ -160,28 +157,26 @@
                                     bind:value={plan.edittedName}
                                     required
                                     aria-required />
-                                <button type="button" class="py-2 px-1" on:click|stopPropagation={() => saveName(plan)}>
+                                <button type="button" class="py-2 px-1" on:click={() => saveName(plan)}>
                                     <CheckIcon class="w-4 text-success-700 hover:text-success-500 transition-colors" />
                                 </button>
-                                <button
-                                    type="button"
-                                    class="py-2 px-1"
-                                    on:click|stopPropagation={() => cancelNameChange(index)}>
+                                <button type="button" class="py-2 px-1" on:click={() => cancelNameChange(index)}>
                                     <XIcon class="w-4 text-error-700 hover:text-error-500 transition-colors" />
                                 </button>
                             {:else}
                                 <span class="pl-3 pr-2">{plan.name}</span>
-                                <button
-                                    type="button"
-                                    class="p-2"
-                                    on:click|stopPropagation={() => (editNameEnabledIndex = index)}>
+                                <button type="button" class="p-2" on:click={() => (editNameEnabledIndex = index)}>
                                     <Edit2Icon
                                         class="w-4 invisible group-hover:visible hover:text-tertiary-100 transition-colors" />
                                 </button>
                             {/if}
                         </div>
                         <div class="w-6/12 flex flex-row justify-end items-center">
-                            <button type="button" class="p-2" on:click|stopPropagation={() => onDeleteClick(plan)}>
+                            <button type="button" class="p-2" on:click={() => showPlan(plan)}>
+                                <EyeIcon
+                                    class="w-4 invisible group-hover:visible hover:text-tertiary-100 transition-colors" />
+                            </button>
+                            <button type="button" class="p-2" on:click={() => onDeleteClick(plan)}>
                                 <TrashIcon
                                     class="w-4 invisible group-hover:visible text-error-700 hover:text-error-500 transition-colors" />
                             </button>
