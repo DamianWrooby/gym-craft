@@ -1,4 +1,5 @@
 <script lang="ts">
+    // TODO: redirect user directly to my-plans after generating a plan
     import { page } from '$app/stores';
     import { loadingState } from '@/stores';
     import SurveyForm from '@components/survey/SurveyForm.svelte';
@@ -16,9 +17,9 @@
 
     const user: User = $page.data.user;
     const toastStore = getToastStore();
-
-    let generatedPlan: string;
-    let generatedPlansNumber: number;
+    
+    let plan: string;
+    let plansLeft: number;
 
     const generatePlan = async (event: CustomEvent<{ formData: SurveyFormModel }>) => {
         const formData = event.detail.formData;
@@ -32,21 +33,24 @@
                 method: 'POST',
                 body,
             });
-            const data: { generatedPlan: Plan; generatedPlansNumber: number } = await response.json();
-            generatedPlan = data.generatedPlan.description;
-            generatedPlansNumber = data.generatedPlansNumber;
+            const { generatedPlan, plansLeft: plansLeftNumber } = await response.json();
+            plan = generatedPlan.description;
+            plansLeft = plansLeftNumber;
         } catch (error) {
             makeToast(toastStore, error as string, 'variant-filled-error');
         }
-
         loadingState.set(false);
+        // setTimeout(() => {
+        //     generatedPlan = planMock;
+        //     plansLeft = 5;
+        //     loadingState.set(false);
+        // }, 5000);
     };
 </script>
-
 {#if $loadingState}
     <Loader />
-{:else if generatedPlan}
-    <GeneratedPlan plan={generatedPlan} {generatedPlansNumber} />
+{:else if plan}
+    <GeneratedPlan {plan} {plansLeft} />
 {:else}
     <SurveyForm on:complete={generatePlan} />
 {/if}
