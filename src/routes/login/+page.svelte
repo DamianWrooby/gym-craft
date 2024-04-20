@@ -31,7 +31,7 @@
     };
 </script>
 
-<Card width="1/2">
+<Card width="1/4">
     <section class="grow flex flex-col justify-center">
         <h1 class="h1 text-2xl text-center font-bold">
             <span>Hello!</span>
