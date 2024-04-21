@@ -13,7 +13,7 @@
 </script>
 
 <aside
-    class="alert variant-filled-tertiary md:variant-soft-primary fixed flex-col z-10 w-full md:w-1/4 bottom-20 md:right-2.5"
+    class="alert variant-filled-tertiary dark:variant-soft-primary fixed flex-col z-10 w-full bottom-20 md:w-1/4 md:right-2.5"
     transition:fade|local={{ duration: 50 }}>
     <!-- Message -->
     <div class="alert-message">
