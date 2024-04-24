@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from '$app/stores';
+    import { PUBLIC_APP_ENV } from '$env/static/public';
     import { createEventDispatcher, onMount } from 'svelte';
     import { ArrowRightIcon, ArrowLeftIcon, ChevronsRightIcon } from 'svelte-feather-icons';
     import { getModalStore } from '@skeletonlabs/skeleton';
@@ -20,9 +21,9 @@
     const dispatch = createEventDispatcher<{ complete: { formData: SurveyFormModel } }>();
     const modalStore = getModalStore();
 
+    const formValidation = PUBLIC_APP_ENV === 'production';
     let currentActive = 1;
     let formElement: HTMLFormElement;
-    let formValidation = false;
 
     let formData: SurveyFormModel = {
         personalInfo: {
