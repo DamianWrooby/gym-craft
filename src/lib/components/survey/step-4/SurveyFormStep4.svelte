@@ -155,8 +155,6 @@
                         <input
                             class="checkbox"
                             type="checkbox"
-                            required
-                            aria-required
                             bind:checked={data.trainingDays[option.value]} />
                         <p>{option.label}</p>
                     </label>

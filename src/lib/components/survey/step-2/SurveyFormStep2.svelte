@@ -46,8 +46,6 @@
                         <input
                             class="checkbox"
                             type="checkbox"
-                            required
-                            aria-required
                             bind:checked={data.mainGoals[option.value]} />
                         <p>{option.label}</p>
                     </label>
