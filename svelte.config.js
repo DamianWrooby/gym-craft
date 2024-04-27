@@ -1,6 +1,6 @@
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-import adapter from '@sveltejs/adapter-cloudflare';
-import path from 'path';
+import adapter from '@sveltejs/adapter-netlify';
+import path from 'node:path';
 /** @type {import('@sveltejs/kit').Config} */
 
 const config = {
