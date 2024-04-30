@@ -10,10 +10,7 @@ const config = {
         inspector: true,
     },
     kit: {
-        adapter: adapter({
-            edge: true,
-            split: false,
-        }),
+        adapter: adapter(),
         alias: {
             '@components': path.resolve('./src/lib/components'),
             '@lib': path.resolve('./src/lib'),
