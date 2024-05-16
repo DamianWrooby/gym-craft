@@ -34,7 +34,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     if (user) {
         const { id, username, role, generatedPlansNumber } = user;
-        event.locals.user = { id, name: username, role: role.name, generatedPlansNumber, plansLeft };
+        event.locals.user = { id, name: username, role: role.name, generatedPlansNumber, plansLeft, session };
     }
 
     return await resolve(event);
