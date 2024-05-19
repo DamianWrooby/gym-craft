@@ -1,6 +1,6 @@
 import { db } from '$lib/database';
 import type { Plan, User } from '@prisma/client';
-import { fail } from 'node:assert';
+import { fail } from 'assert';
 
 type newPlan = {
     name: string;
