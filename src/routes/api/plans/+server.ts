@@ -1,14 +1,12 @@
-import { createCompletion } from '$lib/server/openai';
-import type { ChatMessage } from '@/models/open-ai/chat-gpt.model';
 import { addPlan, getGeneralPlanLimit, updateGeneratedPlansNumber } from '$lib/prisma/prisma';
 import { createErrorResponse } from '$lib/utils/error-response';
 import { json } from '@sveltejs/kit';
 
 export async function POST({ request }: { request: Request }): Promise<Response> {
     const body = await request.json();
-    const messages: Array<ChatMessage> = body.messages;
-    const generatedPlansNumber: number = body.user.generatedPlansNumber;
+    const { generatedPlansNumber }: { generatedPlansNumber: number } = body.user;
     const userId = body.user.id;
+    const { planContent }: { planContent: string } = body;
 
     const generalPlanLimit = await getGeneralPlanLimit();
 
@@ -16,11 +14,9 @@ export async function POST({ request }: { request: Request }): Promise<Response>
         return createErrorResponse(400, 'No plans left');
     }
 
-    const planDescription = await createCompletion(messages);
-
     const plan = {
         name: 'Plan ' + generatedPlansNumber,
-        description: planDescription,
+        description: planContent,
         User: {
             connect: {
                 id: userId,
@@ -36,6 +32,15 @@ export async function POST({ request }: { request: Request }): Promise<Response>
         generatedPlan: generatedPlan,
         generatedPlansNumber: newGeneratedPlansNumber,
         plansLeft,
+    };
+
+    return json(responseBody);
+}
+
+export async function GET(): Promise<Response> {
+    const generalPlanLimit = await getGeneralPlanLimit();
+    const responseBody = {
+        generalPlanLimit,
     };
 
     return json(responseBody);
