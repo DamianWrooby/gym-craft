@@ -5,7 +5,7 @@
     import Card from '@components/card/Card.svelte';
     import { ArrowRightIcon, ChevronsRightIcon } from 'svelte-feather-icons';
 
-    export let plan: string;
+    export let planContent: string;
     export let plansLeft: number;
 
     const modalStore = getModalStore();
@@ -27,7 +27,7 @@
 
 <Card>
     <h2 class="h2 text-center text-xl py-10">We have crafted a plan based on the data you entered:</h2>
-    {@html plan}
+    {@html planContent}
     <div class="w-100 pt-12 flex justify-end">
         <a href="/my-plans" class="btn variant-filled-tertiary group mr-6">
             <span>My plans</span>
