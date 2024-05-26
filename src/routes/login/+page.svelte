@@ -3,6 +3,7 @@
     import { makeToast } from '$lib/utils/toasts.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
+    import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
 
     export let form;
 
@@ -57,7 +58,12 @@
             {/if}
 
             <div class="text-center">
-                <button class="btn variant-filled-primary" type="submit" disabled={loading}>Log in</button>
+                <button class="btn variant-filled-primary" type="submit" disabled={loading}>
+                    {#if loading}
+                        <Spinner size={5} />
+                    {/if}
+                    <span>Log in</span>
+                </button>
             </div>
 
             <p class="pt-5 text-center">
