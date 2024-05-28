@@ -73,6 +73,10 @@ Before you begin, ensure you have met the following requirements:
 
 2. Open your browser and navigate to http://localhost:5173/ to see the application in action.
 
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](https://opensource.org/license/mit) file for details.
+
 ## Contact
 
 If you have any questions, feel free to reach out:
