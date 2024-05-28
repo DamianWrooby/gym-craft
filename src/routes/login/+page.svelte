@@ -3,7 +3,7 @@
     import { makeToast } from '$lib/utils/toasts.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
-    import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
+    import Spinner from '@components/loading/spinner/Spinner.svelte';
 
     export let form;
 
@@ -28,6 +28,7 @@
                     makeToast(toastStore, result.message, 'variant-filled-error');
                 }, 2000);
             }
+            loading = false;
         };
     };
 </script>
