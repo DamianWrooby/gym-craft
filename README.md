@@ -1,38 +1,81 @@
-# create-svelte
+# GymCraft - AI Powered Personal Trainer
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+![GymCraft](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/images/gym-craft-logo-crop.png)
 
-## Creating a project
+Welcome to the GymCraft! This project is a SvelteKit application powered by Chat-GPT that allows users to create personalized fitness training plans based on the data they provide.
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Table of Contents
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+- [Project Overview](#project-overview)
+  - [How does it work?](#how-does-it-work)
+- [Technologies Used](#technologies-used)
+- [Production Link](#production-link)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Running the Application](#running-the-application)
+- [License](#license)
+- [Contact](#contact)
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+## Project Overview
 
-## Developing
+This app is designed to help users create customized fitness plans. By inputting their data, such as fitness goals, current physical condition, and preferences, users can receive tailored workout plans generated with the help of the Chat-GPT model. 
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## How does it work?
 
-```bash
-npm run dev
+The user enters data through a clear form and GymCraft under the hood configures the AI model accordingly and enriches that data using prompt engineering techniques to produce the best quality results.
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+## Technologies Used
 
-## Building
+- **SvelteKit**: A modern framework for building fast and high-performance fullstack web applications.
+- **OpenAI GPT-4**: For generating personalized fitness plans.
+- **Node.js**: Backend runtime environment.
+- **Vite**: Build tool for optimized performance.
+- **Prisma**: ORM for communication with the database.
+- **Skeleton**: UI library.
+- **Tailwind**: Utility-first CSS framework.
 
-To create a production version of your app:
+## Production Link
 
-```bash
-npm run build
-```
+You can check out the live application at [this link](https://gym-craft.netlify.app/).
 
-You can preview the production build with `npm run preview`.
+## Getting Started (local installation)
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+### Prerequisites
+
+Before you begin, ensure you have met the following requirements:
+
+- Node.js (version 18.x or higher)
+- npm (version 10.x or higher)
+
+### Installation
+
+1. Clone the repository:
+
+	```bash
+	git clone https://github.com/DamianWrooby/gym-craft.git
+	cd gym-craft
+	```
+
+2. Install the dependencies:
+
+	```bash
+	npm install
+	```
+
+### Running the Application
+
+1. Start the development server:
+
+	```bash
+	npm run dev
+	```
+
+2. Open your browser and navigate to http://localhost:5173/ to see the application in action.
+
+## Contact
+
+If you have any questions, feel free to reach out:
+
+Email: 👉🏼 **dwroblewski89@gmail.com**
+GitHub: [DamianWrooby](https://github.com/DamianWrooby)
