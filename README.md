@@ -9,6 +9,7 @@ Welcome to the GymCraft! This project is a SvelteKit application powered by Chat
 - [Project Overview](#project-overview)
   - [How does it work?](#how-does-it-work)
 - [Technologies Used](#technologies-used)
+- [Architecture schema](#architecture-schema)
 - [Production Link](#production-link)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
@@ -36,6 +37,10 @@ To bypass the Netlify serverless functions 10s timeout when calling external Ope
 - **Prisma**: ORM for communication with the database.
 - **Skeleton**: UI library.
 - **Tailwind**: Utility-first CSS framework.
+
+## Architecture Schema
+
+![GymCraft Architecture](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/images/GymCraft-architecture.jpg)
 
 ## Production Link
 
