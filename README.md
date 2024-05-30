@@ -25,6 +25,8 @@ This app is designed to help users create customized fitness plans. By inputting
 
 The user enters data through a clear form and GymCraft under the hood configures the AI model accordingly and enriches that data using prompt engineering techniques to produce the best quality results.
 
+To bypass the Netlify serverless functions 10s timeout when calling external OpenAI API, application uses [GymCraft - Proxy](https://github.com/DamianWrooby/gym-craft-ai-proxy) - additional Express.js server.
+
 ## Technologies Used
 
 - **SvelteKit**: A modern framework for building fast and high-performance fullstack web applications.
