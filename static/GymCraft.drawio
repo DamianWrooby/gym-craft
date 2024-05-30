@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2024-05-30T19:52:24.268Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" etag="I7-Sn1fRobi5ZnRSd1eT" version="24.4.10" type="github">
+<mxfile host="app.diagrams.net" modified="2024-05-30T19:54:27.344Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" etag="OUVYl38nyVc7Zjz9qjgQ" version="24.4.10" type="github">
   <diagram name="Page-1" id="zk2GNx5HkSGxQTkh9nYt">
     <mxGraphModel dx="1593" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
@@ -50,7 +50,7 @@
           <mxGeometry x="30.130000000000003" y="27" width="210" height="120" as="geometry" />
         </mxCell>
         <mxCell id="lj0Zras-VuIFO447LdOi-8" value="OpenAI" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Tahoma;fontSize=14;fontColor=#006633;" parent="1" vertex="1">
-          <mxGeometry x="7" y="97" width="110" height="60" as="geometry" />
+          <mxGeometry x="7" y="100" width="110" height="60" as="geometry" />
         </mxCell>
         <mxCell id="lj0Zras-VuIFO447LdOi-9" value="&lt;b&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Chat completions API&lt;/font&gt;&lt;/b&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Tahoma;fontSize=18;" parent="1" vertex="1">
           <mxGeometry x="55.07" y="74" width="160.13" height="60" as="geometry" />
