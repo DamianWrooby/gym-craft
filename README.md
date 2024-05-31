@@ -2,7 +2,7 @@
 
 ![GymCraft](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/images/gym-craft-logo-crop.png)
 
-Welcome to the GymCraft! This project is a SvelteKit application powered by Chat-GPT that allows users to create personalized fitness training plans based on the data they provide.
+Welcome to the GymCraft! This project is a SvelteKit application powered by LLM (gpt-4o) that allows users to create personalized fitness training plans based on the data they provide.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ Welcome to the GymCraft! This project is a SvelteKit application powered by Chat
 
 ## Project Overview
 
-This app is designed to help users create customized fitness plans. By inputting their data, such as fitness goals, current physical condition, and preferences, users can receive tailored workout plans generated with the help of the Chat-GPT model. 
+This app is designed to help users create customized fitness plans. By inputting their data, such as fitness goals, current physical condition, and preferences, users can receive tailored workout plans generated with the help of the gpt-4o large language model. 
 
 ## How does it work?
 
