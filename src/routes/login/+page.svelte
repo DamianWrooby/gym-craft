@@ -60,8 +60,8 @@
 
             <div class="text-center">
                 <button class="btn variant-filled-primary" type="submit" disabled={loading}>
-                    {#if true}
-                        <Spinner size={5} />
+                    {#if loading}
+                        <Spinner size={4} />
                     {/if}
                     <span>Log in</span>
                 </button>
