@@ -57,8 +57,7 @@
         });
 
         // Proxy server API call
-        const proxyAPIurl =
-            PUBLIC_APP_ENV === 'development' ? appConfig.proxyApiUrlDEV : appConfig.proxyApiUrlPROD;
+        const proxyAPIurl = PUBLIC_APP_ENV === 'development' ? appConfig.proxyApiUrlDEV : appConfig.proxyApiUrlPROD;
         try {
             const proxyResponse = await fetch(proxyAPIurl, {
                 method: 'POST',
@@ -100,7 +99,7 @@
 {#if $loadingState}
     <Loader />
 {:else if planContent}
-    <GeneratedPlan {planContent} {plansLeft} />
+    <GeneratedPlan on:restart={() => planContent = ''} {planContent} {plansLeft} />
 {:else}
     <SurveyForm on:complete={generatePlan} />
 {/if}

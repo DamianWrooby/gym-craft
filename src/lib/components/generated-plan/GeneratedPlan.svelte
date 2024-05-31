@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onMount, createEventDispatcher } from 'svelte';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
@@ -8,6 +8,8 @@
     export let planContent: string;
     export let plansLeft: number;
 
+    const dispatch = createEventDispatcher<{ restart: void }>();
+    
     const modalStore = getModalStore();
 
     onMount(() => {
@@ -33,9 +35,11 @@
             <span>My plans</span>
             <ArrowRightIcon class="group-hover:animate-pulse" />
         </a>
-        <a href="/create-plan" class="btn variant-filled-primary group">
-            <span>Create another plan</span>
-            <ChevronsRightIcon class="group-hover:animate-pulse" />
-        </a>
+        {#if plansLeft > 0}
+            <button class="btn variant-filled-primary group" on:click={() => dispatch('restart')}>
+                <span>Create another plan</span>
+                <ChevronsRightIcon class="group-hover:animate-pulse" />
+            </button>
+        {/if}
     </div>
 </Card>
