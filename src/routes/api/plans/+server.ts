@@ -1,8 +1,9 @@
 import { addPlan, getGeneralPlanLimit, updateGeneratedPlansNumber } from '$lib/prisma/prisma';
 import { createErrorResponse } from '$lib/utils/error-response';
 import { json } from '@sveltejs/kit';
+import type { RequestEvent } from './$types';
 
-export async function POST({ request }: { request: Request }): Promise<Response> {
+export async function POST({ request }: RequestEvent): Promise<Response> {
     const body = await request.json();
     const { generatedPlansNumber }: { generatedPlansNumber: number } = body.user;
     const userId = body.user.id;
