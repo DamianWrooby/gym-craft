@@ -22,6 +22,10 @@ const config = {
             themes: { preset: ['crimson'] },
         }),
     ],
+    safelist: [
+        'w-5',
+        'w-10',
+    ],
 } satisfies Config;
 
 export default config;
