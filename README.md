@@ -31,7 +31,7 @@ To bypass the Netlify serverless functions 10s timeout when calling external Ope
 ## Technologies Used
 
 - **SvelteKit**: A modern framework for building fast and high-performance fullstack web applications.
-- **OpenAI GPT-4**: For generating personalized fitness plans.
+- **OpenAI GPT-4o**: For generating personalized fitness plans.
 - **Node.js**: Backend runtime environment.
 - **Vite**: Build tool for optimized performance.
 - **Prisma**: ORM for communication with the database.
