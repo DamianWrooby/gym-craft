@@ -16,7 +16,6 @@ export async function updateUser(event) {
     });
 
     const plansLeft = configuration && user ? +configuration.value - user.generatedPlansNumber : 0;
-	console.log('plansLeft updateUser', plansLeft);
 
     if (user) {
         const { id, username, role, generatedPlansNumber } = user;

@@ -31,12 +31,12 @@
     <h2 class="h2 text-center text-xl py-10">We have crafted a plan based on the data you entered:</h2>
     {@html planContent}
     <div class="w-100 pt-12 flex justify-end">
-        <a href="/my-plans" class="btn variant-filled-tertiary group mr-6">
+        <a href="/my-plans" class="btn btn-sm md:btn-md variant-filled-tertiary group mr-6">
             <span>My plans</span>
             <ArrowRightIcon class="group-hover:animate-pulse" />
         </a>
         {#if plansLeft > 0}
-            <button class="btn variant-filled-primary group" on:click={() => dispatch('restart')}>
+            <button class="btn btn-sm md:btn-md variant-filled-primary group" on:click={() => dispatch('restart')}>
                 <span>Create another plan</span>
                 <ChevronsRightIcon class="group-hover:animate-pulse" />
             </button>
