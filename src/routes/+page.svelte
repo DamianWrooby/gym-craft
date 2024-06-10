@@ -1,15 +1,26 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { cookieBannerOpened } from '@/stores';
     import { Edit2Icon, ArrowRightIcon } from 'svelte-feather-icons';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
     import Banner from '$lib/components/banner/Banner.svelte';
+    import { setCookie, getCookie } from '$lib/utils/cookies';
 
     const user = $page.data.user;
 
     const closeCookieBanner = () => {
+        setCookie('cookiesConsentAccepted', 'true', 100);
         cookieBannerOpened.update(() => false);
     };
+
+    onMount(() => {
+        if (!getCookie('cookiesConsentAccepted')) {
+            cookieBannerOpened.update(() => true);
+        } else {
+            cookieBannerOpened.update(() => false);
+        }
+    });
 </script>
 
 <section class="relative overflow-hidden h-full w-full flex flex-col md:flex-row items-center justify-center">
