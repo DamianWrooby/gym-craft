@@ -146,7 +146,7 @@
             <div class="w-1/2 flex justify-start">
                 {#if currentActive !== 1}
                     <button
-                        class="btn variant-filled-secondary group"
+                        class="btn btn-sm md:btn-md variant-filled-secondary group"
                         type="button"
                         disabled={$loadingState}
                         on:click={() => handleNext(-1)}>
@@ -158,7 +158,7 @@
             <div class="w-1/2 flex justify-end">
                 {#if currentActive !== stepsNumber}
                     <button
-                        class="btn variant-filled-secondary group"
+                        class="btn btn-sm md:btn-md variant-filled-secondary group"
                         type="button"
                         on:click={() => handleNext(+1)}>
                         <span>Next</span>
@@ -166,7 +166,7 @@
                     </button>
                 {:else}
                     <button
-                        class="btn variant-filled-primary group"
+                        class="btn btn-sm md:btn-md variant-filled-primary group"
                         type="button"
                         disabled={user.plansLeft <= 0 || $loadingState}
                         on:click={() => onGeneratePlanClick()}>
