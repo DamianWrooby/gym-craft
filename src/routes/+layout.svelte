@@ -6,24 +6,12 @@
     import { Modal, Toast } from '@skeletonlabs/skeleton';
     import { HomeIcon } from 'svelte-feather-icons';
     import Navigation from '@components/navigation/Navigation.svelte';
-    import { onNavigate } from '$app/navigation';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
 
     const currentDate = new Date();
     $: user = $page.data.user;
 
     initializeStores();
-
-    onNavigate((navigation) => {
-        if (!document.startViewTransition) return;
-
-        return new Promise((resolve) => {
-            document.startViewTransition(async () => {
-                resolve();
-                await navigation.complete;
-            });
-        });
-    });
 </script>
 
 <svelte:head>
