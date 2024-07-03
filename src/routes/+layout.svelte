@@ -7,6 +7,7 @@
     import { HomeIcon } from 'svelte-feather-icons';
     import Navigation from '@components/navigation/Navigation.svelte';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
+    import Screenshot from '$lib/images/gym-craft-app-ss.png';
 
     const currentDate = new Date();
     $: user = $page.data.user;
@@ -16,6 +17,8 @@
 
 <svelte:head>
     <title>Gym Craft - Personal trainer powered by AI</title>
+    <meta property="og:image" content={Screenshot}>
+    <meta property="og:image:alt" content="Gym Craft - Personal trainer application powered by AI">
 </svelte:head>
 
 <Modal />
