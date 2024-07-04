@@ -23,7 +23,7 @@ const config = {
         }),
     ],
     options: {
-        safelist: ['w-5', 'w-10'],
+        safelist: ['w-5', 'w-10', 'text-surface-200'],
     }
 } satisfies Config;
 
