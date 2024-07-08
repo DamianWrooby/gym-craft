@@ -56,7 +56,7 @@
         "@prisma/client": "^5.5.2",
         "@types/dom-view-transitions": "^1.0.4",
         "bcrypt": "^5.1.1",
-        "html2pdf.js": "^0.10.2",
+        "html2pdf.js": "0.9.3",
         "lodash": "^4.17.21",
         "openai": "^4.0.0"
     }
