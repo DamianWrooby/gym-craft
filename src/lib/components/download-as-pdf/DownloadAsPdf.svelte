@@ -1,10 +1,17 @@
 <script lang="ts">
-    // @ts-ignore
-    import * as html2pdf from 'html2pdf.js';
+    import { onMount } from 'svelte'
     import { DownloadIcon } from 'svelte-feather-icons';
 
     export let htmlElement: HTMLElement;
     export let fileName: string;
+    // @ts-ignore
+    let html2pdf;
+
+    onMount(async () => {
+        // @ts-ignore
+        const module = await import('html2pdf.js');
+        html2pdf = module.default;
+    });
 
     function print() {
         const opt = {
@@ -15,9 +22,10 @@
             jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
         };
-
+        
         const htmlElementCopy = htmlElement.cloneNode(true) as HTMLElement;
         htmlElementCopy.style.color = 'black';
+        // @ts-ignore
         html2pdf().set(opt).from(htmlElementCopy).save();
     }
 </script>
