@@ -4,7 +4,7 @@ export enum appConfig {
     proxyApiUrlDEV = 'http://localhost:3000/api/generate-plan',
     proxyApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/generate-plan',
     plansApiUrl = '/api/plans',
-    model = 'gpt-3.5-turbo',
+    model = 'gpt-4o',
     openAIcompletionSeed = 1,
     openAIcompletionTemperature = 0.2,
     planLimit = 10,
