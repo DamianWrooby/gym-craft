@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 
-export const loadingState = writable(false);
-export const cookieBannerOpened = writable(false);
+export const loadingState: Writable<boolean> = writable(false);
+export const cookieBannerOpened: Writable<boolean> = writable(false);
