@@ -146,7 +146,7 @@
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
                 {#each tableRows as plan, index}
                     <li
-                        class="group !m-0 px-4 py-2 text-surface-500 dark:text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-200 dark-odd:bg-surface-900 even:bg-surface-300 dark-even:bg-surface-800 hover:bg-white dark-hover:bg-surface-600">
+                        class="group !m-0 px-4 py-2 text-surface-500 dark:text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-200 dark:odd:bg-surface-900 even:bg-surface-300 dark:even:bg-surface-800 hover:bg-white dark:hover:bg-surface-600">
                         <span class="w-1/12">#{plan.position}</span>
                         <div class="w-5/12 flex flex-row items-center">
                             {#if editNameEnabledIndex === index}
