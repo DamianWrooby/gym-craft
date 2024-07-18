@@ -18,6 +18,8 @@ model User {
   role                 Roles    @relation(fields: [roleId], references: [id])
   generatedPlansNumber Int      @default(0)
   plans                Plan[]
+
+  @@index([roleId])
 }
 
 model Roles {
@@ -34,6 +36,8 @@ model Plan {
   updatedAt   DateTime @updatedAt
   userId      String
   User        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 enum Role {

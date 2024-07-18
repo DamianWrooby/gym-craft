@@ -5,6 +5,8 @@
     "scripts": {
         "dev": "vite dev",
         "build": "prisma generate && vite build",
+        "migrate": "npx prisma migrate deploy",
+        "build-and-migrate": "npm run build && npm run migrate",
         "preview": "vite preview",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
