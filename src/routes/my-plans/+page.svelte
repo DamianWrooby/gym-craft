@@ -138,7 +138,7 @@
 </script>
 
 <Card width="[75%]">
-    {#if $navigating}
+    {#if $navigating || !tableRows}
         <Spinner size={10} />
     {:else}
         <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
