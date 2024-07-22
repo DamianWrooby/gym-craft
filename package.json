@@ -60,6 +60,7 @@
         "bcrypt": "^5.1.1",
         "html2pdf.js": "0.9.3",
         "lodash": "^4.17.21",
+        "node-cache": "^5.1.2",
         "openai": "^4.0.0"
     }
 }

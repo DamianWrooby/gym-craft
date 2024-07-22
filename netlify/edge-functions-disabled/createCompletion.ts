@@ -38,7 +38,7 @@ export default async (request: Request) => {
             };
 
 			// Add the plan to the DB and update the generated plans number
-            const generatedPlan = await addPlan(plan);
+            const generatedPlan = await addPlan(userId, plan);
             const newGeneratedPlansNumber = await updateGeneratedPlansNumber(userId);
             const plansLeft =
                 typeof newGeneratedPlansNumber === 'number' ? generalPlanLimit - newGeneratedPlansNumber : 0;

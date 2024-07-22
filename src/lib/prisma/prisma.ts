@@ -1,6 +1,9 @@
 import { db } from '$lib/database';
-import type { Plan, User } from '@prisma/client';
 import { fail } from 'assert';
+import NodeCache from 'node-cache';
+import type { Plan, User } from '@prisma/client';
+
+const cache = new NodeCache({ stdTTL: 120 });
 
 type newPlan = {
     name: string;
@@ -12,12 +15,15 @@ type newPlan = {
     };
 };
 
-export async function addPlan(plan: newPlan): Promise<Plan> {
-    return await db.plan.create({
+export async function addPlan(userId: string, plan: newPlan): Promise<Plan> {
+    const newPlan = await db.plan.create({
         data: {
             ...plan,
         },
     });
+    cache.del(`plans_${userId}`);
+
+    return newPlan;
 }
 
 export async function deletePlan(planId: string, userId: string): Promise<Plan> {
@@ -33,6 +39,7 @@ export async function deletePlan(planId: string, userId: string): Promise<Plan> 
         return fail('User not authorized');
     }
 
+    cache.del(`plans_${userId}`);
     return await db.plan.delete({
         where: {
             id: planId,
@@ -81,9 +88,16 @@ export async function updatePlanName(planId: string, newName: string): Promise<P
 }
 
 export async function getPlans(userId: string): Promise<Plan[]> {
-    return await db.plan.findMany({
+    const cacheKey = `plans_${userId}`;
+    const cachedPlans = cache.get(cacheKey);
+    if (cachedPlans) return cachedPlans as Plan[];
+
+    const plans = await db.plan.findMany({
         where: { userId: userId },
     });
+    cache.set(cacheKey, plans);
+
+    return plans;
 }
 
 export async function getPlan(planId: string, userId: string): Promise<Plan | null> {
