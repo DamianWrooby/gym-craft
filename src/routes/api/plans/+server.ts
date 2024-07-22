@@ -25,7 +25,7 @@ export async function POST({ request }: RequestEvent): Promise<Response> {
         },
     };
 
-    const generatedPlan = await addPlan(plan);
+    const generatedPlan = await addPlan(userId, plan);
     const newGeneratedPlansNumber = await updateGeneratedPlansNumber(userId);
     const plansLeft = typeof newGeneratedPlansNumber === 'number' ? generalPlanLimit - newGeneratedPlansNumber : 0;
 
