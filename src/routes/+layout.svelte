@@ -1,11 +1,12 @@
 <script lang="ts">
     import '../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
-    import { page } from '$app/stores';
+    import { page, navigating } from '$app/stores';
     import { initializeStores } from '@skeletonlabs/skeleton';
     import { Modal, Toast } from '@skeletonlabs/skeleton';
     import { HomeIcon } from 'svelte-feather-icons';
     import Navigation from '@components/navigation/Navigation.svelte';
+    import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
     import Screenshot from '$lib/images/gym-craft-app-ss.png';
 
@@ -42,7 +43,11 @@
         </AppBar>
     </svelte:fragment>
     <!-- Router Slot -->
-    <slot />
+    {#if $navigating}
+        <Spinner size={10} />
+    {:else}
+        <slot />
+    {/if}
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
         <div class="bg-primary-500 text-surface-500 text-center py-4 font-semibold">

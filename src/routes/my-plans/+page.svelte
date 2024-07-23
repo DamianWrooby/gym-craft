@@ -1,10 +1,9 @@
 <script lang="ts">
-    import { page, navigating } from '$app/stores';
+    import { page } from '$app/stores';
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
-    import Spinner from '@components/loading/spinner/Spinner.svelte';
     import { Edit2Icon, CheckIcon, XIcon, TrashIcon, EyeIcon } from 'svelte-feather-icons';
     import { makeToast } from '$lib/utils/toasts.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
@@ -138,9 +137,6 @@
 </script>
 
 <Card width="[75%]">
-    {#if $navigating || !tableRows}
-        <Spinner size={10} />
-    {:else}
         <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
         <div class="md:w-[75%] m-auto">
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
@@ -185,5 +181,4 @@
                 {/each}
             </ul>
         </div>
-    {/if}
 </Card>
