@@ -37,12 +37,3 @@ export async function POST({ request }: RequestEvent): Promise<Response> {
 
     return json(responseBody);
 }
-
-export async function GET(): Promise<Response> {
-    const generalPlanLimit = await getGeneralPlanLimit();
-    const responseBody = {
-        generalPlanLimit,
-    };
-
-    return json(responseBody);
-}

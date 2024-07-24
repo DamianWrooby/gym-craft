@@ -29,7 +29,7 @@
 
         // Check if the user has reached the limit of generated plans
         try {
-            const generalPlansInfoResponse = await fetch(appConfig.plansApiUrl, {
+            const generalPlansInfoResponse = await fetch(appConfig.generalPlanLimitApiUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

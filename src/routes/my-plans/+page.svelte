@@ -4,6 +4,7 @@
     import { onMount } from 'svelte';
     import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
+    import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import { Edit2Icon, CheckIcon, XIcon, TrashIcon, EyeIcon } from 'svelte-feather-icons';
     import { makeToast } from '$lib/utils/toasts.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
@@ -24,17 +25,23 @@
     const modalStore = getModalStore();
     const toastStore = getToastStore();
 
-    let plans: Plan[] = $page.data.plans;
-    let tableRows = generateTableRows(plans);
+    let plans: Plan[];
+    let tableRows: MappedPlan[];
 
     let editNameEnabledIndex: number = -1;
 
-    onMount(() => {
+    onMount(async () => {
         clearModals();
+        plans = await getPlans();
+        tableRows = generateTableRows(plans);
     });
 
     function clearModals() {
         modalStore.clear();
+    }
+
+    async function getPlans() {
+        return await fetchPlans(user.id);
     }
 
     function formatDate(date: Date): string {
@@ -137,8 +144,9 @@
 </script>
 
 <Card width="[75%]">
-        <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
-        <div class="md:w-[75%] m-auto">
+    <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
+    <div class="md:w-[75%] m-auto">
+        {#if tableRows}
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
                 {#each tableRows as plan, index}
                     <li
@@ -180,5 +188,8 @@
                     </li>
                 {/each}
             </ul>
-        </div>
+        {:else}
+            <Spinner size={10} />
+        {/if}
+    </div>
 </Card>
