@@ -103,7 +103,7 @@
 
     async function fetchPlans(userId: string): Promise<Plan[]> {
         try {
-            const response: Response = await fetch(`api/user/${userId}/plans`, {
+            const response: Response = await fetch(`/api/user/${userId}/plans`, {
                 method: 'GET',
             });
             if (!response.ok) {
