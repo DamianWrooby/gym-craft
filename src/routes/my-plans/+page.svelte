@@ -63,7 +63,7 @@
         plan.name = plan.edittedName;
         editNameEnabledIndex = -1;
 
-        const body = JSON.stringify({ name: plan.edittedName });
+        const body = JSON.stringify({ name: plan.edittedName, userId: user.id });
         try {
             const response: Response = await fetch(`${appConfig.plansApiUrl}/${plan.id}`, {
                 method: 'POST',

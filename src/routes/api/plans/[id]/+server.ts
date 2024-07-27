@@ -12,7 +12,7 @@ export async function POST({ request, params }: { request: Request; params: { id
     }
 
     try {
-        updatedPlan = await updatePlanName(params.id, body.name);
+        updatedPlan = await updatePlanName(params.id, body.name, body.userId);
     } catch (error) {
         return createErrorResponse(502, 'Database error');
     }
