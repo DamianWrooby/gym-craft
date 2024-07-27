@@ -78,7 +78,8 @@ export async function getGeneralPlanLimit(): Promise<number> {
     return generalPlanLimit ? +generalPlanLimit.value : 0;
 }
 
-export async function updatePlanName(planId: string, newName: string): Promise<Plan> {
+export async function updatePlanName(planId: string, newName: string, userId: string): Promise<Plan> {
+    cache.del(`plans_${userId}`);
     return await db.plan.update({
         where: { id: planId },
         data: {
@@ -90,6 +91,7 @@ export async function updatePlanName(planId: string, newName: string): Promise<P
 export async function getPlans(userId: string): Promise<Plan[] | Error> {
     const cacheKey = `plans_${userId}`;
     const cachedPlans = cache.get(cacheKey);
+    // console.log('cachedPlans', cachedPlans);
     if (cachedPlans) return cachedPlans as Plan[];
     if (!userId) return fail('User not found');
 
