@@ -87,15 +87,16 @@ export async function updatePlanName(planId: string, newName: string): Promise<P
     });
 }
 
-export async function getPlans(userId: string): Promise<Plan[]> {
-    // const cacheKey = `plans_${userId}`;
-    // const cachedPlans = cache.get(cacheKey);
-    // if (cachedPlans) return cachedPlans as Plan[];
+export async function getPlans(userId: string): Promise<Plan[] | Error> {
+    const cacheKey = `plans_${userId}`;
+    const cachedPlans = cache.get(cacheKey);
+    if (cachedPlans) return cachedPlans as Plan[];
+    if (!userId) return fail('User not found');
 
     const plans = await db.plan.findMany({
         where: { userId: userId },
     });
-    // cache.set(cacheKey, plans);
+    cache.set(cacheKey, plans);
 
     return plans;
 }

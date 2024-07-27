@@ -2,8 +2,8 @@ import { getPlans } from '$lib/prisma/prisma';
 import { createErrorResponse } from '$lib/utils/error-response';
 import { json } from '@sveltejs/kit';
 
-export async function GET({ params }: { params: { userId: string } }): Promise<Response> {
-    const userId = params.userId;
+export async function GET({ params }: { params: { id: string } }): Promise<Response> {
+    const userId = params.id;
 
     const plans = await getPlans(userId);
 

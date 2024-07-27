@@ -107,8 +107,8 @@
                 method: 'GET',
             });
             if (!response.ok) {
-                const { error } = await response.json();
-                makeToast(toastStore, error, 'variant-filled-error');
+                const res = await response.json();
+                throw new Error(res.message);
             }
             return await response.json();
         } catch (error) {
@@ -130,7 +130,7 @@
                 makeToast(toastStore, error, 'variant-filled-error');
             }
             makeToast(toastStore, 'Selected plan has been removed', 'variant-filled-warning');
-            plans = await fetchPlans(user.id);
+            plans = await fetchPlans(user.id) || [];
             tableRows = generateTableRows(plans);
         } catch (error) {
             makeToast(toastStore, 'Cannot delete plan', 'variant-filled-error');
