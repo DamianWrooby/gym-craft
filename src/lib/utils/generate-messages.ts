@@ -52,7 +52,7 @@ export const generateAPIMessages = (formData: SurveyFormModel): Array<ChatMessag
     const formatMessage = {
         role: 'user',
         content:
-            'Based on the information above, prepare a detailed training plan with a breakdown of days of the week, exercises, sets and repetitions. Include training periodization and progression. Also add a general description of the training plan with justification for the choice of exercises. Format the plan using HTML tags. It will be displayed in the application so you don;t need to include html, head and body tags. Start with the <h2> tag. To every h2 tag include CSS classes: "h2 text-xl font-bold py-2". To every h3 tag include CSS classes: "h3 text-lg font-bold py-2".',
+            'Based on the information above, prepare a detailed training plan with a breakdown of days of the week, exercises, sets and repetitions. Include training periodization and progression. Also add a general description of the training plan with justification for the choice of exercises. Format the plan using HTML tags. Do not include "```html". It will be displayed in the application so you do not need to include html, head and body tags. Start with the <h2> tag. To every h2 tag include CSS classes: "h2 text-xl font-bold py-2". To every h3 tag include CSS classes: "h3 text-lg font-bold py-2".',
     };
 
     const messages: Array<ChatMessage> = [systemRoleMessage, taskMessage, ...informationMessages, formatMessage];
