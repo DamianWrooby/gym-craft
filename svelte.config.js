@@ -17,11 +17,6 @@ const config = {
             '@utils': path.resolve('./src/lib/utils'),
             '@models': path.resolve('./src/models'),
         },
-        prerender: {
-            entries: [
-                '/my-plans',
-            ],
-        },
     },
 };
 export default config;
