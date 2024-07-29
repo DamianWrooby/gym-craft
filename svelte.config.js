@@ -18,7 +18,6 @@ const config = {
             '@models': path.resolve('./src/models'),
         },
         prerender: {
-            crawl: true,
             entries: [
                 '/my-plans',
             ],
