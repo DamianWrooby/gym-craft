@@ -17,6 +17,12 @@ const config = {
             '@utils': path.resolve('./src/lib/utils'),
             '@models': path.resolve('./src/models'),
         },
+        prerender: {
+            crawl: true,
+            entries: [
+                '/my-plans',
+            ],
+        },
     },
 };
 export default config;
