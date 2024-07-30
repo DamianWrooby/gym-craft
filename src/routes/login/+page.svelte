@@ -33,19 +33,19 @@
     };
 </script>
 
-<Card width="1/4">
+<Card width="1/2">
     <section class="grow flex flex-col justify-center">
         <h1 class="h1 text-2xl text-center font-bold">
             <span>Hello!</span>
         </h1>
         <p class="pb-8 text-center">Sign in to your account</p>
         <form action="?/login" method="POST" use:enhance={formCallback}>
-            <div class="p-1">
+            <div class="p-1 max-w-sm m-auto">
                 <label class="label" for="username">Username</label>
                 <input class="input" id="username" name="username" type="text" required />
             </div>
 
-            <div class="p-1 pb-5">
+            <div class="p-1 max-w-sm m-auto pb-5">
                 <label class="label" for="password">Password</label>
                 <input class="input" id="password" name="password" type="password" required />
             </div>
