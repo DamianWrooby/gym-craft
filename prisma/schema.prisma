@@ -11,7 +11,7 @@ datasource db {
 model User {
   id                   String   @id @default(uuid())
   username             String   @unique
-  email                String   @unique @default("") @db.VarChar(50)
+  email                String   @default("") @db.VarChar(50)
   emailVerified        Boolean  @default(false)
   passwordHash         String
   userAuthToken        String   @unique
