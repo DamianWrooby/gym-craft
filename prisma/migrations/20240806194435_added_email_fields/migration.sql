@@ -8,5 +8,3 @@
 ALTER TABLE "User" ADD COLUMN     "email" VARCHAR(50) NOT NULL DEFAULT '',
 ADD COLUMN     "emailVerified" BOOLEAN NOT NULL DEFAULT false;
 
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
