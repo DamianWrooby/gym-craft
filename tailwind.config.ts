@@ -22,9 +22,16 @@ const config = {
             themes: { preset: ['crimson'] },
         }),
     ],
-    options: {
-        safelist: ['w-5', 'w-10', 'text-surface-200'],
-    }
+    safelist: [
+        'w-5',
+        'w-10',
+        'w-1/4',
+        'text-surface-200',
+        {
+            pattern: /w-(1\/4)/,
+            variants: ['md', 'xl'],
+        },
+    ],
 } satisfies Config;
 
 export default config;
