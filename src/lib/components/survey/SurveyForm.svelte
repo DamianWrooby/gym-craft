@@ -1,6 +1,5 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import { PUBLIC_APP_ENV } from '$env/static/public';
     import { createEventDispatcher, onMount } from 'svelte';
     import { ArrowRightIcon, ArrowLeftIcon, ChevronsRightIcon } from 'svelte-feather-icons';
     import { getModalStore } from '@skeletonlabs/skeleton';
@@ -14,6 +13,7 @@
     import SurveyFormStep5 from '@components/survey/step-5/SurveyFormStep5.svelte';
     import SurveyFormStep6 from '@components/survey/step-6/SurveyFormStep6.svelte';
     import ProgressBar from '@components/progress-bar/ProgressBar.svelte';
+    import { isProduction } from '$lib/utils/environment';
     import { loadingState } from '@/stores';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 
@@ -21,7 +21,7 @@
     const dispatch = createEventDispatcher<{ complete: { formData: SurveyFormModel } }>();
     const modalStore = getModalStore();
 
-    const formValidation = PUBLIC_APP_ENV === 'production';
+    const formValidation = isProduction();
     let currentActive = 1;
     let formElement: HTMLFormElement;
 
