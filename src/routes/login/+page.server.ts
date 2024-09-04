@@ -1,6 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import bcrypt from 'bcrypt';
+import { isProduction } from '$lib/utils/environment';
 import type { Action, Actions } from './$types';
+import { isString } from '$lib/utils/form-validation';
 
 import { db } from '$lib/database';
 
@@ -9,18 +11,23 @@ const login: Action = async ({ cookies, request }) => {
     const username = data.get('username');
     const password = data.get('password');
 
-    if (typeof username !== 'string' || typeof password !== 'string' || !username || !password) {
+    if (!isString(username) || !isString(password)) {
         return fail(400, { invalid: true });
     }
 
-    const user = await db.user.findUnique({ where: { username } });
+    const user = await db.user.findUnique({
+        where: { username },
+        select: {
+            username: true,
+            passwordHash: true,
+        },
+    });
 
     if (!user) {
         return fail(400, { credentials: true });
     }
 
     const userPassword = await bcrypt.compare(password, user.passwordHash);
-
     if (!userPassword) {
         return fail(400, { credentials: true });
     }
@@ -34,7 +41,7 @@ const login: Action = async ({ cookies, request }) => {
         path: '/',
         httpOnly: true,
         sameSite: 'strict',
-        secure: process.env.PUBLIC_APP_ENV === 'production',
+        secure: isProduction(),
         maxAge: 60 * 60 * 24 * 30,
     });
 
