@@ -2,10 +2,10 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { updateUser } from '$lib/utils/user';
 
-const public_paths = ['/', '/register', '/login'];
+const publicPaths = ['/', '/register', '/login', '/verify', '/verification-mail-sent'];
 
 function isPathAllowed(path: string) {
-    return public_paths.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath + '/'));
+    return publicPaths.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath + '/'));
 }
 
 export const handle: Handle = async ({ event, resolve }) => {

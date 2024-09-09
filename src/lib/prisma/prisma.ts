@@ -2,6 +2,7 @@ import { db } from '$lib/database';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
 import type { Plan, User } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const cache = new NodeCache({ stdTTL: 120 });
 
@@ -91,7 +92,7 @@ export async function updatePlanName(planId: string, newName: string, userId: st
 export async function getPlans(userId: string): Promise<Plan[] | Error> {
     const cacheKey = `plans_${userId}`;
     const cachedPlans = cache.get(cacheKey);
-    // console.log('cachedPlans', cachedPlans);
+
     if (cachedPlans) return cachedPlans as Plan[];
     if (!userId) return fail('User not found');
 
@@ -130,4 +131,72 @@ export async function getGeneratedPlansNumber(userId: string): Promise<number | 
         return fail('User not found');
     }
     return user.generatedPlansNumber;
+}
+
+export async function verifyToken(userId: string, token: string): Promise<boolean> {
+    const verificationToken = await db.verificationToken.findFirst({
+        where: {
+            userId: userId,
+            isUsed: false,
+            expiresAt: {
+                gte: new Date(Date.now()),
+            },
+        },
+    });
+
+    if (!verificationToken) throw new Error('Invalid or expired token');
+
+    const isMatch = await bcrypt.compare(token, verificationToken.tokenHash);
+    if (!isMatch) throw new Error('Invalid token');
+
+    // Mark the token as used
+    await db.verificationToken.update({
+        where: {
+            id: verificationToken.id,
+        },
+        data: {
+            isUsed: true,
+            usedAt: new Date(),
+        },
+    });
+
+    // Verify the user's account
+    await db.user.update({
+        where: {
+            id: verificationToken.userId,
+        },
+        data: {
+            emailVerified: true,
+        },
+    });
+
+    console.log('User verified successfully');
+    return true;
+}
+
+export async function invalidatePreviousToken(userId: string): Promise<boolean> {
+    const verificationToken = await db.verificationToken.findFirst({
+        where: {
+            userId: userId,
+            isUsed: false,
+            expiresAt: {
+                gte: new Date(Date.now()),
+            },
+        },
+    });
+    if (!verificationToken) return false;
+
+    await db.verificationToken.update({
+        where: {
+            id: verificationToken.id,
+            userId: userId,
+            isUsed: false,
+        },
+        data: {
+            isUsed: true,
+            usedAt: new Date(),
+        },
+    });
+
+    return true;
 }
