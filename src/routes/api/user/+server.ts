@@ -12,7 +12,10 @@ export async function DELETE({ request }: { request: Request }): Promise<Respons
         return createErrorResponse(400, 'Invalid credentials');
     }
 
-    const dbUser = await db.user.findUnique({ where: { id: userId } });
+    const dbUser = await db.user.findUnique({
+        where: { id: userId },
+        select: { passwordHash: true },
+    });
 
     if (!dbUser) {
         return createErrorResponse(404, 'User not found');
