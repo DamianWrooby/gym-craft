@@ -6,6 +6,7 @@
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
     import Card from '@components/card/Card.svelte';
+    import { goto } from '$app/navigation';
 
     const user: User = $page.data.user;
     const formData = { password: '' };
@@ -31,15 +32,18 @@
                     password,
                 }),
             });
-            const { error: errorMessage } = await response.json();
+            const { message } = await response.json();
 
-            if (!response.ok) {
-                throw new Error(errorMessage);
+            if (response.ok) {
+                makeToast(toastStore, message, 'variant-filled-success');
+                goto('/');
             } else {
-                makeToast(toastStore, 'Your account has been deleted', 'variant-filled-error');
+                makeToast(toastStore, message, 'variant-filled-error');
             }
-        } catch (error) {
-            makeToast(toastStore, error as string, 'variant-filled-error');
+        } catch (err) {
+            console.error({ err });
+            makeToast(toastStore, 'Verification email has not been sent', 'variant-filled-error');
+            makeToast(toastStore, err as string, 'variant-filled-error');
         }
 
         loading = false;
