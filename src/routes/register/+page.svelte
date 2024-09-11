@@ -13,8 +13,11 @@
 
     let formData = {
         username: '',
+        email: '',
         password: '',
         confirmPassword: '',
+        termsOfUse: false,
+        marketingAgreement: false,
     };
 
     let isFormValid = false;
@@ -32,10 +35,10 @@
         debounce(() => {
             validateForm();
             isFormDirty = true;
-            if (!!formData.username && !!formData.password && !!formData.confirmPassword) {
+            if (!!formData.username && !!formData.password && !!formData.confirmPassword && !!formData.email) {
                 isFormFilled = true;
             }
-        }, 1500)();
+        }, 1200)();
     }
 
     interface FormCallbackResult {
@@ -64,7 +67,7 @@
         </h1>
         <p class="pb-8 text-center">Create your account</p>
         <form action="?/register" method="POST" use:enhance={formCallback}>
-            <div class="p-1">
+            <div class="p-1 max-w-sm m-auto">
                 <label class="label" for="username">Username</label>
                 <input
                     class="input"
@@ -78,7 +81,17 @@
                 {/if}
             </div>
 
-            <div class="p-1">
+            <div class="p-1 max-w-sm m-auto">
+                <label class="label" for="email">Email</label>
+                <input class="input" id="email" name="email" type="email" bind:value={formData.email} required />
+                {#if form?.emailInvalid}
+                    <p class="text-error-500">Invalid email address</p>
+                {:else if form?.emailExists}
+                    <p class="text-error-500">Email is already in use.</p>
+                {/if}
+            </div>
+
+            <div class="p-1 max-w-sm m-auto">
                 <label class="label" for="password">Password</label>
                 <input
                     class="input"
@@ -98,7 +111,7 @@
                 {/if}
             </div>
 
-            <div class="p-1">
+            <div class="p-1 max-w-sm m-auto">
                 <label class="label" for="confirmPassword">Confirm password</label>
                 <input
                     class="input"
@@ -108,6 +121,43 @@
                     bind:value={formData.confirmPassword}
                     on:input={onInput}
                     required />
+            </div>
+
+            <div class="px-1 pt-5 max-w-sm m-auto">
+                <label class="flex items-center space-x-2">
+                    <input
+                        class="checkbox required:border-red-500"
+                        id="termsOfUse"
+                        name="termsOfUse"
+                        type="checkbox"
+                        required
+                        bind:checked={formData.termsOfUse}
+                        on:input={onInput} />
+                    <p>
+                        I agree to the <a class="text-primary-500 hover:text-primary-700" href="/terms-of-use"
+                            >Terms of Use</a>
+                        and <a class="text-primary-500 hover:text-primary-700" href="/privacy-policy">Privacy Policy</a>
+                        (required)
+                    </p>
+                </label>
+            </div>
+            {#if form?.termsOfUse}
+                <p class="text-error-500">You must accept the terms of use to proceed</p>
+            {/if}
+            <div class="px-1 py-2 max-w-sm m-auto">
+                <label class="flex items-center space-x-2">
+                    <input
+                        class="checkbox"
+                        id="marketingAgreement"
+                        name="marketingAgreement" 
+                        type="checkbox"
+                        bind:checked={formData.marketingAgreement}
+                        />
+                    <p>
+                        I agree to receive by email information related to the development of the GymCraft application
+                        (optional)
+                    </p>
+                </label>
             </div>
             {#if form?.invalidEntry}
                 <p class="text-error-500">One of the fields has incorrect value</p>
