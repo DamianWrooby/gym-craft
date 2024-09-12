@@ -1,5 +1,5 @@
 import { fail, redirect, error } from '@sveltejs/kit';
-import type { Action, Actions } from './$types';
+import type { Action, Actions } from '../../$types';
 import { Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { sendVerificationToken } from '$lib/server/mail';
