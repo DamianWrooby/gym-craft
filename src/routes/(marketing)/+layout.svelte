@@ -1,17 +1,15 @@
 <script lang="ts">
-    import '../app.pcss';
+    import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
-    import { page, navigating } from '$app/stores';
+    import { navigating } from '$app/stores';
     import { initializeStores } from '@skeletonlabs/skeleton';
     import { Modal, Toast } from '@skeletonlabs/skeleton';
     import { HomeIcon } from 'svelte-feather-icons';
-    import Navigation from '@components/navigation/Navigation.svelte';
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
     import Screenshot from '$lib/images/gym-craft-app-ss.png';
 
     const currentDate = new Date();
-    $: user = $page.data.user;
 
     initializeStores();
 </script>
@@ -37,7 +35,6 @@
                 </a>
             </svelte:fragment>
             <svelte:fragment slot="trail">
-                <Navigation {user}></Navigation>
                 <LightSwitch></LightSwitch>
             </svelte:fragment>
         </AppBar>
