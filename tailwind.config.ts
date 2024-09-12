@@ -27,9 +27,10 @@ const config = {
         'w-10',
         'w-1/4',
         'xl:w-[50%]',
+        'xl:w-[75%]',
         'text-surface-200',
         {
-            pattern: /w-(1\/4|1\/2|\[50%\])/,
+            pattern: /w-(1\/4|1\/2|\[50%\]|\[75%\])/,
             variants: ['md', 'xl'],
         },
     ],
