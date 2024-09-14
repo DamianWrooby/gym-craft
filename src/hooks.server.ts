@@ -2,7 +2,15 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { updateUser } from '$lib/utils/user';
 
-const publicPaths = ['/', '/register', '/login', '/verify', '/verification-mail-sent'];
+const publicPaths = [
+    '/',
+    '/register',
+    '/login',
+    '/verify',
+    '/verification-mail-sent',
+    '/privacy-policy',
+    '/terms-of-use',
+];
 
 function isPathAllowed(path: string) {
     return publicPaths.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath + '/'));
