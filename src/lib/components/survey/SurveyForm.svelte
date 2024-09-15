@@ -127,7 +127,7 @@
 
     <form
         bind:this={formElement}
-        class="card w-full md:w-[50%] p-6 md:p-16 mb-8 relative overflow-hidden">
+        class="card w-full md:w-1/2 p-6 md:p-16 mb-8 relative overflow-hidden">
         <ProgressBar max={stepsNumber} curr={currentActive} duration={500} />
         {#if currentActive === 1}
             <SurveyFormStep1 bind:data={formData.personalInfo} />

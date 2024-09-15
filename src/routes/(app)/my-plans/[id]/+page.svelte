@@ -14,7 +14,7 @@
     }
 </script>
 
-<Card width="[75%]">
+<Card width="3/4">
     <div class="flex justify-between">
         <button type="button" on:click={() => goBackToPlanList()}>
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
