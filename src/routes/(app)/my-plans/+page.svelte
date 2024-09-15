@@ -143,9 +143,9 @@
     }
 </script>
 
-<Card width="[75%]">
+<Card width="3/4">
     <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
-    <div class="md:w-[75%] m-auto">
+    <div class="md:w-3/4 m-auto">
         {#if tableRows}
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
                 {#each tableRows as plan, index}
