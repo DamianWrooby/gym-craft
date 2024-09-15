@@ -2,9 +2,9 @@
     import Card from '$lib/components/card/Card.svelte';
 </script>
 
-<Card width="[75%]">
+<Card width="3/4">
     <h1 class="h2 text-center py-10">Terms of Use</h1>
-    <div class="md:w-[75%] m-auto">
+    <div class="md:w-3/4 m-auto">
         <h2><strong>1. Introduction</strong></h2>
         <p>
             Welcome to GymCraft. By accessing or using our application, you agree to comply with and be bound by the
