@@ -36,6 +36,7 @@
 
             if (response.ok) {
                 makeToast(toastStore, message, 'variant-filled-success');
+                setCookie('session', '', 0);
                 goto('/');
             } else {
                 makeToast(toastStore, message, 'variant-filled-error');
