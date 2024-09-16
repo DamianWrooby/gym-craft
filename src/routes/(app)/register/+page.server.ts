@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 import { sendVerificationToken } from '$lib/server/mail';
 import { isProduction } from '$lib/utils/environment';
 import { validateRegisterFormData, isString } from '$lib/utils/form-validation';
-import to from 'await-to-js';
+import { to } from 'await-to-js';
 
 import { db } from '$lib/database';
 
