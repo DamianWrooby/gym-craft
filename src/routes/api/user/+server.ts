@@ -2,7 +2,7 @@ import { db } from '$lib/database';
 import { createErrorResponse } from '$lib/utils/error-response';
 import { createResponse } from '$lib/utils/response';
 import bcrypt from 'bcrypt';
-import to from 'await-to-js';
+import { to } from 'await-to-js';
 
 export async function DELETE({ request }: { request: Request }): Promise<Response> {
     const body = await request.json();

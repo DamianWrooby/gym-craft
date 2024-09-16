@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { sendVerificationToken } from '$lib/server/mail';
 import { invalidatePreviousToken } from '$lib/prisma/prisma';
-import to from 'await-to-js';
+import { to } from 'await-to-js';
 import { createErrorResponse } from '$lib/utils/error-response';
 import { createResponse } from '$lib/utils/response';
 
