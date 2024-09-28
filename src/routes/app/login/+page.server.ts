@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import bcrypt from 'bcrypt';
 import { isProduction } from '$lib/utils/environment';
-import type { Action, Actions } from '../../$types';
+import type { Action, Actions } from '../$types';
 import { isString } from '$lib/utils/form-validation';
 
 import { db } from '$lib/database';
@@ -45,7 +45,7 @@ const login: Action = async ({ cookies, request }) => {
         maxAge: 60 * 60 * 24 * 30,
     });
 
-    throw redirect(302, '/');
+    throw redirect(302, '/app');
 };
 
 export const actions: Actions = { login };

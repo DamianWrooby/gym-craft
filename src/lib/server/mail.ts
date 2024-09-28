@@ -53,7 +53,7 @@ export async function sendVerificationToken(userId: string, email: string) {
 }
 
 const sendVerificationEmail = (email: string, userId: string, token: string) => {
-    const baseUrl = PUBLIC_APP_ENV === 'development' ? appConfig.baseUrlDEV : appConfig.baseUrlPROD;
+    const baseUrl = PUBLIC_APP_ENV === 'development' ? appConfig.baseAppUrlDEV : appConfig.baseAppUrlPROD;
     const html = generateEmailTemplate(baseUrl, userId, token);
 
     sendMail(email, html);

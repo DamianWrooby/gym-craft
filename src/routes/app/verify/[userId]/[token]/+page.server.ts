@@ -1,6 +1,6 @@
 import { verifyToken } from '$lib/prisma/prisma.js';
 import { error } from '@sveltejs/kit';
-import to from 'await-to-js';
+import { to } from 'await-to-js';
 
 export async function load({ params }) {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars

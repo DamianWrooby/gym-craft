@@ -91,7 +91,7 @@
         </div>
         <div class="p-5 text-center">
             {#if user && user.plansLeft > 0}
-                <a href="/create-plan" class="btn variant-filled-primary group">
+                <a href="/app/create-plan" class="btn variant-filled-primary group">
                     <Edit2Icon size="20" class="group-hover:animate-pulse" />
                     <span>Create training plan</span>
                 </a>
@@ -99,12 +99,12 @@
                 <h3 class="h3 text-lg text-center pb-3 text-warning-500">
                     <span>You have created maximum number of plans</span>
                 </h3>
-                <a href="/my-plans" class="btn variant-filled-primary group">
+                <a href="/app/my-plans" class="btn variant-filled-primary group">
                     <ArrowRightIcon size="20" class="group-hover:animate-pulse" />
                     <span>Your plans</span>
                 </a>
             {:else}
-                <a href="/login" class="btn variant-filled-primary group">
+                <a href="/app/login" class="btn variant-filled-primary group">
                     <span>Log in</span>
                 </a>
             {/if}

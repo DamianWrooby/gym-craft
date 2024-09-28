@@ -5,7 +5,7 @@
 <Card>
     <div class="md:w-3/4 m-auto text-center">
         <p class="pb-5">Your account has been successfully verified. You can now log in.</p>
-        <a href="/login" class="btn variant-filled-primary group">
+        <a href="/app/login" class="btn variant-filled-primary group">
             <span>Log in</span>
         </a>
     </div>

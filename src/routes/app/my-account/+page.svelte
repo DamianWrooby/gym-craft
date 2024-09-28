@@ -7,6 +7,7 @@
     import { makeToast } from '$lib/utils/toasts.js';
     import Card from '@components/card/Card.svelte';
     import { goto } from '$app/navigation';
+    import { setCookie } from '$lib/utils/cookies';
 
     const user: User = $page.data.user;
     const formData = { password: '' };
@@ -36,6 +37,7 @@
 
             if (response.ok) {
                 makeToast(toastStore, message, 'variant-filled-success');
+                setCookie('session', '', 0);
                 goto('/');
             } else {
                 makeToast(toastStore, message, 'variant-filled-error');
