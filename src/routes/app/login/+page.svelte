@@ -68,7 +68,7 @@
             </div>
 
             <p class="pt-5 text-center">
-                Don't have an account? <a class="text-primary-500 hover:text-primary-700" href="/register">Register</a>
+                Don't have an account? <a class="text-primary-500 hover:text-primary-700" href="/app/register">Register</a>
             </p>
         </form>
     </section>

@@ -162,7 +162,7 @@
             {#if form?.invalidEntry}
                 <p class="text-error-500">One of the fields has incorrect value</p>
             {:else if isFormDirty && !isFormValid && isFormFilled}
-                <p class="text-error-500 pb-2 w-72">
+                <p class="text-error-500 pb-2 w-72 max-w-sm m-auto">
                     Password should have at least 8 characters and contain upper and lower case, numeric, and special
                     character. Passwords should match.
                 </p>
