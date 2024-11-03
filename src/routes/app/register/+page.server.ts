@@ -21,7 +21,7 @@ const register: Action = async ({ request }) => {
     if (!isString(username) || !isString(email) || !isString(password) || !isString(confirmPassword)) {
         return fail(400, { invalidEntry: true });
     }
-    console.log({termsOfUse});
+
     if (!termsOfUse) return fail(400, { termsOfUse: true });;
 
     const validationError = validateRegisterFormData({ username, email, password, confirmPassword });

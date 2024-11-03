@@ -7,18 +7,32 @@
     import { HomeIcon } from 'svelte-feather-icons';
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
-    import Screenshot from '$lib/images/gym-craft-app-ss.png';
+    import { onMount } from 'svelte';
+    import Banner from '$lib/components/banner/Banner.svelte';
+    import { setCookie, getCookie } from '$lib/utils/cookies';
+    import { cookieBannerOpened } from '@/stores';
 
     const currentDate = new Date();
 
     initializeStores();
-</script>
 
-<svelte:head>
-    <title>Gym Craft - Personal trainer powered by AI</title>
-    <meta property="og:image" content={Screenshot}>
-    <meta property="og:image:alt" content="Gym Craft - Personal trainer application powered by AI">
-</svelte:head>
+    const closeCookieBanner = () => {
+        setCookie('cookiesConsentAccepted', 'true', 100);
+        cookieBannerOpened.update(() => false);
+    };
+
+    const checkCookieConsent = () => {
+        if (!getCookie('cookiesConsentAccepted')) {
+            cookieBannerOpened.update(() => true);
+        } else {
+            cookieBannerOpened.update(() => false);
+        }
+    };
+
+    onMount(() => {
+        checkCookieConsent();
+    });
+</script>
 
 <Modal />
 <Toast position={'br'} />
@@ -47,8 +61,17 @@
     {/if}
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
-        <div class="bg-primary-500 text-surface-500 text-center py-4 font-semibold">
-            © {currentDate.getFullYear()} GYM CRAFT - Your AI powered personal trainer
+        <div class="bg-primary-500 font-thin text-center py-2 font-semibold">
+            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span> - Your AI powered personal trainer by
+            <a href="https://github.com/DamianWrooby" target="_blank" rel="noopener noreferrer"
+                ><span class="text-surface-200 hover:text-surface-300 font-semibold">Wrooby</span></a>
         </div>
     </svelte:fragment>
 </AppShell>
+
+{#if $cookieBannerOpened}
+    <Banner
+        title={'Cookie Consent'}
+        message={"This web application uses cookies to keep user's session. By continuing to browse or by clicking 'Accept', you agree to the storing of cookies on your device."}
+        on:accept={closeCookieBanner} />
+{/if}

@@ -1,6 +1,10 @@
 <script lang="ts">
     import Card from '$lib/components/card/Card.svelte';
+    import Seo from '$lib/components/seo/Seo.svelte';
 </script>
+
+<Seo title="Terms of Use | GymCraft™"
+    metaDescription="Read our terms and conditions." />
 
 <Card width="3/4">
     <h1 class="h2 text-center py-10">Terms of Use</h1>

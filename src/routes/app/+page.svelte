@@ -1,32 +1,16 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-    import { cookieBannerOpened } from '@/stores';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
     import { Edit2Icon, ArrowRightIcon } from 'svelte-feather-icons';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
-    import Banner from '$lib/components/banner/Banner.svelte';
-    import { setCookie, getCookie } from '$lib/utils/cookies';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
 
     const user = $page.data.user;
     const modalStore = getModalStore();
     const toastStore = getToastStore();
-
-    const closeCookieBanner = () => {
-        setCookie('cookiesConsentAccepted', 'true', 100);
-        cookieBannerOpened.update(() => false);
-    };
-
-    const checkCookieConsent = () => {
-        if (!getCookie('cookiesConsentAccepted')) {
-            cookieBannerOpened.update(() => true);
-        } else {
-            cookieBannerOpened.update(() => false);
-        }
-    };
 
     const openEmailVerificationModal = () => {
         const modal: ModalSettings = {
@@ -74,7 +58,6 @@
     };
 
     onMount(() => {
-        checkCookieConsent();
         checkEmailVerification();
     });
 </script>
@@ -112,13 +95,6 @@
     </div>
     <div class="bg-img absolute w-full h-full top-0 left-0 bg-surface-700 z-0 md:w-1/2 md:relative"></div>
 </section>
-
-{#if $cookieBannerOpened}
-    <Banner
-        title={'Cookie Consent'}
-        message={"This web application uses cookies to keep user's session. By continuing to browse or by clicking 'Accept', you agree to the storing of cookies on your device."}
-        on:accept={closeCookieBanner} />
-{/if}
 
 <style>
     .h1 {
