@@ -4,9 +4,10 @@ import { updateUser } from '$lib/utils/user';
 
 const publicPaths = [
     '/',
-    '/register',
-    '/login',
-    '/verify',
+    '/app',
+    '/app/register',
+    '/app/login',
+    '/app/verify',
     '/verification-mail-sent',
     '/privacy-policy',
     '/terms-of-use',
@@ -24,7 +25,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         if (isPathAllowed(url.pathname)) {
             return await resolve(event);
         } else {
-            throw redirect(302, '/login');
+            throw redirect(302, '/app/login');
         }
     }
 

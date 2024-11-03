@@ -1,18 +1,21 @@
 <script lang="ts">
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
-    import { navigating } from '$app/stores';
+    import Seo from '$lib/components/seo/Seo.svelte';
+    import { page, navigating } from '$app/stores';
     import { initializeStores } from '@skeletonlabs/skeleton';
     import { Modal, Toast } from '@skeletonlabs/skeleton';
     import { HomeIcon } from 'svelte-feather-icons';
+    import Navigation from '@components/navigation/Navigation.svelte';
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
     import { onMount } from 'svelte';
+    import { cookieBannerOpened } from '@/stores';
     import Banner from '$lib/components/banner/Banner.svelte';
     import { setCookie, getCookie } from '$lib/utils/cookies';
-    import { cookieBannerOpened } from '@/stores';
 
     const currentDate = new Date();
+    $: user = $page.data.user;
 
     initializeStores();
 
@@ -34,6 +37,9 @@
     });
 </script>
 
+<Seo title="Personal trainer powered by AI | GymCraft™"
+    metaDescription="Verification link has been sent to the provided email." />
+
 <Modal />
 <Toast position={'br'} />
 
@@ -49,6 +55,7 @@
                 </a>
             </svelte:fragment>
             <svelte:fragment slot="trail">
+                <Navigation {user}></Navigation>
                 <LightSwitch></LightSwitch>
             </svelte:fragment>
         </AppBar>

@@ -15,6 +15,7 @@
             "$lib/*": ["./src/lib/*"],
             "@/*": ["src/*"],
             "@components/*": ["src/lib/components/*"],
+            "@models/*": ["src/models/*"],
             "@assets/*": ["src/assets/*"]
         }
     }
