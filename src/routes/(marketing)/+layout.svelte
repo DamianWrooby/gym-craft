@@ -61,10 +61,13 @@
     {/if}
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
-        <div class="bg-primary-500 font-thin text-center py-2 font-semibold">
+        <div class="hidden sm:block bg-primary-500 font-thin text-center py-2 font-semibold">
             © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span> - Your AI powered personal trainer by
             <a href="https://github.com/DamianWrooby" target="_blank" rel="noopener noreferrer"
                 ><span class="text-surface-200 hover:text-surface-300 font-semibold">Wrooby</span></a>
+        </div>
+        <div class="block sm:hidden bg-primary-500 font-thin text-center py-2 font-semibold">
+            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span>
         </div>
     </svelte:fragment>
 </AppShell>
