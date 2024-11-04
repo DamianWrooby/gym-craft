@@ -121,15 +121,13 @@ export async function incrementUserGeneretedPlans(userId: string): Promise<User>
     });
 }
 
-export async function getGeneratedPlansNumber(userId: string): Promise<number | Error> {
+export async function getGeneratedPlansNumber(userId: string): Promise<number> {
     const user = await db.user.findUnique({
         where: { id: userId },
         select: { generatedPlansNumber: true },
     });
 
-    if (!user) {
-        return fail('User not found');
-    }
+    if (!user) return -1;
     return user.generatedPlansNumber;
 }
 
