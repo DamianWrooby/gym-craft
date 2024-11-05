@@ -92,7 +92,7 @@
     const planLimitHandler = () => {
         makeToast(toastStore, 'You have reached the limit of generated plans.', 'variant-filled-warning');
         loadingState.set(false);
-        goto('/');
+        goto('/app');
     };
 </script>
 

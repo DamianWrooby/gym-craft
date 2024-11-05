@@ -10,7 +10,7 @@
     let planContainer: HTMLElement | null = null;
 
     function goBackToPlanList() {
-        goto('/my-plans');
+        goto('/app/my-plans');
     }
 </script>
 
