@@ -139,7 +139,7 @@
     }
 
     function showPlan(plan: MappedPlan) {
-        goto(`/my-plans/${plan.id}`);
+        goto(`/app/my-plans/${plan.id}`);
     }
 </script>
 
