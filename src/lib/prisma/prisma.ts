@@ -51,23 +51,23 @@ export async function deletePlan(planId: string, userId: string): Promise<Plan> 
 export async function updateGeneratedPlansNumber(userId: string): Promise<number | Error> {
     const user = await db.user.findUnique({
         where: { id: userId },
-        select: { plans: true },
     });
 
     if (!user) {
         return fail('User not found');
     }
 
-    const plansCount = user.plans.length;
+    const generatedPlansNumber = user.generatedPlansNumber;
+    const newGeneratedPlansNumber = generatedPlansNumber + 1;
 
     await db.user.update({
         where: { id: userId },
         data: {
-            generatedPlansNumber: plansCount,
+            generatedPlansNumber: newGeneratedPlansNumber,
         },
     });
 
-    return plansCount;
+    return newGeneratedPlansNumber;
 }
 
 export async function getGeneralPlanLimit(): Promise<number> {

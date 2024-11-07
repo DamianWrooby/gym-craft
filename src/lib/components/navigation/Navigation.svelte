@@ -12,7 +12,7 @@
         <a class="px-4 hover:text-tertiary-500" href="/app/login">Login</a>
         <a class="px-4 hover:text-tertiary-500" href="/app/register">Register</a>
     {:else}
-        <a class="px-4 hover:text-tertiary-500" href="/app/my-account">
+        <a class="px-4 hover:text-tertiary-500" href="/app/my-account" data-sveltekit-reload>
             <Avatar
                 initials={firstLetter}
                 background="bg-tertiary-900"
