@@ -42,12 +42,18 @@
         <form action="?/login" method="POST" use:enhance={formCallback}>
             <div class="p-1 max-w-sm m-auto">
                 <label class="label" for="username">Username</label>
-                <input class="input" id="username" name="username" type="text" required />
+                <input class="input" id="username" name="username" type="text" autocomplete="username" required />
             </div>
 
             <div class="p-1 max-w-sm m-auto pb-5">
                 <label class="label" for="password">Password</label>
-                <input class="input" id="password" name="password" type="password" required />
+                <input
+                    class="input"
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    required />
             </div>
 
             {#if form?.invalid}
@@ -68,7 +74,8 @@
             </div>
 
             <p class="pt-5 text-center">
-                Don't have an account? <a class="text-primary-500 hover:text-primary-700" href="/app/register">Register</a>
+                Don't have an account? <a class="text-primary-500 hover:text-primary-700" href="/app/register"
+                    >Register</a>
             </p>
         </form>
     </section>
