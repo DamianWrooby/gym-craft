@@ -74,6 +74,7 @@
                     id="username"
                     name="username"
                     type="text"
+                    autocomplete="username"
                     bind:value={formData.username}
                     required />
                 {#if form?.userExists}
@@ -83,7 +84,14 @@
 
             <div class="p-1 max-w-sm m-auto">
                 <label class="label" for="email">Email</label>
-                <input class="input" id="email" name="email" type="email" bind:value={formData.email} required />
+                <input
+                    class="input"
+                    id="email"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    bind:value={formData.email}
+                    required />
                 {#if form?.emailInvalid}
                     <p class="text-error-500">Invalid email address</p>
                 {:else if form?.emailExists}
@@ -98,6 +106,7 @@
                     id="password"
                     name="password"
                     type="password"
+                    autocomplete="new-password"
                     bind:value={formData.password}
                     on:input={onInput}
                     required />
@@ -118,6 +127,7 @@
                     id="confirmPassword"
                     name="confirmPassword"
                     type="password"
+                    autocomplete="new-password"
                     bind:value={formData.confirmPassword}
                     on:input={onInput}
                     required />
@@ -149,10 +159,9 @@
                     <input
                         class="checkbox"
                         id="marketingAgreement"
-                        name="marketingAgreement" 
+                        name="marketingAgreement"
                         type="checkbox"
-                        bind:checked={formData.marketingAgreement}
-                        />
+                        bind:checked={formData.marketingAgreement} />
                     <p>
                         I agree to receive by email information related to the development of the GymCraft application
                         (optional)
