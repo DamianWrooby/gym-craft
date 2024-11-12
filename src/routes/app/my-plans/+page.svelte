@@ -11,6 +11,7 @@
     import { appConfig } from '@/constants/app.constants';
     import type { Plan } from '@/models/plan/plan.model';
     import type { User } from '@/models/user/user.model';
+    import CtaButton from '$lib/components/cta-button/CtaButton.svelte';
 
     interface MappedPlan {
         id: string;
@@ -27,13 +28,16 @@
 
     let plans: Plan[];
     let tableRows: MappedPlan[];
+    let isLoading: boolean = false;
 
     let editNameEnabledIndex: number = -1;
 
     onMount(async () => {
         clearModals();
+        isLoading = true;
         plans = await getPlans();
         tableRows = generateTableRows(plans);
+        isLoading = false;
     });
 
     function clearModals() {
@@ -188,7 +192,10 @@
                     </li>
                 {/each}
             </ul>
-        {:else}
+        {:else if !isLoading && tableRows}
+            <p class="text-center">No plans found</p>
+            <CtaButton url="/app/create-plan" text="Create new plan" />
+        {:else if isLoading}
             <Spinner size={10} />
         {/if}
     </div>
