@@ -29,7 +29,8 @@
     };
 </script>
 
-<Seo title="Personalized fitness plan in minutes | GymCraft™"
+<Seo
+    title="Personalized fitness plan in minutes | GymCraft™"
     metaDescription="Get a personalized fitness plan in minutes! Our AI-powered app analyzes your goals, abilities, and limitations to create a training plan tailored just for you." />
 
 <section class="relative py-24 overflow-hidden w-full flex flex-col xl:flex-row items-center justify-center">
@@ -176,17 +177,6 @@
 </section>
 
 <style>
-    @media (min-width: 1280px) {
-        .perspective {
-            transform: perspective(1000px) rotateY(-31deg);
-            transition: transform 1s ease 0s;
-        }
-        .perspective:hover {
-            transform: unset;
-            transition: transform 1s ease 0s;
-        }
-    }
-
     .bg-img {
         background-image: linear-gradient(150deg, rgba(212, 22, 60, 1) 30%, rgba(5, 5, 5, 0.7) 55%),
             url('/src/lib/images/gym-2.webp');
@@ -194,7 +184,21 @@
         background-position: center;
         background-blend-mode: multiply;
         background-repeat: no-repeat;
-        background-attachment: fixed;
         filter: brightness(0.2) hue-rotate(0deg) grayscale(0);
+    }
+
+    @media (min-width: 1280px) {
+        .perspective {
+            transform: perspective(1600px) rotateY(-31deg);
+            transition: transform 1s ease 0s;
+        }
+        .perspective:hover {
+            transform: unset;
+            transition: transform 1s ease 0s;
+        }
+
+        .bg-img {
+            background-attachment: fixed;
+        }
     }
 </style>
