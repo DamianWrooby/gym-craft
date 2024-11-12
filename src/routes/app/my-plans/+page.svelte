@@ -150,7 +150,7 @@
 <Card width="3/4">
     <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
     <div class="md:w-3/4 m-auto">
-        {#if tableRows}
+        {#if tableRows?.length}
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
                 {#each tableRows as plan, index}
                     <li
@@ -192,10 +192,10 @@
                     </li>
                 {/each}
             </ul>
-        {:else if !isLoading && tableRows}
+        {:else if !isLoading}
             <p class="text-center">No plans found</p>
             <CtaButton url="/app/create-plan" text="Create new plan" />
-        {:else if isLoading}
+        {:else}
             <Spinner size={10} />
         {/if}
     </div>
