@@ -57,11 +57,11 @@
             </div>
 
             {#if form?.invalid}
-                <p class="text-primary-500 pb-5">Username and password are required.</p>
+                <p class="text-center text-primary-500 pb-5">Username and password are required.</p>
             {/if}
 
             {#if form?.credentials}
-                <p class="text-primary-500 pb-5">You have entered the wrong credentials.</p>
+                <p class="text-center text-primary-500 pb-5">You have entered the wrong credentials.</p>
             {/if}
 
             <div class="text-center">
