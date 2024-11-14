@@ -9,7 +9,7 @@
     export let plansLeft: number;
 
     const dispatch = createEventDispatcher<{ restart: void }>();
-    
+
     const modalStore = getModalStore();
 
     onMount(() => {
@@ -17,10 +17,14 @@
     });
 
     const openInfoModal = () => {
+        const plansLeftMessage = plansLeft > 0
+            ? `<p>You can still generate the following number of plans: ${plansLeft}</p>`
+            : 'You have already generated the maximum number of plans.';
+
         const modal: ModalSettings = {
             type: 'alert',
             title: 'Information',
-            body: `<p>Your plan has been generated and automatically added to <a class="text-secondary-400 hover:text-tertiary-50" href="/app/my-plans">your plan list</a>.</p> <br> <p>You can still generate the following number of plans: ${plansLeft}</p>`,
+            body: `<p>Your plan has been generated and automatically added to <a class="text-secondary-400 hover:text-tertiary-50" href="/app/my-plans">your plan list</a>.</p> <br> ${plansLeftMessage}`,
             buttonTextCancel: 'Ok',
         };
         modalStore.trigger(modal);

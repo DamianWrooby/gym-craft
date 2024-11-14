@@ -2,6 +2,7 @@
     // TODO: redirect user directly to my-plans after generating a plan
     import { page } from '$app/stores';
     import { loadingState } from '@/stores';
+    import { onMount } from 'svelte';
     import SurveyForm from '@components/survey/SurveyForm.svelte';
     import GeneratedPlan from '@components/generated-plan/GeneratedPlan.svelte';
     import Loader from '@components/loading/loader/Loader.svelte';
@@ -18,11 +19,17 @@
     import { PUBLIC_APP_ENV } from '$env/static/public';
 
     const user: User = $page.data.user;
-    const generatedPlansNumber: number = user.generatedPlansNumber;
+    const { generatedPlansNumber, plansLeft: initialPlansLeft } = user;
     const toastStore = getToastStore();
 
     let planContent: string;
     let plansLeft: number;
+
+    onMount(() => {
+        if (initialPlansLeft <= 0) {
+            planLimitHandler();
+        }
+    });
 
     const generatePlan = async (event: CustomEvent<{ formData: SurveyFormModel }>) => {
         loadingState.set(true);
@@ -68,7 +75,7 @@
             });
             const chatCompletion: string = await proxyResponse.json();
 
-            // Plans API call to save the generated plan in DB and updated generated plans number
+            // Plans API call to save the generated plan in DB and update generated plans number
             const plansAPIbody = JSON.stringify({ user, planContent: chatCompletion });
             const plansAPIresponse = await fetch(appConfig.plansApiUrl, {
                 method: 'POST',
@@ -99,7 +106,7 @@
 {#if $loadingState}
     <Loader />
 {:else if planContent}
-    <GeneratedPlan on:restart={() => planContent = ''} {planContent} {plansLeft} />
+    <GeneratedPlan on:restart={() => (planContent = '')} {planContent} {plansLeft} />
 {:else}
     <SurveyForm on:complete={generatePlan} />
 {/if}
