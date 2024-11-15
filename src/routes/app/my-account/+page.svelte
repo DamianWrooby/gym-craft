@@ -13,14 +13,14 @@
     const formData = { password: '' };
     const toastStore = getToastStore();
     let deleteAccountFormOpened = false;
-    let loading = false;
+    let isDeletionProcessed = false;
 
     const openDeleteAccountPanel = () => {
         deleteAccountFormOpened = true;
     };
 
     const deleteAccount = async () => {
-        loading = true;
+        isDeletionProcessed = true;
 
         const password = formData.password;
         const userId = user.id;
@@ -48,7 +48,7 @@
             makeToast(toastStore, err as string, 'variant-filled-error');
         }
 
-        loading = false;
+        isDeletionProcessed = false;
     };
 </script>
 
@@ -63,17 +63,13 @@
         </div>
         {#if !deleteAccountFormOpened}
             <div class="flex justify-center p-5">
-                <button
-                    type="button"
-                    class="btn variant-filled-error"
-                    disabled={loading}
-                    on:click={() => openDeleteAccountPanel()}>
-                    Delete my account
+                <button type="button" class="btn variant-filled-error" on:click={() => openDeleteAccountPanel()}>
+                    <span>Delete my account</span>
                 </button>
             </div>
         {:else}
             <section class="flex justify-center" transition:slide={{ duration: 200 }}>
-                <DeleteAccountForm data={formData} onSubmit={() => deleteAccount()} />
+                <DeleteAccountForm data={formData} onSubmit={() => deleteAccount()} loading={isDeletionProcessed} />
             </section>
         {/if}
     </div>
