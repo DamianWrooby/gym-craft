@@ -22,7 +22,7 @@ const register: Action = async ({ request }) => {
         return fail(400, { invalidEntry: true });
     }
 
-    if (!termsOfUse) return fail(400, { termsOfUse: true });;
+    if (!termsOfUse) return fail(400, { termsOfUse: true });
 
     const validationError = validateRegisterFormData({ username, email, password, confirmPassword });
     if (validationError) return fail(400, validationError);

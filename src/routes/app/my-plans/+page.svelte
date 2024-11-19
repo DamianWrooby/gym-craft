@@ -28,7 +28,7 @@
 
     let plans: Plan[];
     let tableRows: MappedPlan[];
-    let isLoading: boolean = false;
+    let isLoading: boolean = true;
 
     let editNameEnabledIndex: number = -1;
 
@@ -114,7 +114,8 @@
                 const res = await response.json();
                 throw new Error(res.message);
             }
-            return await response.json();
+            const res = await response.json();
+            return res.plans;
         } catch (error) {
             makeToast(toastStore, 'Cannot fetch plans', 'variant-filled-error');
             console.error(error);
