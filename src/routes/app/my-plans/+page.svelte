@@ -28,7 +28,7 @@
 
     let plans: Plan[];
     let tableRows: MappedPlan[];
-    let isLoading: boolean = false;
+    let isLoading: boolean = true;
 
     let editNameEnabledIndex: number = -1;
 
