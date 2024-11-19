@@ -1,6 +1,5 @@
 import { getPlans } from '$lib/prisma/prisma';
-import { createErrorResponse } from '$lib/utils/error-response';
-import { json } from '@sveltejs/kit';
+import { createResponse } from '$lib/utils/response';
 
 export async function GET({ params }: { params: { id: string } }): Promise<Response> {
     const userId = params.id;
@@ -8,8 +7,8 @@ export async function GET({ params }: { params: { id: string } }): Promise<Respo
     const plans = await getPlans(userId);
 
     if (!plans) {
-        return createErrorResponse(404, 'Plans not found');
+        return createResponse(404, { message: 'Plans not found' });
     }
 
-    return json(plans);
+    return createResponse(200, { plans });
 }

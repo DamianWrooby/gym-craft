@@ -3,7 +3,7 @@ import { createCompletion } from '../../src/lib/server/openai';
 import { addPlan, getGeneralPlanLimit, updateGeneratedPlansNumber } from '../../src/lib/prisma/prisma';
 import type { Config } from '@netlify/edge-functions';
 import type { ChatMessage } from '../../src/models/open-ai/chat-gpt.model';
-import { createErrorResponse } from '../../src/lib/utils/error-response';
+import { createResponse } from '../../src/lib/utils/response';
 import { json } from '@sveltejs/kit';
 
 export default async (request: Request) => {
@@ -18,7 +18,7 @@ export default async (request: Request) => {
 
     // Check if the user has reached the plan limit
     if (generatedPlansNumber >= generalPlanLimit) {
-        return createErrorResponse(400, 'No plans left');
+        return createResponse(400, { message: 'No plans left' });
     }
 
     const body = new ReadableStream({

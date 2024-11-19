@@ -1,3 +1,5 @@
 import { json } from '@sveltejs/kit';
 
-export const createResponse = (status: number, message: string) => json({ message }, { status });
+type ResponseData = Record<string, unknown>;
+
+export const createResponse = (status: number, data: ResponseData) => json(data, { status });

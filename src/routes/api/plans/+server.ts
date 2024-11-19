@@ -1,6 +1,5 @@
 import { addPlan, getGeneralPlanLimit, updateGeneratedPlansNumber, getGeneratedPlansNumber } from '$lib/prisma/prisma';
-import { createErrorResponse } from '$lib/utils/error-response';
-import { json } from '@sveltejs/kit';
+import { createResponse } from '$lib/utils/response';
 import type { RequestEvent } from './$types';
 
 export async function POST({ request }: RequestEvent): Promise<Response> {
@@ -14,7 +13,7 @@ export async function POST({ request }: RequestEvent): Promise<Response> {
     ]);
 
     if (generatedPlansNumber === -1 || generatedPlansNumber >= generalPlanLimit) {
-        return createErrorResponse(400, 'No plans left');
+        return createResponse(400, { message: 'No plans left' });
     }
 
     const plan = {
@@ -37,5 +36,5 @@ export async function POST({ request }: RequestEvent): Promise<Response> {
         plansLeft,
     };
 
-    return json(responseBody);
+    return createResponse(200, responseBody);
 }
