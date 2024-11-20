@@ -26,9 +26,7 @@
     let plansLeft: number;
 
     onMount(() => {
-        if (initialPlansLeft <= 0) {
-            planLimitHandler();
-        }
+        if (initialPlansLeft <= 0) planLimitHandler();
     });
 
     const generatePlan = async (event: CustomEvent<{ formData: SurveyFormModel }>) => {
