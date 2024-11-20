@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
     import { page } from '$app/stores';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
@@ -17,7 +18,7 @@
             type: 'confirm',
             title: 'Email verification',
             body: `<p>Your account is not verified.</p>
-                    <p>Verify email address to get full account functionality</p>
+                    <p>Verify email address to get full account functionality.</p>
                     <p>Click on the link provided in the email we sent you.</p>`,
             modalClasses: 'max-h-fit',
             buttonTextCancel: 'Cancel',
@@ -57,6 +58,10 @@
         }
     };
 
+    const onCreatePlan = () => {
+        goto('/app/create-plan');
+    };
+
     onMount(() => {
         checkEmailVerification();
     });
@@ -74,20 +79,23 @@
         </div>
         <div class="p-5 text-center">
             {#if user && user.plansLeft > 0}
-                <a href="/app/create-plan" class="btn variant-filled-primary group">
+                <button on:click={() => onCreatePlan()} disabled={!user.emailVerified} class="btn variant-filled-primary group">
                     <Edit2Icon size="20" class="group-hover:animate-pulse" />
                     <span>Create training plan</span>
-                </a>
+                </button>
+                {#if !user.emailVerified}
+                    <p class="text-warning-500 text-sm pt-3">Verify your email to create a plan</p>
+                {/if}
             {:else if user && user.plansLeft <= 0}
                 <h3 class="h3 text-lg text-center pb-3 text-warning-500">
                     <span>You have created maximum number of plans</span>
                 </h3>
-                <a href="/app/my-plans" class="btn variant-filled-primary group">
+                <a href="/app/my-plans" class="btn variant-filled-primary group" data-sveltekit-preload-data="hover">
                     <ArrowRightIcon size="20" class="group-hover:animate-pulse" />
                     <span>Your plans</span>
                 </a>
             {:else}
-                <a href="/app/login" class="btn variant-filled-primary group">
+                <a href="/app/login" class="btn variant-filled-primary group" data-sveltekit-preload-data="hover">
                     <span>Log in</span>
                 </a>
             {/if}
