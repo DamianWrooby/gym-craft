@@ -54,7 +54,6 @@
         lifestyle: {
             job: '',
             hourCapacity: '',
-            timePreferences: '',
             trainingDays: {
                 monday: false,
                 tuesday: false,

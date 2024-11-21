@@ -34,7 +34,6 @@ export interface ExperienceModel {
 export interface LifestyleModel {
     job: string;
     hourCapacity: string;
-    timePreferences: string;
     trainingDays: {
         [key: string]: boolean;
     };

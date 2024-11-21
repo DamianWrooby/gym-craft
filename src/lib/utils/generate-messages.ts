@@ -37,7 +37,6 @@ export const generateAPIMessages = (formData: SurveyFormModel): Array<ChatMessag
             Lifestyle:
             Job type: ${formData.lifestyle.job}
             Time I can spend on training: ${formData.lifestyle.hourCapacity}/week
-            Training time preferences: ${formData.lifestyle.timePreferences}
             Days of the week I can train: ${daysOfWeekText}
             
             My current fitness level:
@@ -78,13 +77,15 @@ const generateDaysOfWeekText = (formData: SurveyFormModel): string =>
         .join(', ');
 
 const generateEquipmentText = (formData: SurveyFormModel): string =>
-    // TODO: second word is not capitalized
     Object.entries(formData.equipment)
         .filter(([, value]) => value === true)
         .map(([key]) => key)
         .map(separateCamelCase)
+        .map(toLowerCaseAll)
         .join(', ');
 
 const capitalizeWord = (word: string): string => word.replace(/\b\w/g, (char) => char.toUpperCase());
 
 const separateCamelCase = (word: string) => word.replace(/([A-Z])/g, ' $1').trim();
+
+const toLowerCaseAll = (word: string): string => word.replace(/[A-Z]/g, (char) => char.toLowerCase());
