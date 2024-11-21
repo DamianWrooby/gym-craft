@@ -55,20 +55,6 @@
             value: 'unlimited',
         },
     ];
-    const timePreferencesOptions: Array<{ label: string; value: string }> = [
-        {
-            label: 'in the morning',
-            value: 'morning',
-        },
-        {
-            label: 'in the afternoon',
-            value: 'afternoon',
-        },
-        {
-            label: 'in the evening',
-            value: 'evening',
-        },
-    ];
     const trainingDays: Array<{ label: string; value: string }> = [
         {
             label: 'Monday',
@@ -126,24 +112,6 @@
                     <option value={option.value}>{option.label}</option>
                 {/each}
             </select>
-        </label>
-    </div>
-    <div class="flex flex-row gap-x-4 py-4">
-        <label class="label pb-2 grow">
-            <div>Do you have any time restrictions or preferences for training?</div>
-            <div class="flex flex-row items-center justify-stretch">
-                <span class="whitespace-nowrap pr-4">I prefer to train</span>
-                <select
-                    class="select"
-                    title="Time preferences"
-                    bind:value={data.timePreferences}
-                    required
-                    aria-required>
-                    {#each timePreferencesOptions as option}
-                        <option value={option.value}>{option.label}</option>
-                    {/each}
-                </select>
-            </div>
         </label>
     </div>
     <div class="flex flex-row gap-x-4 py-4">
