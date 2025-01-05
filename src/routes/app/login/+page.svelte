@@ -25,7 +25,7 @@
                 }, 2000);
             } else if (result.type === 'error') {
                 setTimeout(() => {
-                    makeToast(toastStore, result.message, 'variant-filled-error');
+                    makeToast(toastStore, 'Server error. Please try again.', 'variant-filled-error');
                 }, 2000);
             }
             loading = false;
