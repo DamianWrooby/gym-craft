@@ -17,4 +17,5 @@
     <meta property="og:title" content={title} />
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:alt" content="GymCraft - Personal trainer application powered by AI" />
+	<link rel="canonical" href="https://gymcraft.damianwroblewski.com/" />
 </svelte:head>
