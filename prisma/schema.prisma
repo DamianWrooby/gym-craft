@@ -23,6 +23,7 @@ model User {
   generatedPlansNumber Int                 @default(0)
   plans                Plan[]
   verificationTokens   VerificationToken[]
+  garminData           GarminData?
 
   @@index([roleId])
 }
@@ -37,6 +38,7 @@ model Plan {
   id          String   @id @default(uuid())
   name        String
   description String
+  workouts    Json     @default("{}")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   userId      String
@@ -72,4 +74,13 @@ model VerificationToken {
 
   @@index([userId])
   @@index([tokenHash])
+}
+
+model GarminData {
+  id           String @id @default(uuid())
+  userId       String @unique
+  email        String @default("") @db.VarChar(50)
+  User         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

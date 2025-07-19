@@ -25,7 +25,7 @@
                 }, 2000);
             } else if (result.type === 'error') {
                 setTimeout(() => {
-                    makeToast(toastStore, result.message, 'variant-filled-error');
+                    makeToast(toastStore, result.error.message, 'variant-filled-error');
                 }, 2000);
             }
             loading = false;

@@ -5,6 +5,7 @@
     import CtaButton from '$lib/components/cta-button/CtaButton.svelte';
     import FaqAccordion from '$lib/components/faq-accordion/FaqAccordion.svelte';
     import DemoVideo from '$lib/videos/GymCraft-demo.mp4';
+    import GarminDemoVideo from '$lib/videos/Garmin-demo.mp4';
 
     import { howItWorksItems, trainingComponentItems, faqItems } from './content';
     import Play from '$lib/images/play.svg';
@@ -12,26 +13,42 @@
     import GymImage from '$lib/images/gym-31.jpeg';
 
     let video: HTMLVideoElement;
-    let isPlayButtonVisible = true;
-
-    const onPlayClick = () => {
-        video.paused || video.ended ? playVideo() : pauseVideo();
+    let videoGarmin: HTMLVideoElement;
+    let isPlayButtonVisible = {
+        demo: true,
+        garmin: true,
     };
 
-    const playVideo = () => {
-        video.play();
-        isPlayButtonVisible = false;
+    const onPlayClick = (src: 'demo' | 'garmin') => {
+        const videoMapping = {
+            demo: video,
+            garmin: videoGarmin,
+        };
+        videoMapping[src].paused || videoMapping[src].ended ? playVideo(src) : pauseVideo(src);
     };
 
-    const pauseVideo = () => {
-        video.pause();
-        isPlayButtonVisible = true;
+    const playVideo = (src: 'demo' | 'garmin') => {
+        const videoMapping = {
+            demo: video,
+            garmin: videoGarmin,
+        };
+        videoMapping[src].play();
+        isPlayButtonVisible[src] = false;
+    };
+
+    const pauseVideo = (src: 'demo' | 'garmin') => {
+        const videoMapping = {
+            demo: video,
+            garmin: videoGarmin,
+        };
+        videoMapping[src].pause();
+        isPlayButtonVisible[src] = true;
     };
 </script>
 
 <Seo
-    title="Personalized fitness plan in minutes | GymCraft™"
-    metaDescription="Get a personalized fitness plan in minutes! Our AI-powered app analyzes your goals, abilities, and limitations to create a training plan tailored just for you." />
+    title="AI-Powered Personalized Fitness Plans in Minutes | GymCraft™"
+    metaDescription="Generate custom fitness plans based on your goals and abilities. AI-powered workout generator for beginners, pros, and personal trainers." />
 
 <section class="relative py-24 overflow-hidden w-full flex flex-col xl:flex-row items-center justify-center">
     <div class="z-10 xl:w-1/2 p-5 xl:p-16 text-center">
@@ -51,26 +68,26 @@
         <CtaButton url="/app" text="Try it for FREE" />
     </div>
     <div class="z-10 xl:w-1/2 p-5 xl:p-16 xl:pl-0">
-        <div class="relative perspective">
+        <div class="relative perspective-right">
             <video
                 bind:this={video}
                 class="rounded-lg"
                 muted={false}
                 preload="metadata"
                 width="100%"
-                on:ended={() => (isPlayButtonVisible = true)}>
+                on:ended={() => (isPlayButtonVisible.demo = true)}>
                 <source src={DemoVideo} type="video/mp4" />
                 Your browser does not support the video tag.
             </video>
             <button
                 class="absolute top-0 w-full h-full flex justify-center items-center group"
-                on:click={() => onPlayClick()}
+                on:click={() => onPlayClick('demo')}
                 aria-label="Play video">
                 <img
                     alt="play button"
                     src={Play}
                     class="w-24 h-24 cursor-pointer group-hover:drop-shadow-[0px_0px_10px_rgba(255,255,255,0.5)]"
-                    class:hidden={!isPlayButtonVisible} />
+                    class:hidden={!isPlayButtonVisible.demo} />
             </button>
         </div>
     </div>
@@ -150,6 +167,61 @@
     </div>
     <div class="bg-img absolute w-full h-full"></div>
 </section>
+
+<!-- New Garmin Integration Section -->
+<section
+    class="relative  text-surface-200 overflow-hidden w-full flex flex-col xl:flex-row justify-center">
+    <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
+        <div class="relative perspective-left">
+            <video
+                bind:this={videoGarmin}
+                class="rounded-lg"
+                muted={false}
+                preload="metadata"
+                width="100%"
+                on:ended={() => (isPlayButtonVisible.garmin = true)}>
+                <source src={GarminDemoVideo} type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+            <button
+                class="absolute top-0 w-full h-full flex justify-center items-center group"
+                on:click={() => onPlayClick('garmin')}
+                aria-label="Play video">
+                <img
+                    alt="play button"
+                    src={Play}
+                    class="w-24 h-24 cursor-pointer group-hover:drop-shadow-[0px_0px_10px_rgba(255,255,255,0.5)]"
+                    class:hidden={!isPlayButtonVisible.garmin} />
+            </button>
+        </div>
+    </div>
+    <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
+        <h2 class="h2 font-bold mb-4 text-primary-700 dark:text-error-500">Seamless Garmin Integration</h2>
+        <p class="text-lg md:text-xl font-light mb-6">
+            Effortlessly sync your AI-generated workout plans with your
+            <span class="text-secondary-400">
+                <a href="https://connect.garmin.com/" target="_blank" rel="noopener noreferrer">Garmin Connect™</a>
+            </span>
+            account. With just a click, send your personalized routines directly to your Garmin device and stay on track
+            wherever you train.
+        </p>
+        <ul class="list-disc list-inside text-left text-base md:text-lg font-light mb-8 mx-auto max-w-xl">
+            <li>Connect your Garmin account securely</li>
+            <li>Export training plans in one step</li>
+            <li>Access workouts on your Garmin watch or app</li>
+            <li>Track progress and adapt plans in real time</li>
+        </ul>
+        <p class="text-error-400 text-lg md:text-xl font-light mb-6">
+            Check out the first AI powered fitness workout plan generator with direct Garmin integration.
+        </p>
+        <div class="flex justify-center">
+            <CtaButton url="/app" text="Connect Garmin & Try Now" />
+        </div>
+    </div>
+</section>
+<!-- End Garmin Integration Section -->
+
+<hr class="border !border-primary-900" />
 <section class="relative overflow-hidden w-full pt-10 flex flex-col xl:flex-row items-center justify-center">
     <div class="z-10 max-w-5xl p-5 xl:p-16 text-center">
         <h2 class="h2 pb-10 font-semibold">What should you keep in mind?</h2>
@@ -178,8 +250,8 @@
 
 <style>
     .bg-img {
-        background-image: linear-gradient(150deg, rgba(212, 22, 60, 1) 30%, rgba(5, 5, 5, 0.7) 55%),
-            url('/src/lib/images/gym-2.webp');
+        background-image:
+            linear-gradient(150deg, rgba(212, 22, 60, 1) 30%, rgba(5, 5, 5, 0.7) 55%), url('/src/lib/images/gym-2.webp');
         background-size: cover;
         background-position: center;
         background-blend-mode: multiply;
@@ -188,11 +260,19 @@
     }
 
     @media (min-width: 1280px) {
-        .perspective {
+        .perspective-right {
             transform: perspective(1600px) rotateY(-31deg);
             transition: transform 1s ease 0s;
         }
-        .perspective:hover {
+        .perspective-right:hover {
+            transform: unset;
+            transition: transform 1s ease 0s;
+        }
+        .perspective-left {
+            transform: perspective(1600px) rotateY(31deg);
+            transition: transform 1s ease 0s;
+        }
+        .perspective-left:hover {
             transform: unset;
             transition: transform 1s ease 0s;
         }
