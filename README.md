@@ -4,7 +4,7 @@
 
 Welcome to the GymCraft - web app powered by GenAI that allows users to create personalized fitness training plans based on the provided information.
 
-![Demo](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/videos/GymCraft-demo.mp4)
+![Demo](https://github.com/user-attachments/assets/6ca0492a-74ec-402e-9f93-c15612cb136c)
 
 ## Table of Contents
 
