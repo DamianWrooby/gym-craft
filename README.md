@@ -37,7 +37,7 @@ To bypass the Netlify serverless functions 10s timeout when calling external Ope
 
 ## Garmin Connect Integration
 
-![Garmin](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/videos/Garmin-demo.mp4)
+https://github.com/user-attachments/assets/b215e70c-7f59-4018-a3af-7b2d9946254d
 
 Effortlessly sync your AI-generated workout plans with your Garmin Connect™ account. With just a click, you can:
 
