@@ -13,11 +13,15 @@
     import { cookieBannerOpened } from '@/stores';
     import Banner from '$lib/components/banner/Banner.svelte';
     import { setCookie, getCookie } from '$lib/utils/cookies';
+    import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
+    import { storePopup } from '@skeletonlabs/skeleton';
 
     const currentDate = new Date();
     $: user = $page.data.user;
 
-    initializeStores();
+    const initializePopups = () => {
+        storePopup.set({ computePosition, autoUpdate, offset, shift, flip, arrow });
+    };
 
     const closeCookieBanner = () => {
         setCookie('cookiesConsentAccepted', 'true', 100);
@@ -31,6 +35,9 @@
             cookieBannerOpened.update(() => false);
         }
     };
+
+    initializeStores();
+    initializePopups();
 
     onMount(() => {
         checkCookieConsent();

@@ -13,8 +13,8 @@ const auth = {
     auth: {
         api_key: SECRET_MAILGUN_API_KEY,
         domain: SECRET_MAILGUN_DOMAIN,
-        url: 'https://api.eu.mailgun.net',
     },
+    host: 'api.eu.mailgun.net',
 };
 
 const transporter = nodemailer.createTransport(mg(auth));
@@ -62,10 +62,9 @@ const sendVerificationEmail = (email: string, userId: string, token: string) => 
 const sendMail = (to: string, content: string) =>
     transporter.sendMail(
         {
-            from: 'GymCraft <no-reply@gym-craft.netlify.app>',
+            from: 'GymCraft <no-reply@gymcraft.damianwroblewski.com>',
             to,
-            subject: 'GymCraft Registration',
-            replyTo: appConfig.administratorEmail as string,
+            subject: 'GymCraft - Activate your account',
             html: content,
         },
         (err) => {

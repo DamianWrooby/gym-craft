@@ -114,7 +114,7 @@
                 const res = await response.json();
                 throw new Error(res.message);
             }
-            const res = await response.json();
+            const res: { plans: Plan[] } = await response.json();
             return res.plans;
         } catch (error) {
             makeToast(toastStore, 'Cannot fetch plans', 'variant-filled-error');
@@ -150,7 +150,7 @@
 
 <Card width="3/4">
     <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
-    <div class="md:w-3/4 m-auto">
+    <div class="md:w-3/4 m-auto pb-8">
         {#if tableRows?.length}
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
                 {#each tableRows as plan, index}
@@ -199,5 +199,23 @@
         {:else}
             <Spinner size={10} />
         {/if}
+    </div>
+    <div class="md:w-3/4 m-auto pb-8">
+        <p class="h3 font-bold mb-4 text-primary-700 dark:text-error-500 text-center">Do you like this app?</p>
+        <div class="text-center">
+            {@html `<script 
+              type="text/javascript" 
+              src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" 
+              data-name="bmc-button" 
+              data-slug="damianwroblewski" 
+              data-color="#bf1436" 
+              data-emoji=""  
+              data-font="Bree" 
+              data-text="Buy me a coffee" 
+              data-outline-color="#ffffff" 
+              data-font-color="#ffffff" 
+              data-coffee-color="#FFDD00">
+              </script>`}
+        </div>
     </div>
 </Card>

@@ -3,8 +3,7 @@ import { error } from '@sveltejs/kit';
 import { to } from 'await-to-js';
 
 export async function load({ params }) {
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const [err, _] = await to(verifyToken(params.userId, params.token));
+		const [err] = await to(verifyToken(params.userId, params.token));
 
 		if (err) {
 			console.log(err);
