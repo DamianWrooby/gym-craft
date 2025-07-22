@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { onMount } from 'svelte'
+    import { onMount } from 'svelte';
     import { DownloadIcon } from 'svelte-feather-icons';
+    import { generateFullPlanDescription } from '../../utils/plan-description';
+    import type { Plan } from '@models/plan/plan.model';
 
-    export let htmlElement: HTMLElement;
-    export let fileName: string;
+    export let plan: Plan;
     // @ts-ignore
     let html2pdf;
 
@@ -14,19 +15,29 @@
     });
 
     function print() {
+        const htmlString = generateFullPlanDescription(plan);
+        const htmlElementCopy = htmlStringToElement(htmlString);
+
         const opt = {
-            margin: [15, 15],
-            filename: `${fileName}.pdf`,
+            margin: [20, 20],
+            filename: `${plan.name}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
         };
-        
-        const htmlElementCopy = htmlElement.cloneNode(true) as HTMLElement;
+
         htmlElementCopy.style.color = 'black';
+
         // @ts-ignore
         html2pdf().set(opt).from(htmlElementCopy).save();
+    }
+
+    function htmlStringToElement(html: string): HTMLElement {
+        const container = document.createElement('div');
+        container.innerHTML = html;
+
+        return container;
     }
 </script>
 

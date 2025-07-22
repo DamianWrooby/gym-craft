@@ -16,6 +16,8 @@
     import { isProduction } from '$lib/utils/environment';
     import { loadingState } from '@/stores';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
+    import { PUBLIC_APP_ENV } from '$env/static/public';
+    import { formDataMock } from '@/constants/mockData.constants';
 
     const user: User = $page.data.user;
     const dispatch = createEventDispatcher<{ complete: { formData: SurveyFormModel } }>();
@@ -115,6 +117,9 @@
     };
 
     const onGeneratePlanClick = () => {
+        if (PUBLIC_APP_ENV === 'development') {
+            formData = formDataMock;
+        }
         dispatch('complete', { formData });
     };
 </script>
@@ -124,9 +129,7 @@
         Fill out the survey and generate a training plan tailored to your goals
     </h1>
 
-    <form
-        bind:this={formElement}
-        class="card w-full lg:w-1/2 p-6 md:p-16 mb-8 relative overflow-hidden">
+    <form bind:this={formElement} class="card w-full lg:w-1/2 p-6 md:p-16 mb-8 relative overflow-hidden">
         <ProgressBar max={stepsNumber} curr={currentActive} duration={500} />
         {#if currentActive === 1}
             <SurveyFormStep1 bind:data={formData.personalInfo} />

@@ -2,29 +2,20 @@ import { db } from '$lib/database';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
 import type { Plan, User } from '@prisma/client';
+import type { NewPlan } from '../../models/plan/plan.model';
 import bcrypt from 'bcrypt';
 
 const cache = new NodeCache({ stdTTL: 120 });
 
-type newPlan = {
-    name: string;
-    description: string;
-    User: {
-        connect: {
-            id: string;
-        };
-    };
-};
-
-export async function addPlan(userId: string, plan: newPlan): Promise<Plan> {
-    const newPlan = await db.plan.create({
+export async function addPlan(userId: string, plan: NewPlan): Promise<Plan> {
+    const createdPlan = await db.plan.create({
         data: {
             ...plan,
         },
     });
     cache.del(`plans_${userId}`);
 
-    return newPlan;
+    return createdPlan;
 }
 
 export async function deletePlan(planId: string, userId: string): Promise<Plan> {
@@ -195,6 +186,42 @@ export async function invalidatePreviousToken(userId: string): Promise<boolean> 
             usedAt: new Date(),
         },
     });
+
+    return true;
+}
+
+export async function getGarminEmail(userId: string): Promise<string | false> {
+    const credentials = await db.garminData.findUnique({
+        where: { userId: userId },
+        select: {
+            email: true,
+        },
+    });
+    const email = credentials?.email;
+
+    if (!credentials || !email) return false;
+
+    return email;
+}
+
+export async function saveGarminEmail(userId: string, garminEmail: string): Promise<boolean> {
+    const existing = await db.garminData.findUnique({
+        where: { userId },
+    });
+
+    if (!existing) {
+        await db.garminData.create({
+            data: {
+                userId,
+                email: garminEmail,
+            },
+        });
+    } else {
+        await db.garminData.update({
+            where: { userId },
+            data: { email: garminEmail },
+        });
+    }
 
     return true;
 }

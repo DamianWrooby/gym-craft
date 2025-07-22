@@ -2,25 +2,32 @@
 
 ![GymCraft](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/images/gym-craft-logo-crop.png)
 
-Welcome to the GymCraft! This project is a SvelteKit application powered by LLM (gpt-4o) that allows users to create personalized fitness training plans based on the data they provide.
+Welcome to the GymCraft - web app powered by GenAI that allows users to create personalized fitness training plans based on the provided information.
+
+https://github.com/user-attachments/assets/6ca0492a-74ec-402e-9f93-c15612cb136c
 
 ## Table of Contents
 
-- [Project Overview](#project-overview)
-  - [How does it work?](#how-does-it-work)
-- [Technologies Used](#technologies-used)
-- [Architecture schema](#architecture-schema)
-- [Production Link](#production-link)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Running the Application](#running-the-application)
-- [License](#license)
-- [Contact](#contact)
+- [GymCraft - AI Powered Personal Trainer](#gymcraft---ai-powered-personal-trainer)
+	- [Table of Contents](#table-of-contents)
+	- [Project Overview](#project-overview)
+	- [How does it work?](#how-does-it-work)
+	- [Garmin Connect Integration](#garmin-connect-integration)
+	- [Technologies Used](#technologies-used)
+	- [Architecture Schema](#architecture-schema)
+	- [Production Link](#production-link)
+	- [Getting Started (local installation)](#getting-started-local-installation)
+		- [Prerequisites](#prerequisites)
+		- [Installation](#installation)
+		- [Running the Application](#running-the-application)
+	- [License](#license)
+	- [Contact](#contact)
 
 ## Project Overview
 
-This app is designed to help users create customized fitness plans. By inputting their data, such as fitness goals, current physical condition, and preferences, users can receive tailored workout plans generated with the help of the gpt-4o large language model. 
+This app is designed to help users create customized fitness plans. By inputting their data, such as fitness goals, current physical condition, and preferences, users can receive tailored workout plans generated with the help of the GenAI.
+
+**New:** GymCraft now features seamless [Garmin Connect™](https://connect.garmin.com/) integration, allowing users to sync AI-generated workout plans directly to their Garmin devices.
 
 ## How does it work?
 
@@ -28,19 +35,33 @@ The user enters data through a clear form and GymCraft under the hood configures
 
 To bypass the Netlify serverless functions 10s timeout when calling external OpenAI API, application uses [GymCraft - Proxy](https://github.com/DamianWrooby/gym-craft-ai-proxy) - additional Express.js server.
 
+## Garmin Connect Integration
+
+https://github.com/user-attachments/assets/b215e70c-7f59-4018-a3af-7b2d9946254d
+
+Effortlessly sync your AI-generated workout plans with your Garmin Connect™ account. With just a click, you can:
+
+- Securely connect your Garmin account
+- Export training plans in one step
+- Access workouts on your Garmin watch or app
+- Track progress and adapt plans in real time
+
+This integration is designed for a frictionless experience—no manual file transfers or complex setup required. 
+
 ## Technologies Used
 
 - **SvelteKit**: A modern framework for building fast and high-performance fullstack web applications.
-- **OpenAI GPT-4o**: For generating personalized fitness plans.
-- **Node.js**: Backend runtime environment.
-- **Vite**: Build tool for optimized performance.
-- **Prisma**: ORM for communication with the database.
-- **Skeleton**: UI library.
-- **Tailwind**: Utility-first CSS framework.
+- **OpenAI API**: communication with GPT model
+- **Node.js**: Proxy server
+- **Python**: microservice responsible for communication with Garmin Connect
+- **Vite**: Build tool for optimized performance
+- **Prisma**: ORM for communication with PostgreSQL DB
+- **Skeleton**: UI library
+- **Tailwind**: CSS framework
 
 ## Architecture Schema
 
-![GymCraft Architecture](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/images/GymCraft-architecture.jpg)
+![GymCraft Architecture](https://github.com/DamianWrooby/gym-craft/blob/main/src/lib/images/gym-craft-arch-schema.jpg)
 
 ## Production Link
 
@@ -59,24 +80,24 @@ Before you begin, ensure you have met the following requirements:
 
 1. Clone the repository:
 
-	```bash
-	git clone https://github.com/DamianWrooby/gym-craft.git
-	cd gym-craft
-	```
+    ```bash
+    git clone https://github.com/DamianWrooby/gym-craft.git
+    cd gym-craft
+    ```
 
 2. Install the dependencies:
 
-	```bash
-	npm install
-	```
+    ```bash
+    npm install
+    ```
 
 ### Running the Application
 
 1. Start the development server:
 
-	```bash
-	npm run dev
-	```
+    ```bash
+    npm run dev
+    ```
 
 2. Open your browser and navigate to http://localhost:5173/ to see the application in action.
 
@@ -88,5 +109,5 @@ This project is licensed under the MIT License. See the [LICENSE](https://openso
 
 If you have any questions, feel free to reach out:
 
-Email: 👉🏼 **dwroblewski89@gmail.com**
+Email: 👉🏼 **dwroblewski89@gmail.com**  
 GitHub: [DamianWrooby](https://github.com/DamianWrooby)

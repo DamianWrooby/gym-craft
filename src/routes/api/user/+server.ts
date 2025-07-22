@@ -20,9 +20,8 @@ export async function DELETE({ request }: { request: Request }): Promise<Respons
     const [passwordError, userPassword] = await to(bcrypt.compare(password, dbUser.passwordHash));
     if (passwordError || !userPassword) return createResponse(400, { message: 'Invalid credentials' });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [deleteError, _] = await to(db.user.delete({ where: { id: userId } }));
-    console.log(deleteError);
+    const [deleteError] = await to(db.user.delete({ where: { id: userId } }));
+    console.error(deleteError);
     if (deleteError) return createResponse(500, { message: 'User not deleted' });
 
     return createResponse(200, { message: 'User deleted' });

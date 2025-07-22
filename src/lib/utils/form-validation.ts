@@ -23,6 +23,21 @@ export function validateRegisterFormData({
     return null;
 }
 
+export function validateGarminLoginFormData({
+    email,
+    password,
+}: {
+    email: string;
+    password: string;
+}) {
+    if (!email || typeof email !== 'string') return { invalidEmail: true };
+    if (!password || typeof password !== 'string') return { invalidPassword: true };
+
+    if (!isValidEmailFormat(email)) return { emailInvalid: true };
+
+    return null;
+}
+
 export function validatePasswordComplexity(password: string) {
     const hasLength = password.length >= 8;
     const hasUpperCase = /[A-Z]/.test(password);
@@ -36,6 +51,6 @@ export function isString(value: FormDataEntryValue | null) {
     return typeof value === 'string';
 }
 
-function isValidEmailFormat(email: string) {
+export function isValidEmailFormat(email: string) {
     return emailRegex.test(email);
 }
