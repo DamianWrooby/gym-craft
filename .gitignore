@@ -12,3 +12,5 @@ vite.config.ts.timestamp-*
 notes.txt
 .netlify
 .notes.txt
+.notes.md
+.github/copilot-instructions.md
