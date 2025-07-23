@@ -209,11 +209,11 @@
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
         {#if plan && planContainer}
-            <DownloadAsPdf htmlElement={planContainer} {plan} fileName={plan.name} />
+            <DownloadAsPdf {plan} />
         {/if}
     </div>
     {#if plan}
-        <div class="mb-5" bind:this={planContainer}>
+        <div class="mb-5">
             <PlanDescription {garminLoading} {plan} on:sendToGarminClicked={openConfirmationModal} />
         </div>
     {:else}

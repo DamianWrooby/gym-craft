@@ -203,19 +203,14 @@
     <div class="md:w-3/4 m-auto pb-8">
         <p class="h3 font-bold mb-4 text-primary-700 dark:text-error-500 text-center">Do you like this app?</p>
         <div class="text-center">
-            {@html `<script 
-              type="text/javascript" 
-              src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" 
-              data-name="bmc-button" 
-              data-slug="damianwroblewski" 
-              data-color="#bf1436" 
-              data-emoji=""  
-              data-font="Bree" 
-              data-text="Buy me a coffee" 
-              data-outline-color="#ffffff" 
-              data-font-color="#ffffff" 
-              data-coffee-color="#FFDD00">
-              </script>`}
+            <iframe
+                title="Buy Me a Coffee"
+                src="/bmc-widget.html"
+                width="250"
+                height="80"
+                scrolling="no"
+                style="border: none; margin: auto; display: block;"
+                loading="lazy"></iframe>
         </div>
     </div>
 </Card>
