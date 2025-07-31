@@ -58,7 +58,7 @@
                     <HomeIcon />
                 </a>
                 <a class="px-4 text-surface-500 hover:text-tertiary-500 w-40 hidden md:block" href="/app">
-                    <img class="m-auto" src={Logo} alt="Gym Craft Logo" />
+                    <img loading="lazy" class="m-auto" src={Logo} alt="Gym Craft Logo" />
                 </a>
             </svelte:fragment>
             <svelte:fragment slot="trail">
