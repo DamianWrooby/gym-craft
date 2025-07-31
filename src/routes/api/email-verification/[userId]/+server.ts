@@ -12,7 +12,7 @@ export async function POST({ request, params }: { request: Request; params: { us
     // mark previous token as used
     await invalidatePreviousToken(params.userId);
 
-    const [verificationError] = await to(sendVerificationToken(params.userId, email));
+    const [verificationError, _] = await to(sendVerificationToken(params.userId, email));s
     if (verificationError) return createResponse(400, { message: 'Verification email not sent' });
 
     return createResponse(200, { message: 'Verification email has been sent' });
