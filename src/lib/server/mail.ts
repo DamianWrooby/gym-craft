@@ -43,7 +43,7 @@ export async function sendVerificationToken(userId: string, email: string) {
         });
 
         // Send the raw token to the user (not the hash)
-        sendVerificationEmail(email, userId, token);
+        await sendVerificationEmail(email, userId, token);
 
         return verificationToken;
     } catch (err) {
@@ -52,30 +52,33 @@ export async function sendVerificationToken(userId: string, email: string) {
     }
 }
 
-const sendVerificationEmail = (email: string, userId: string, token: string) => {
+const sendVerificationEmail = async (email: string, userId: string, token: string) => {
     const baseUrl = PUBLIC_APP_ENV === 'development' ? appConfig.baseAppUrlDEV : appConfig.baseAppUrlPROD;
     const html = generateEmailTemplate(baseUrl, userId, token);
 
-    sendMail(email, html);
+    await sendMail(email, html);
 };
 
 const sendMail = (to: string, content: string) =>
-    transporter.sendMail(
-        {
-            from: 'GymCraft <no-reply@gymcraft.damianwroblewski.com>',
-            to,
-            subject: 'GymCraft - Activate your account',
-            html: content,
-        },
-        (err) => {
-            if (err) {
-                console.error('Mail provider error:', err);
-                throw error(400, 'Mail provider error');
-            } else {
-                console.log('Email sent successfully');
-            }
-        },
-    );
+    new Promise<void>((resolve, reject) => {
+        transporter.sendMail(
+            {
+                from: 'GymCraft <no-reply@gymcraft.damianwroblewski.com>',
+                to,
+                subject: 'GymCraft - Activate your account',
+                html: content,
+            },
+            (err) => {
+                if (err) {
+                    console.error('Mail provider error:', err);
+                    reject(error(400, 'Mail provider error'));
+                } else {
+                    console.log('Email sent successfully');
+                    resolve();
+                }
+            },
+        );
+    });
 
 const verifyEmail = async (userId: string, email: string) => {
     try {
