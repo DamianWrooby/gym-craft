@@ -70,7 +70,7 @@
 <section class="relative overflow-hidden h-full w-full flex flex-col md:flex-row items-center justify-center">
     <div class="z-10 md:w-1/2">
         <div class="flex flex-col items-center justify-center p-5 pt-10">
-            <img class="pt-5" src={Logo} alt="Gym Craft Logo" />
+            <img loading="lazy" class="pt-5" src={Logo} alt="Gym Craft Logo" />
             <h1 class="h1 inline-block">
                 <span
                     class="bg-gradient-to-br from-primary-500 to-surface-400 bg-clip-text text-transparent box-decoration-clone uppercase text-base"

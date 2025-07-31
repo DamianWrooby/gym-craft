@@ -107,8 +107,8 @@
             allowing for steady progress.
         </p>
         <div class="w-full py-10 flex">
-            <img alt="Man at the hi-tec gym" src={ManImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
-            <img alt="Technologically advanced gym" src={GymImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
+            <img loading="lazy" alt="Man at the hi-tec gym" src={ManImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
+            <img loading="lazy" alt="Technologically advanced gym" src={GymImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
         </div>
         <h3 class="h3 pt-10 pb-10 font-semibold">Time is priceless</h3>
         <p class="text-left font-light text-lg md:text-xl pb-5">
