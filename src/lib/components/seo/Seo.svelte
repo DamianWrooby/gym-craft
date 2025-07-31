@@ -18,14 +18,14 @@
     <meta property="og:site_name" content="GymCraft" />
     <meta property="og:description" content={metaDescription} />
     <meta property="og:title" content={title} />
-    <meta property="og:image" content={baseUrl + ogImage} />
+    <meta property="og:image" content={ogImage} />
     <meta property="og:image:alt" content="GymCraft - Personal trainer application powered by AI" />
 
     <!-- Twitter Card -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={title} />
 	<meta name="twitter:description" content={metaDescription} />
-	<meta name="twitter:image" content={baseUrl + ogImage} />
+	<meta name="twitter:image" content={ogImage} />
 
     <link rel="canonical" href={baseUrl} />
 </svelte:head>
