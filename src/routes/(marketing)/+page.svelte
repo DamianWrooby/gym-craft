@@ -170,7 +170,7 @@
 
 <!-- New Garmin Integration Section -->
 <section
-    class="relative  text-surface-200 overflow-hidden w-full flex flex-col xl:flex-row justify-center">
+    class="relative text-surface-500 dark:text-surface-200 overflow-hidden w-full flex flex-col xl:flex-row justify-center">
     <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
         <div class="relative perspective-left">
             <video
@@ -199,7 +199,7 @@
         <h2 class="h2 font-bold mb-4 text-primary-700 dark:text-error-500">Seamless Garmin Integration</h2>
         <p class="text-lg md:text-xl font-light mb-6">
             Effortlessly sync your AI-generated workout plans with your
-            <span class="text-secondary-400">
+            <span class="text-secondary-500 dark:text-secondary-400">
                 <a href="https://connect.garmin.com/" target="_blank" rel="noopener noreferrer">Garmin Connect™</a>
             </span>
             account. With just a click, send your personalized routines directly to your Garmin device and stay on track
@@ -211,7 +211,7 @@
             <li>Access workouts on your Garmin watch or app</li>
             <li>Track progress and adapt plans in real time</li>
         </ul>
-        <p class="text-error-400 text-lg md:text-xl font-light mb-6">
+        <p class="text-error-800 dark:text-error-400 text-lg md:text-xl font-light mb-6">
             Check out the first AI powered fitness workout plan generator with direct Garmin integration.
         </p>
         <div class="flex justify-center">
