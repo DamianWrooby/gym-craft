@@ -14,7 +14,7 @@ export async function POST({ request }: RequestEvent): Promise<Response> {
     const userSession = body.user.session;
     const { formData }: { formData: SurveyFormModel } = body;
     const proxyAPIurl = PUBLIC_APP_ENV === 'development' ? appConfig.proxyApiUrlDEV : appConfig.proxyApiUrlPROD;
-    const retryCount = 1;
+    const retryCount = 2;
 
     // Check if user has plans left
     const [plansMetaError, results] = await to(Promise.all([getGeneralPlanLimit(), getGeneratedPlansNumber(userId)]));
