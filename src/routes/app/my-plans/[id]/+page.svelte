@@ -129,6 +129,7 @@
         if (error || !garminPyConnectResponse.ok) {
             const { message }: { message: string } = await garminPyConnectResponse?.json();
             handleGarminPyConnectError(message, error);
+
             if (message.includes('No valid token found')) {
                 makeToast(
                     toastStore,
@@ -138,6 +139,8 @@
                 garminLoading = workoutToSend.dayOfWeek;
                 openGarminLoginModal();
             }
+
+            return;
         }
 
         const { status } = await garminPyConnectResponse?.json();
