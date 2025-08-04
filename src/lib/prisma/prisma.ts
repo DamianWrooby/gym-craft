@@ -7,6 +7,19 @@ import bcrypt from 'bcrypt';
 
 const cache = new NodeCache({ stdTTL: 120 });
 
+export async function getUserBySession(session: string): Promise<Pick<User, 'id'>> {
+    const user = await db.user.findUnique({
+        where: { userAuthToken: session },
+        select: {
+            id: true,
+        },
+    });
+    if (!user) {
+        return fail('User not found');
+    }
+    return user;
+}
+
 export async function addPlan(userId: string, plan: NewPlan): Promise<Plan> {
     const createdPlan = await db.plan.create({
         data: {
