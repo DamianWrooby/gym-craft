@@ -47,7 +47,7 @@
 </script>
 
 <Seo
-    title="AI-Powered Personalized Fitness Plans in Minutes | GymCraft™"
+    title="AI-Powered Fitness App connected with Garmin | GymCraft™ - AI fitness coach | Generate workout plans tailored to your goals"
     metaDescription="Generate custom fitness plans based on your goals and abilities. AI-powered workout generator for beginners, pros, and personal trainers." />
 
 <section class="relative py-24 overflow-hidden w-full flex flex-col xl:flex-row items-center justify-center">
@@ -107,8 +107,8 @@
             allowing for steady progress.
         </p>
         <div class="w-full py-10 flex">
-            <img loading="lazy" alt="Man at the hi-tec gym" src={ManImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
-            <img loading="lazy" alt="Technologically advanced gym" src={GymImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
+            <img loading="lazy" alt="AI fitness app connected to Garmin" src={ManImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
+            <img loading="lazy" alt="AI personal coach - generate workout plan and send to Garmin with one click" src={GymImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
         </div>
         <h3 class="h3 pt-10 pb-10 font-semibold">Time is priceless</h3>
         <p class="text-left font-light text-lg md:text-xl pb-5">
