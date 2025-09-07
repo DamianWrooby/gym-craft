@@ -14,6 +14,8 @@ export default defineConfig({
     },
     plugins: [sveltekit(), purgeCss()],
     test: {
+        setupFiles: ['./vitest-setup.js'],
         include: ['src/**/*.{test,spec}.{js,ts}'],
+        environment: 'jsdom',
     },
 });
