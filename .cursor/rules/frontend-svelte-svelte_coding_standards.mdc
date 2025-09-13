@@ -1,0 +1,32 @@
+---
+alwaysApply: true
+---
+
+## FRONTEND
+
+### Guidelines for SVELTE
+
+#### SVELTE_CODING_STANDARDS
+
+- Use the $ prefix for reactive store values instead of manual store subscription
+- Use slot props for better component composition
+- Leverage the :global() modifier sparingly for global CSS
+- Implement Svelte transitions and animations for smooth UI changes
+- Use simple callback props instead of createEventDispatcher
+- Use lifecycle functions (onMount, onDestroy) for setup and cleanup
+- Leverage special elements like <svelte:window> and <svelte:component> for dynamic behavior
+
+## FRONTEND
+
+### Guidelines for SVELTE
+
+#### SVELTE_CODING_STANDARDS
+
+- Use the $ prefix for reactive store values instead of manual store subscription
+- Use slot props for better component composition
+- Leverage the :global() modifier sparingly for global CSS
+- Implement Svelte transitions and animations for smooth UI changes
+- Use simple callback props instead of createEventDispatcher
+- Use lifecycle functions (onMount, onDestroy) for setup and cleanup
+- Leverage special elements like <svelte:window> and <svelte:component> for dynamic behavior
+

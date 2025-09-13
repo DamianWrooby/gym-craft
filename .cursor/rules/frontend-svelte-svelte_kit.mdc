@@ -1,0 +1,38 @@
+---
+alwaysApply: true
+---
+
+## FRONTEND
+
+### Guidelines for SVELTE
+
+#### SVELTE_KIT
+
+- Use server-side load functions to fetch data before rendering pages
+- Implement form actions for handling form submissions with progressive enhancement
+- Use page stores ($page) to access route parameters and other page data
+- Leverage SvelteKit's server-only modules for sensitive operations
+- Implement +error.svelte files for custom error handling at the route level
+- Use the enhance function for progressive enhancement of forms
+- Leverage SvelteKit hooks for global middleware functionality
+- Implement route groups (folders with parentheses) for logical organization without URL impact
+- Use the new Embedded SvelteKit plugin system
+- Implement content negotiation with accept header in load functions
+
+## FRONTEND
+
+### Guidelines for SVELTE
+
+#### SVELTE_KIT
+
+- Use server-side load functions to fetch data before rendering pages
+- Implement form actions for handling form submissions with progressive enhancement
+- Use page stores ($page) to access route parameters and other page data
+- Leverage SvelteKit's server-only modules for sensitive operations
+- Implement +error.svelte files for custom error handling at the route level
+- Use the enhance function for progressive enhancement of forms
+- Leverage SvelteKit hooks for global middleware functionality
+- Implement route groups (folders with parentheses) for logical organization without URL impact
+- Use the new Embedded SvelteKit plugin system
+- Implement content negotiation with accept header in load functions
+
