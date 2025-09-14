@@ -67,7 +67,7 @@
             loadingState.set(false);
             return;
         }
-        const { generatedPlan, _ } = await plansAPIresponse?.json();
+        const { generatedPlan } = await plansAPIresponse.json();
 
         loadingState.set(false);
         goto(`/app/my-plans/${generatedPlan.id}`);

@@ -4,6 +4,7 @@
     import { getToastStore } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import Spinner from '@components/loading/spinner/Spinner.svelte';
+    import type { ActionResult } from '@sveltejs/kit';
 
     export let form;
 
@@ -11,7 +12,7 @@
     let loading = false;
 
     interface FormCallbackResult {
-        result: any;
+        result: ActionResult;
         update: () => void;
     }
     type FormCallback = () => (result: FormCallbackResult) => Promise<void>;
