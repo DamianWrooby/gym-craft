@@ -1,0 +1,74 @@
+---
+alwaysApply: true
+---
+# 🏋️ Gym-Craft Tech Stack
+
+This project is powered by a modern full‑stack setup with SvelteKit, Prisma, and Netlify deployment. Below is a clear breakdown of the stack.
+
+---
+
+## 🔹 Frontend
+- **Framework:** [SvelteKit](https://kit.svelte.dev) (Svelte 4)
+- **Bundler / Dev Server:** [Vite](https://vitejs.dev/)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Styling:**
+  - [Tailwind CSS](https://tailwindcss.com/) (`tailwindcss`, `@tailwindcss/forms`, `@tailwindcss/typography`)
+  - [Skeleton UI](https://www.skeleton.dev/) (`@skeletonlabs/skeleton`, `@skeletonlabs/tw-plugin`)
+  - Icons via `svelte-feather-icons`
+- **UI Utilities:** `@floating-ui/dom` for tooltips, dropdowns, etc.
+
+---
+
+## 🔹 Backend
+- **Database ORM:** [Prisma](https://www.prisma.io/) (`prisma`, `@prisma/client`)
+- **Database Migrations & Seeding:** Prisma migrations + seeding with `ts-node`
+- **Authentication / Security:** `bcrypt` for hashing passwords
+- **Email Delivery:** 
+  - [Nodemailer](https://nodemailer.com/) (`nodemailer`)
+  - Mailgun transport via `nodemailer-mailgun-transport`
+- **Caching:** `node-cache` (simple in‑memory caching)
+- **PDF Export:** `html2pdf.js`
+- **AI Integration:** [OpenAI API](https://platform.openai.com/) (`openai`)
+
+---
+
+## 🔹 Infrastructure & Deployment
+- **Platform:** [Netlify](https://www.netlify.com/)
+- **Adapters:**
+  - `@sveltejs/adapter-netlify` for Netlify deployment
+  - `@sveltejs/adapter-auto` for dev flexibility
+- **Edge Function Support:** `@netlify/edge-functions`
+
+---
+
+## 🔹 Tooling / Developer Experience
+- **Code Quality:**
+  - [ESLint](https://eslint.org/) with TypeScript + Svelte plugins
+  - [Prettier](https://prettier.io/) with Prisma + Svelte plugins
+- **Static Analysis:** `svelte-check` for type and compile-time validation
+- **Testing:**
+  - [Vitest](https://vitest.dev/) + UI inspector (`@vitest/ui`)
+  - [Testing Library](https://testing-library.com/docs/svelte-testing-library/intro/) (`@testing-library/svelte`, `@testing-library/jest-dom`)
+  - `jsdom` to simulate the browser
+- **Build Tools:**
+  - PostCSS + Autoprefixer
+  - `vite-plugin-tailwind-purgecss` for optimized production builds
+- **Type Definitions:** extensive use of `@types/*` packages
+
+---
+
+## 🔹 Miscellaneous Utilities
+- **Utility Helpers:** `lodash`
+- **Promise Handling:** `await-to-js`
+- **Icons:** `svelte-feather-icons`
+
+---
+
+## ✅ Summary
+**Gym-Craft** is a **full‑stack SvelteKit application** with:
+- A **modern frontend** (SvelteKit, TypeScript, Tailwind, Skeleton UI)  
+- A **robust backend** (Prisma ORM, bcrypt, nodemailer/mailgun, caching)  
+- **Cloud deployment on Netlify** (with serverless + edge functions)  
+- A **top‑notch developer experience** (Vitest, ESLint, Prettier, svelte-check)  
+
+This stack provides a clean, fast, and scalable foundation for building a feature-rich modern web application.
