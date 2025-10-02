@@ -1,0 +1,24 @@
+TEST PLAN GENERATION
+
+Please generate a comprehensive test plan for my project with the following details:
+
+Project Overview:
+- Codebase: {{Codebase}}
+- Tech Stack: {{TechStack}}
+- Repository structure: [Please provide main directories and key files]
+- Main application components: [List key components/modules]
+
+Please include in the test plan:
+1. Testing scope and priorities based on the project architecture
+2. Recommended testing types (unit, integration, e2e, etc.) aligned with the tech stack
+3. Critical test scenarios for each major component
+4. Technology-specific testing approaches (e.g. specific testing frameworks)
+5. Test environment requirements
+6. Test data requirements and mocking strategies
+7. Performance testing considerations if applicable
+8. Security testing requirements if applicable
+
+Additional context to consider:
+- Are there any specific areas of concern or high-risk components?
+- What is the current test coverage (if any)?
+- Are there any existing testing tools or frameworks in place?

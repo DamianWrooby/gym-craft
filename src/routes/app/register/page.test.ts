@@ -47,7 +47,7 @@ vi.mock('$lib/utils/form-validation', () => ({
     isString: vi.fn(),
 }));
 
-const db = (await import('$lib/database')).db;
+const { db } = await import('$lib/database');
 
 import { actions } from './+page.server';
 import { isProduction } from '$lib/utils/environment';
