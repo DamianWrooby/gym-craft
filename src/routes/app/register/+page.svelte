@@ -6,6 +6,7 @@
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
     import Card from '@components/card/Card.svelte';
+    import { ActionResult } from '@sveltejs/kit';
 
     export let form;
 
@@ -42,19 +43,19 @@
     }
 
     interface FormCallbackResult {
-        result: any;
+        result: ActionResult;
         update: () => void;
     }
     type FormCallback = () => (result: FormCallbackResult) => Promise<void>;
     const formCallback: FormCallback = () => {
         loadingState.set(true);
-        return async ({ result, update }) => {
+        return async ({ result }) => {
             await applyAction(result);
             loadingState.set(false);
             if (result.type === 'redirect') {
                 makeToast(toastStore, 'Your account has been created. Now you can sign in.', 'variant-filled-success');
             } else if (result.type === 'error') {
-                makeToast(toastStore, result.message, 'variant-filled-error');
+                makeToast(toastStore, result.error?.message || 'Server error. Please try again.', 'variant-filled-error');
             }
         };
     };

@@ -5,11 +5,11 @@
     import type { Plan } from '@models/plan/plan.model';
 
     export let plan: Plan;
-    // @ts-ignore
+    // @ts-expect-error html2pdf.js is not typed
     let html2pdf;
 
     onMount(async () => {
-        // @ts-ignore
+        // @ts-expect-error html2pdf.js is not typed
         const module = await import('html2pdf.js');
         html2pdf = module.default;
     });
@@ -29,7 +29,7 @@
 
         htmlElementCopy.style.color = 'black';
 
-        // @ts-ignore
+        // @ts-expect-error html2pdf.js is not typed
         html2pdf().set(opt).from(htmlElementCopy).save();
     }
 

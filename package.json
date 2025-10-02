@@ -11,12 +11,14 @@
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test:unit": "vitest",
-        "lint": "prettier --plugin-search-dir . --check . && eslint .",
+        "lint": "eslint .",
+        "format-check": "prettier --plugin-search-dir . --check .",
         "format": "prettier --plugin-search-dir . --write .",
         "postinstall": "prisma generate",
         "test": "vitest run",
         "test:ui": "vitest --ui",
-        "test:watch": "vitest"
+        "test:watch": "vitest",
+        "deploy": "npm run format-check && npm run lint && npm run test && npm run build-and-migrate"
     },
     "devDependencies": {
         "@floating-ui/dom": "^1.7.2",

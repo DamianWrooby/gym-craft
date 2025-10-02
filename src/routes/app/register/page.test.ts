@@ -47,7 +47,7 @@ vi.mock('$lib/utils/form-validation', () => ({
     isString: vi.fn(),
 }));
 
-const db = (await import('$lib/database')).db;
+const { db } = await import('$lib/database');
 
 import { actions } from './+page.server';
 import { isProduction } from '$lib/utils/environment';
@@ -75,7 +75,7 @@ function setMocks() {
     mockCreateUser.mockResolvedValue(testUser);
     mockFindFirstUser.mockResolvedValue({ email: 'user@example.com' });
     vi.stubGlobal('crypto', { randomUUID: vi.fn() });
-    vi.mocked(to).mockReturnValue(new Promise((resolve, _) => resolve([null, 'token'])));
+    vi.mocked(to).mockReturnValue(new Promise((resolve) => resolve([null, 'token'])));
     (bcrypt.hash as Mock).mockResolvedValue('hashed');
     (crypto.randomUUID as any).mockReturnValue('uuid');
     vi.mocked(isString).mockReturnValue(true);
@@ -303,7 +303,7 @@ describe('register action', () => {
         vi.mocked(isString).mockReturnValue(true);
         vi.mocked(isProduction).mockReturnValue(true);
         vi.mocked(to).mockReturnValue(
-            new Promise((resolve, _) => resolve([new Error('test error message'), undefined])),
+            new Promise((resolve) => resolve([new Error('test error message'), undefined])),
         );
 
         const event = mockRequestWithFormData({});

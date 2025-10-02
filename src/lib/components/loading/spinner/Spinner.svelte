@@ -5,6 +5,7 @@
 <div class="h-full flex flex-col items-center justify-center select-none">
     <svg
         aria-hidden="true"
+        data-testid="spinner"
         role="status"
         class="inline w-{size} h-{size} me-3 text-white animate-spin"
         viewBox="0 0 100 101"

@@ -126,11 +126,22 @@
 
         const [error, garminPyConnectResponse] = await to(fetch(apiUrl, { method: 'POST', body: formData }));
 
-        if (error || !garminPyConnectResponse.ok) {
-            const { message }: { message: string } = await garminPyConnectResponse?.json();
+        if (error || !garminPyConnectResponse || !garminPyConnectResponse.ok) {
+            let message = 'Unknown error';
+            try {
+                if (garminPyConnectResponse) {
+                    const data = await garminPyConnectResponse.json();
+                    message = data?.message ?? message;
+                } else if (error instanceof Error) {
+                    message = error.message;
+                }
+            } catch (jsonErr) {
+                message = 'Error parsing JSON response';
+            }
+
             handleGarminPyConnectError(message, error);
 
-            if (message.includes('No valid token found')) {
+            if (typeof message === 'string' && message.includes('No valid token found')) {
                 makeToast(
                     toastStore,
                     'Invalid token <br> Please log in to your Garmin account',
@@ -143,7 +154,7 @@
             return;
         }
 
-        const { status } = await garminPyConnectResponse?.json();
+        const { status } = await garminPyConnectResponse.json();
 
         if (status === 'success') {
             handleWorkoutUploadSuccess(email);

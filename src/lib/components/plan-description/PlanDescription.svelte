@@ -3,16 +3,12 @@
     import { Accordion, AccordionItem } from '@skeletonlabs/skeleton';
     import { popup } from '@skeletonlabs/skeleton';
     import { CalendarIcon, HelpCircleIcon, ChevronsRightIcon } from 'svelte-feather-icons';
-    import { sportTypes, stepTypes, targetTypes } from '@/garmin/mapping';
+    import { sportTypes, stepTypes } from '@/garmin/mapping';
     import { periodizationText } from '@/constants/texts.constants';
-    import {
-        getEndConditionValue,
-        generateEndConditionDescription,
-        generateTargetDescription,
-        generateExerciseName,
-    } from '../../utils/plan-description';
+    import { getEndConditionValue } from '../../utils/plan-description';
+    import { getEndConditionData, getTargetData, getExerciseData } from '../../utils/plan-description';
     import type { PopupSettings } from '@skeletonlabs/skeleton';
-    import type { Plan, GeneratedWorkout, WorkoutStep } from '@models/plan/plan.model';
+    import type { Plan, GeneratedWorkout } from '@models/plan/plan.model';
     import Spinner from '../loading/spinner/Spinner.svelte';
 
     export let plan: Plan;
@@ -80,8 +76,20 @@
                                                     {stepTypes[subStep.stepType.stepTypeKey].title}
                                                 </h5>
                                                 <p>{subStep.description || ''}</p>
-                                                {@html generateEndConditionDescription(subStep)}
-                                                {@html generateTargetDescription(subStep)}
+                                                {#if getEndConditionData(subStep).hasCondition}
+                                                    <p class="text-secondary-400">
+                                                        End condition: {getEndConditionData(subStep).conditionType} - {getEndConditionData(
+                                                            subStep,
+                                                        ).value}
+                                                    </p>
+                                                {/if}
+                                                {#if getTargetData(subStep).hasTarget}
+                                                    <p class="text-warning-400">
+                                                        Target: {getTargetData(subStep).type} - {getTargetData(subStep)
+                                                            .valueOne} - {getTargetData(subStep).valueTwo}
+                                                        {getTargetData(subStep).unit}
+                                                    </p>
+                                                {/if}
                                             </div>
                                         {/each}
                                     {/if}
@@ -91,12 +99,29 @@
                                 <h3 class="h5 font-bold py-2">
                                     {stepIndex + 1}. {stepTypes[step.stepType.stepTypeKey].title}
                                 </h3>
-                                {@html generateExerciseName(step)}
+                                {#if getExerciseData(step)?.name}
+                                    <p class="text-secondary-400">
+                                        Exercise: {getExerciseData(step)?.name}
+                                    </p>
+                                {/if}
                                 <p>
                                     {step.description || ''}
                                 </p>
-                                {@html generateEndConditionDescription(step)}
-                                {@html generateTargetDescription(step)}
+                                {#if getEndConditionData(step).hasCondition}
+                                    <p class="text-secondary-400">
+                                        End condition: {getEndConditionData(step).conditionType} - {getEndConditionData(
+                                            step,
+                                        ).value}
+                                    </p>
+                                {/if}
+                                {#if getTargetData(step).hasTarget}
+                                    <p class="text-warning-400">
+                                        Target: {getTargetData(step).type} - {getTargetData(step).valueOne} - {getTargetData(
+                                            step,
+                                        ).valueTwo}
+                                        {getTargetData(step).unit}
+                                    </p>
+                                {/if}
                                 <br />
                             {/if}
                         {/each}
