@@ -56,10 +56,9 @@ const register: Action = async ({ request }) => {
         },
     });
 
-
     const [err, verificationToken] = await to(sendVerificationToken(createdUser.id, createdUser.email));
     if (err) throw error(500, 'Verification email not sent');
-    if (verificationToken)  throw redirect(303, '/verification-mail-sent');
+    if (verificationToken) throw redirect(303, '/verification-mail-sent');
 };
 
 export const actions: Actions = { register };

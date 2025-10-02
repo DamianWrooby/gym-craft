@@ -3,8 +3,7 @@
     import Seo from '$lib/components/seo/Seo.svelte';
 </script>
 
-<Seo title="Privacy Policy | GymCraft™"
-    metaDescription="Check out how we take care of your privacy" />
+<Seo title="Privacy Policy | GymCraft™" metaDescription="Check out how we take care of your privacy" />
 
 <Card width="3/4">
     <h1 class="h2 text-center py-10">Privacy Policy</h1>

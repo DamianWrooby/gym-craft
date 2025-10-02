@@ -43,10 +43,7 @@
             <div class="space-y-2">
                 {#each goalsOptions as option}
                     <label class="flex items-center space-x-2">
-                        <input
-                            class="checkbox"
-                            type="checkbox"
-                            bind:checked={data.mainGoals[option.value]} />
+                        <input class="checkbox" type="checkbox" bind:checked={data.mainGoals[option.value]} />
                         <p>{option.label}</p>
                     </label>
                 {/each}

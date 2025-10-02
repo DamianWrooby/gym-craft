@@ -37,21 +37,21 @@ export default async (request: Request) => {
                 },
             };
 
-			// Add the plan to the DB and update the generated plans number
+            // Add the plan to the DB and update the generated plans number
             const generatedPlan = await addPlan(userId, plan);
             const newGeneratedPlansNumber = await updateGeneratedPlansNumber(userId);
             const plansLeft =
                 typeof newGeneratedPlansNumber === 'number' ? generalPlanLimit - newGeneratedPlansNumber : 0;
 
-			// Prepare the response body
-			const responseBody = {
-				generatedPlan: generatedPlan,
-				generatedPlansNumber: newGeneratedPlansNumber,
-				plansLeft,
-			};
+            // Prepare the response body
+            const responseBody = {
+                generatedPlan: generatedPlan,
+                generatedPlansNumber: newGeneratedPlansNumber,
+                plansLeft,
+            };
 
-			controller.enqueue(json(responseBody));
-			controller.close();
+            controller.enqueue(json(responseBody));
+            controller.close();
         },
     });
     return new Response(body, {

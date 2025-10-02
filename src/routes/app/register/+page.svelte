@@ -55,7 +55,11 @@
             if (result.type === 'redirect') {
                 makeToast(toastStore, 'Your account has been created. Now you can sign in.', 'variant-filled-success');
             } else if (result.type === 'error') {
-                makeToast(toastStore, result.error?.message || 'Server error. Please try again.', 'variant-filled-error');
+                makeToast(
+                    toastStore,
+                    result.error?.message || 'Server error. Please try again.',
+                    'variant-filled-error',
+                );
             }
         };
     };

@@ -1,24 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="dark">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="icon" href="%sveltekit.assets%/favicon.png" />
+        <meta name="viewport" content="width=device-width" />
+        <meta name="have-i-been-pwned-verification" value="dweb_jtwse35n4tc4zka4e95qea9w" />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y1QGJKBJ0E"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() {
+                dataLayer.push(arguments);
+            }
+            gtag('js', new Date());
 
-<head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%sveltekit.assets%/favicon.png" />
-    <meta name="viewport" content="width=device-width" />
-    <meta name="have-i-been-pwned-verification" value="dweb_jtwse35n4tc4zka4e95qea9w">
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y1QGJKBJ0E"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
+            gtag('config', 'G-Y1QGJKBJ0E');
+        </script>
+        %sveltekit.head%
+    </head>
 
-        gtag('config', 'G-Y1QGJKBJ0E');
-    </script>
-    %sveltekit.head%
-</head>
-
-<body data-sveltekit-preload-data="hover" data-theme="crimson" class="bg-gradient-to-tr from-slate-500 to-slate-300 dark:from-slate-900 to-slate-800">
-    <div style="display: contents">%sveltekit.body%</div>
-</body>
-
+    <body
+        data-sveltekit-preload-data="hover"
+        data-theme="crimson"
+        class="bg-gradient-to-tr from-slate-500 to-slate-300 dark:from-slate-900 to-slate-800">
+        <div style="display: contents">%sveltekit.body%</div>
+    </body>
 </html>

@@ -16,7 +16,6 @@ Web application for generating AI-powered personalized workout plans tailored to
 - When debugging, provide targeted diagnostic approaches rather than shotgun solutions.
 - Suggest comprehensive testing strategies rather than just example tests, including considerations for mocking, test organization, and coverage.
 
-
 ## FRONTEND
 
 ### Guidelines for SVELTE
@@ -44,7 +43,6 @@ Web application for generating AI-powered personalized workout plans tailored to
 - Use lifecycle functions (onMount, onDestroy) for setup and cleanup
 - Leverage special elements like <svelte:window> and <svelte:component> for dynamic behavior
 
-
 ## TESTING
 
 ### Guidelines for UNIT
@@ -62,5 +60,3 @@ Web application for generating AI-powered personalized workout plans tailored to
 - Configure jsdom for DOM testing - Set `environment: 'jsdom'` in your configuration for frontend component tests and combine with testing-library utilities for realistic user interaction simulation.
 - Structure tests for maintainability - Group related tests with descriptive `describe` blocks, use explicit assertion messages, and follow the Arrange-Act-Assert pattern to make tests self-documenting.
 - Leverage TypeScript type checking in tests - Enable strict typing in your tests to catch type errors early, use `expectTypeOf()` for type-level assertions, and ensure mocks preserve the original type signatures.
-
-

@@ -44,7 +44,8 @@
     });
 </script>
 
-<Seo title="Personal trainer powered by AI | GymCraft™"
+<Seo
+    title="Personal trainer powered by AI | GymCraft™"
     metaDescription="Verification link has been sent to the provided email." />
 
 <Modal />

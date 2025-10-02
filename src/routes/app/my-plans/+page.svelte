@@ -21,6 +21,7 @@
         createdAt: string;
     }
 
+    // TODO: after confirming email user is undefined
     const user: User = $page.data.user;
 
     const modalStore = getModalStore();
@@ -45,6 +46,7 @@
     }
 
     async function getPlans() {
+        if (!user) return [];
         return await fetchPlans(user.id);
     }
 

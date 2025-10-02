@@ -111,37 +111,37 @@ function formatDuration(seconds: number): string {
 // Instead of returning HTML strings, return structured data
 export function getEndConditionData(step: WorkoutStep) {
     const endConditionValue = step.endCondition?.conditionTypeKey ? getEndConditionValue(step) : 'N/A';
-    
+
     return {
         conditionType: step.endCondition?.conditionTypeKey ?? 'unknown',
         value: endConditionValue,
-        hasCondition: !!step.endCondition?.conditionTypeKey
+        hasCondition: !!step.endCondition?.conditionTypeKey,
     };
 }
 
 export function getTargetData(step: WorkoutStep) {
     const isNoTarget = step.targetType.workoutTargetTypeKey === 'no.target';
-    
+
     return {
         hasTarget: !isNoTarget,
         type: targetTypes[step.targetType.workoutTargetTypeKey as keyof typeof targetTypes]?.label,
         valueOne: step.targetValueOne ?? '',
         valueTwo: step.targetValueTwo ?? '',
-        unit: step.targetValueUnit ?? ''
+        unit: step.targetValueUnit ?? '',
     };
 }
 
 export function getExerciseData(step: WorkoutStep) {
     if (!step.exerciseName) return null;
-    
+
     const formatExerciseName = (exerciseName: string): string => {
         return exerciseName
             .toLowerCase()
             .replace(/_/g, ' ')
             .replace(/\b\w/g, (char) => char.toUpperCase());
     };
-    
+
     return {
-        name: formatExerciseName(step.exerciseName)
+        name: formatExerciseName(step.exerciseName),
     };
 }

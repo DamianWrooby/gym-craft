@@ -102,12 +102,7 @@
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
             <div>How many hours per week can you commit to exercise?</div>
-            <select
-                class="select"
-                title="Hour capacity"
-                bind:value={data.hourCapacity}
-                required
-                aria-required>
+            <select class="select" title="Hour capacity" bind:value={data.hourCapacity} required aria-required>
                 {#each capacityOptions as option}
                     <option value={option.value}>{option.label}</option>
                 {/each}
@@ -120,10 +115,7 @@
             <div class="space-y-2">
                 {#each trainingDays as option}
                     <label class="flex items-center space-x-2">
-                        <input
-                            class="checkbox"
-                            type="checkbox"
-                            bind:checked={data.trainingDays[option.value]} />
+                        <input class="checkbox" type="checkbox" bind:checked={data.trainingDays[option.value]} />
                         <p>{option.label}</p>
                     </label>
                 {/each}

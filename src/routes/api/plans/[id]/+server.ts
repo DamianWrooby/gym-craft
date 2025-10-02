@@ -5,7 +5,7 @@ import type { Plan } from '@prisma/client';
 export async function POST({ request, params }: { request: Request; params: { id: string } }): Promise<Response> {
     const body = await request.json();
     let updatedPlan;
-    
+
     if (!params.id) {
         return createResponse(404, { message: 'Plan not found' });
     }

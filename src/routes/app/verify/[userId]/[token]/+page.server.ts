@@ -3,12 +3,12 @@ import { error } from '@sveltejs/kit';
 import { to } from 'await-to-js';
 
 export async function load({ params }) {
-		const [err] = await to(verifyToken(params.userId, params.token));
+    const [err] = await to(verifyToken(params.userId, params.token));
 
-		if (err) {
-			console.log(err);
-			throw error(400, 'Token error');
-		}
+    if (err) {
+        console.log(err);
+        throw error(400, 'Token error');
+    }
 
-	return { status: 200, body: 'Account verified' };
+    return { status: 200, body: 'Account verified' };
 }

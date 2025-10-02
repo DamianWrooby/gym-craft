@@ -4,7 +4,8 @@
     import Seo from '$lib/components/seo/Seo.svelte';
 </script>
 
-<Seo title="Something went wrong | GymCraft™"
+<Seo
+    title="Something went wrong | GymCraft™"
     metaDescription="Something went wrong. Use navigation or reload the page." />
 
 <Card>

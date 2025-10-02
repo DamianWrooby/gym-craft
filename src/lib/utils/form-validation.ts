@@ -23,13 +23,7 @@ export function validateRegisterFormData({
     return null;
 }
 
-export function validateGarminLoginFormData({
-    email,
-    password,
-}: {
-    email: string;
-    password: string;
-}) {
+export function validateGarminLoginFormData({ email, password }: { email: string; password: string }) {
     if (!email || typeof email !== 'string') return { invalidEmail: true };
     if (!password || typeof password !== 'string') return { invalidPassword: true };
 

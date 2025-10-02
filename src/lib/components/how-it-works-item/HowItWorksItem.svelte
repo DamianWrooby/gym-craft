@@ -39,7 +39,9 @@
     };
 </script>
 
-<article class="w-full flex justify-start text-left font-light max-w-xl xl:max-w-full" class:sm:flex-row-reverse={!isEven}>
+<article
+    class="w-full flex justify-start text-left font-light max-w-xl xl:max-w-full"
+    class:sm:flex-row-reverse={!isEven}>
     <div class="sm:w-1/2 p-8">
         <div class="relative pl-6 h-full flex flex-col flex-auto justify-between border-l">
             <p
@@ -57,13 +59,14 @@
         </div>
     </div>
     <div class="w-1/2 hidden sm:block p-5 flex class:justify-center={!isEven}">
-        <div class="card h-full bg-gradient-to-br from-surface-700 to-surface-900 aspect-square p-8 flex justify-center items-center">
+        <div
+            class="card h-full bg-gradient-to-br from-surface-700 to-surface-900 aspect-square p-8 flex justify-center items-center">
             <svelte:component this={icon} size={iconSize} />
         </div>
     </div>
 </article>
 {#if !isLast}
-        <ChevronsDownIcon class="m-auto text-primary-500 animate-bounce" size={'40'} />
+    <ChevronsDownIcon class="m-auto text-primary-500 animate-bounce" size={'40'} />
 {/if}
 
 <style>

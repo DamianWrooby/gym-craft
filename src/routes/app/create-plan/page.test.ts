@@ -37,7 +37,7 @@ describe.only('create-plan +page.svelte', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (pageStore as any).set({ data: { user: { session: 'sess', plansLeft: 1 } } });
-		loadingState.set(false);
+        loadingState.set(false);
     });
 
     it.only('shows Loader when loadingState is true and hides survey form', async () => {

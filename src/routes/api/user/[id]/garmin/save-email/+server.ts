@@ -2,7 +2,7 @@ import { saveGarminEmail } from '$lib/prisma/prisma';
 import { to } from 'await-to-js';
 import { createResponse } from '$lib/utils/response';
 
-export async function POST({ request, params }: { request: Request, params: { id: string } }): Promise<Response> {
+export async function POST({ request, params }: { request: Request; params: { id: string } }): Promise<Response> {
     const body = await request.json();
     const { email } = body;
     const userId = params.id;

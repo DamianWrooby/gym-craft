@@ -25,12 +25,7 @@
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
             <div>Sex</div>
-            <select
-                class="select w-9/12 md:w-1/2"
-                title="Sex selection"
-                bind:value={data.sex}
-                required
-                aria-required>
+            <select class="select w-9/12 md:w-1/2" title="Sex selection" bind:value={data.sex} required aria-required>
                 {#each Object.values(sexOptions) as option}
                     <option value={option.value}>{option.label}</option>
                 {/each}
@@ -77,10 +72,7 @@
     </div>
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
-            <div>
-                Do you have any existing medical conditions or injuries that may affect your
-                training?
-            </div>
+            <div>Do you have any existing medical conditions or injuries that may affect your training?</div>
             <textarea
                 class="textarea"
                 rows="4"
