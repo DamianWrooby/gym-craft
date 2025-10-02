@@ -9,19 +9,19 @@ https://github.com/user-attachments/assets/6ca0492a-74ec-402e-9f93-c15612cb136c
 ## Table of Contents
 
 - [GymCraft - AI Powered Personal Trainer](#gymcraft---ai-powered-personal-trainer)
-	- [Table of Contents](#table-of-contents)
-	- [Project Overview](#project-overview)
-	- [How does it work?](#how-does-it-work)
-	- [Garmin Connect Integration](#garmin-connect-integration)
-	- [Technologies Used](#technologies-used)
-	- [Architecture Schema](#architecture-schema)
-	- [Production Link](#production-link)
-	- [Getting Started (local installation)](#getting-started-local-installation)
-		- [Prerequisites](#prerequisites)
-		- [Installation](#installation)
-		- [Running the Application](#running-the-application)
-	- [License](#license)
-	- [Contact](#contact)
+    - [Table of Contents](#table-of-contents)
+    - [Project Overview](#project-overview)
+    - [How does it work?](#how-does-it-work)
+    - [Garmin Connect Integration](#garmin-connect-integration)
+    - [Technologies Used](#technologies-used)
+    - [Architecture Schema](#architecture-schema)
+    - [Production Link](#production-link)
+    - [Getting Started (local installation)](#getting-started-local-installation)
+        - [Prerequisites](#prerequisites)
+        - [Installation](#installation)
+        - [Running the Application](#running-the-application)
+    - [License](#license)
+    - [Contact](#contact)
 
 ## Project Overview
 
@@ -46,7 +46,7 @@ Effortlessly sync your AI-generated workout plans with your Garmin Connect™ ac
 - Access workouts on your Garmin watch or app
 - Track progress and adapt plans in real time
 
-This integration is designed for a frictionless experience—no manual file transfers or complex setup required. 
+This integration is designed for a frictionless experience—no manual file transfers or complex setup required.
 
 ## Technologies Used
 

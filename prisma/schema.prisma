@@ -1,86 +1,86 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id                   String              @id @default(uuid())
-  username             String              @unique
-  email                String              @default("") @db.VarChar(50)
-  emailVerified        Boolean             @default(false)
-  marketingAgreement   Boolean             @default(false)
-  passwordHash         String
-  userAuthToken        String              @unique
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  roleId               Int
-  role                 Roles               @relation(fields: [roleId], references: [id])
-  generatedPlansNumber Int                 @default(0)
-  plans                Plan[]
-  verificationTokens   VerificationToken[]
-  garminData           GarminData?
+    id                   String              @id @default(uuid())
+    username             String              @unique
+    email                String              @default("") @db.VarChar(50)
+    emailVerified        Boolean             @default(false)
+    marketingAgreement   Boolean             @default(false)
+    passwordHash         String
+    userAuthToken        String              @unique
+    createdAt            DateTime            @default(now())
+    updatedAt            DateTime            @updatedAt
+    roleId               Int
+    role                 Roles               @relation(fields: [roleId], references: [id])
+    generatedPlansNumber Int                 @default(0)
+    plans                Plan[]
+    verificationTokens   VerificationToken[]
+    garminData           GarminData?
 
-  @@index([roleId])
+    @@index([roleId])
 }
 
 model Roles {
-  id   Int    @id @default(autoincrement())
-  name Role   @unique
-  User User[]
+    id   Int    @id @default(autoincrement())
+    name Role   @unique
+    User User[]
 }
 
 model Plan {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  workouts    Json     @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String
-  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id          String   @id @default(uuid())
+    name        String
+    description String
+    workouts    Json     @default("{}")
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    userId      String
+    User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+    @@index([userId])
 }
 
 enum Role {
-  ADMIN
-  MODERATOR
-  USER
+    ADMIN
+    MODERATOR
+    USER
 }
 
 model Configuration {
-  id        String   @id @default(uuid())
-  name      String
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        String   @id @default(uuid())
+    name      String
+    value     String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
-  id        String    @id @default(uuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-  usedAt    DateTime?
-  isUsed    Boolean   @default(false)
+    id        String    @id @default(uuid())
+    userId    String
+    tokenHash String    @unique
+    expiresAt DateTime
+    createdAt DateTime  @default(now())
+    usedAt    DateTime?
+    isUsed    Boolean   @default(false)
 
-  User User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    User User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([tokenHash])
+    @@index([userId])
+    @@index([tokenHash])
 }
 
 model GarminData {
-  id           String @id @default(uuid())
-  userId       String @unique
-  email        String @default("") @db.VarChar(50)
-  User         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id     String @id @default(uuid())
+    userId String @unique
+    email  String @default("") @db.VarChar(50)
+    User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+    @@index([userId])
 }

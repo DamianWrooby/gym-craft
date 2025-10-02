@@ -1,4 +1,7 @@
-export function sanitizeObject<T extends object, K extends keyof T>(obj: T, filter: K[] | { [P in K]: unknown }): Pick<T, K> {
+export function sanitizeObject<T extends object, K extends keyof T>(
+    obj: T,
+    filter: K[] | { [P in K]: unknown },
+): Pick<T, K> {
     // Get allowed properties based on input type
     const allowedProps = Array.isArray(filter) ? filter : (Object.keys(filter) as K[]);
 

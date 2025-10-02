@@ -3,7 +3,8 @@
     import Seo from '$lib/components/seo/Seo.svelte';
 </script>
 
-<Seo title="Verification email has been sent! | GymCraft™"
+<Seo
+    title="Verification email has been sent! | GymCraft™"
     metaDescription="Verification link has been sent to the provided email." />
 
 <Card>

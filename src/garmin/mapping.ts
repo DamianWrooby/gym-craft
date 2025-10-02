@@ -1,52 +1,52 @@
-import type { EndCondition } from "@/models/plan/plan.model";
+import type { EndCondition } from '@/models/plan/plan.model';
 
 export const sportTypes: Record<string, SportType> = {
-    'running': {
+    running: {
         title: 'Running',
     },
-    'cycling': {
+    cycling: {
         title: 'Cycling',
     },
-    'other': {
-		title: 'Other',
-	},
-    'swimming': {
+    other: {
+        title: 'Other',
+    },
+    swimming: {
         title: 'Swimming',
     },
-    'strength_training': {
+    strength_training: {
         title: 'Strength Training',
     },
-    'cardio_training': {
+    cardio_training: {
         title: 'Cardio Training',
     },
-    'yoga': {
+    yoga: {
         title: 'Yoga',
     },
-    'pilates': {
+    pilates: {
         title: 'Pilates',
     },
-    'hiit': {
+    hiit: {
         title: 'HIIT',
     },
 };
 
 export const stepTypes: Record<string, SportType> = {
-    'warmup': {
+    warmup: {
         title: 'Warm Up',
     },
-    'cooldown': {
+    cooldown: {
         title: 'Cooldown',
     },
-    'interval': {
+    interval: {
         title: 'Interval',
     },
-    'recovery': {
+    recovery: {
         title: 'Recovery',
     },
-    'rest': {
+    rest: {
         title: 'Rest',
     },
-    'repeat': {
+    repeat: {
         title: 'Repeat',
     },
 };
@@ -56,97 +56,97 @@ export const conditionTypeMapping: Record<string, EndCondition> = {
         conditionTypeId: 4,
         conditionTypeKey: 'calories',
         displayOrder: 4,
-        displayable: true
+        displayable: true,
     },
     distance: {
         conditionTypeId: 3,
         conditionTypeKey: 'distance',
         displayOrder: 3,
-        displayable: true
+        displayable: true,
     },
     'heart rate': {
         conditionTypeId: 6,
         conditionTypeKey: 'heart.rate',
         displayOrder: 6,
-        displayable: true
+        displayable: true,
     },
     'lap button': {
         conditionTypeId: 1,
         conditionTypeKey: 'lap.button',
         displayOrder: 1,
-        displayable: true
+        displayable: true,
     },
     iterations: {
         conditionTypeId: 7,
         conditionTypeKey: 'iterations',
         displayOrder: 7,
-        displayable: false
+        displayable: false,
     },
     power: {
         conditionTypeId: 5,
         conditionTypeKey: 'power',
         displayOrder: 5,
-        displayable: true
+        displayable: true,
     },
     time: {
         conditionTypeId: 2,
         conditionTypeKey: 'time',
         displayOrder: 2,
-        displayable: true
+        displayable: true,
     },
     'fixed rest': {
         conditionTypeId: 8,
         conditionTypeKey: 'fixed.rest',
         displayOrder: 8,
-        displayable: true
+        displayable: true,
     },
     'fixed repetition': {
         conditionTypeId: 9,
         conditionTypeKey: 'fixed.repetition',
         displayOrder: 9,
-        displayable: true
+        displayable: true,
     },
     reps: {
         conditionTypeId: 10,
         conditionTypeKey: 'reps',
         displayOrder: 10,
-        displayable: true
+        displayable: true,
     },
     'training peaks tss': {
         conditionTypeId: 11,
         conditionTypeKey: 'training.peaks.tss',
         displayOrder: 11,
-        displayable: false
+        displayable: false,
     },
     'repetition time': {
         conditionTypeId: 12,
         conditionTypeKey: 'repetition.time',
         displayOrder: 12,
-        displayable: false
+        displayable: false,
     },
     'time at valid cda': {
         conditionTypeId: 13,
         conditionTypeKey: 'time.at.valid.cda',
         displayOrder: 13,
-        displayable: false
+        displayable: false,
     },
     'power last lap': {
         conditionTypeId: 14,
         conditionTypeKey: 'power.last.lap',
         displayOrder: 14,
-        displayable: false
+        displayable: false,
     },
     'max power last lap': {
         conditionTypeId: 15,
         conditionTypeKey: 'max.power.last.lap',
         displayOrder: 15,
-        displayable: false
+        displayable: false,
     },
     'repetition swim css offset': {
         conditionTypeId: 16,
         conditionTypeKey: 'repetition.swim.css.offset',
         displayOrder: 16,
-        displayable: true
+        displayable: true,
     },
 };
 
@@ -154,11 +154,11 @@ export const targetTypes = {
     'no.target': { label: 'No target' },
     'power.zone': { label: 'Power' },
     'cadence.zone': { label: 'Cadence' },
-    'heart.rate.zone': {label: 'Heart rate'},
+    'heart.rate.zone': { label: 'Heart rate' },
     'speed.zone': { label: 'Speed' },
     'pace.zone': { label: 'Pace' },
 };
 
 interface SportType {
-    title: string,
-};
+    title: string;
+}

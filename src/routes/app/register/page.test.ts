@@ -302,9 +302,7 @@ describe('register action', () => {
         vi.mocked(validateRegisterFormData).mockReturnValue(null);
         vi.mocked(isString).mockReturnValue(true);
         vi.mocked(isProduction).mockReturnValue(true);
-        vi.mocked(to).mockReturnValue(
-            new Promise((resolve) => resolve([new Error('test error message'), undefined])),
-        );
+        vi.mocked(to).mockReturnValue(new Promise((resolve) => resolve([new Error('test error message'), undefined])));
 
         const event = mockRequestWithFormData({});
 

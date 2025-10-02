@@ -36,12 +36,7 @@
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
             <div>Your fitness activity experience</div>
-            <select
-                class="select"
-                title="Sex selection"
-                bind:value={data.activityLevel}
-                required
-                aria-required>
+            <select class="select" title="Sex selection" bind:value={data.activityLevel} required aria-required>
                 {#each experienceOptions as option}
                     <option value={option.value}>{option.label}</option>
                 {/each}
@@ -62,9 +57,7 @@
     </div>
     <div class="flex flex-row gap-x-4 py-4">
         <label class="label pb-2 grow">
-            <div>
-                What type of exercises or workouts have you enjoyed or found successful previously?
-            </div>
+            <div>What type of exercises or workouts have you enjoyed or found successful previously?</div>
             <textarea
                 class="textarea"
                 rows="4"

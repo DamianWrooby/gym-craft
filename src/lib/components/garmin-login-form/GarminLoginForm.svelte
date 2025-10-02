@@ -28,31 +28,31 @@
     <div class="modal-example-form {cBase}">
         <header class={cHeader}>{$modalStore[0].title ?? '(title missing)'}</header>
         <article>{$modalStore[0].body ?? '(body missing)'}</article>
-            <div class="p-1 max-w-sm m-auto">
-                <label class="label" for="email">Email</label>
-                <input
-                    class="input"
-                    id="email"
-                    name="email"
-                    type="email"
-                    autocomplete="email"
-                    bind:value={formData.email}
-                    required />
-            </div>
+        <div class="p-1 max-w-sm m-auto">
+            <label class="label" for="email">Email</label>
+            <input
+                class="input"
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                bind:value={formData.email}
+                required />
+        </div>
 
-            <div class="p-1 max-w-sm m-auto pb-5">
-                <label class="label" for="password">Password</label>
-                <input
-                    class="input"
-                    id="password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    bind:value={formData.password}
-                    required />
-            </div>
-            <!-- prettier-ignore -->
-            <footer class="flex justify-center">
+        <div class="p-1 max-w-sm m-auto pb-5">
+            <label class="label" for="password">Password</label>
+            <input
+                class="input"
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                bind:value={formData.password}
+                required />
+        </div>
+        <!-- prettier-ignore -->
+        <footer class="flex justify-center">
                 <button class="btn variant-filled-tertiary mr-2" on:click|preventDefault={parent.onClose}>{parent.buttonTextCancel}</button>
                 <button class="btn variant-filled-primary" on:click={onFormSubmit} >
                     <ChevronsRightIcon class="group-hover:animate-pulse" />

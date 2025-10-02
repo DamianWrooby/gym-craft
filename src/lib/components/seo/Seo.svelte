@@ -3,7 +3,8 @@
     import Screenshot from '$lib/images/gym-craft-app-ss.png';
 
     export let title = 'Personal trainer powered by AI | GymCraft™';
-    export let metaDescription: string = 'Generate AI-powered personalized workout plans tailored to your goals, experience, and physical condition.';
+    export let metaDescription: string =
+        'Generate AI-powered personalized workout plans tailored to your goals, experience, and physical condition.';
     export let ogImage = Screenshot;
 
     const baseUrl = appConfig.baseUrlPROD as string;
@@ -22,10 +23,10 @@
     <meta property="og:image:alt" content="GymCraft - Personal trainer application powered by AI" />
 
     <!-- Twitter Card -->
-	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content={title} />
-	<meta name="twitter:description" content={metaDescription} />
-	<meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={metaDescription} />
+    <meta name="twitter:image" content={ogImage} />
 
     <link rel="canonical" href={baseUrl} />
 </svelte:head>

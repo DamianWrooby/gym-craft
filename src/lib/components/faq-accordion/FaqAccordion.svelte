@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Accordion, AccordionItem } from '@skeletonlabs/skeleton';
 
-    export let items: Array<{title: string, content: string}>;
+    export let items: Array<{ title: string; content: string }>;
 </script>
 
 <Accordion

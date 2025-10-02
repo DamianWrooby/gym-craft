@@ -79,7 +79,10 @@
         </div>
         <div class="p-5 text-center">
             {#if user && user.plansLeft > 0}
-                <button on:click={() => onCreatePlan()} disabled={!user.emailVerified} class="btn variant-filled-primary group">
+                <button
+                    on:click={() => onCreatePlan()}
+                    disabled={!user.emailVerified}
+                    class="btn variant-filled-primary group">
                     <Edit2Icon size="20" class="group-hover:animate-pulse" />
                     <span>Create training plan</span>
                 </button>

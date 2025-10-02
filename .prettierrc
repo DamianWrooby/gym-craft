@@ -6,7 +6,5 @@
     "bracketSameLine": true,
     "plugins": ["prettier-plugin-svelte", "prettier-plugin-prisma"],
     "pluginSearchDirs": ["."],
-    "overrides": [
-        { "files": "*.svelte", "options": { "parser": "svelte" } }
-    ]
+    "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
 }

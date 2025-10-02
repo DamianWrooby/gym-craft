@@ -107,8 +107,16 @@
             allowing for steady progress.
         </p>
         <div class="w-full py-10 flex">
-            <img loading="lazy" alt="AI fitness app connected to Garmin" src={ManImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
-            <img loading="lazy" alt="AI personal coach - generate workout plan and send to Garmin with one click" src={GymImage} class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
+            <img
+                loading="lazy"
+                alt="AI fitness app connected to Garmin"
+                src={ManImage}
+                class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
+            <img
+                loading="lazy"
+                alt="AI personal coach - generate workout plan and send to Garmin with one click"
+                src={GymImage}
+                class="w-1/2 pr-1 sm:pr-2 rounded-lg" />
         </div>
         <h3 class="h3 pt-10 pb-10 font-semibold">Time is priceless</h3>
         <p class="text-left font-light text-lg md:text-xl pb-5">
