@@ -29,14 +29,14 @@ import { loadingState } from '@/stores';
 import CreatePlanPage from './+page.svelte';
 import { page as pageStore } from '$app/stores';
 
-describe.only('create-plan +page.svelte', () => {
+describe('create-plan +page.svelte', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (pageStore as any).set({ data: { user: { session: 'sess', plansLeft: 1 } } });
         loadingState.set(false);
     });
 
-    it.only('shows Loader when loadingState is true and hides survey form', async () => {
+    it('shows Loader when loadingState is true and hides survey form', async () => {
         loadingState.set(true);
 
         const { getByTestId } = render(CreatePlanPage);
