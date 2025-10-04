@@ -28,10 +28,6 @@ import { loadingState } from '@/stores';
 // Keep real component for Loader/SurveyForm; no behavior needed for this test
 import CreatePlanPage from './+page.svelte';
 import { page as pageStore } from '$app/stores';
-import { goto } from '$app/navigation';
-import { makeToast } from '$lib/utils/toasts';
-const gotoMock = vi.mocked(goto);
-const makeToastMock = vi.mocked(makeToast);
 
 describe.only('create-plan +page.svelte', () => {
     beforeEach(() => {
