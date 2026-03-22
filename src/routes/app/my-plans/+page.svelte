@@ -151,7 +151,7 @@
 </script>
 
 <Card width="3/4">
-    <h2 class="h2 text-center text-xl py-10">Generated plans</h2>
+    <h2 class="h2 text-center text-xl py-10">Workouts</h2>
     <div class="md:w-3/4 m-auto pb-8">
         {#if tableRows?.length}
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
