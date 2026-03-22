@@ -15,8 +15,8 @@ const register: Action = async ({ request }) => {
     const email = data.get('email');
     const password = data.get('password');
     const confirmPassword = data.get('confirmPassword');
-    const termsOfUse = data.get('termsOfUse') === 'true';
-    const marketingAgreement = data.get('marketingAgreement') === 'true';
+    const termsOfUse = data.get('termsOfUse') === 'on';
+    const marketingAgreement = data.get('marketingAgreement') === 'on';
 
     if (!isString(username) || !isString(email) || !isString(password) || !isString(confirmPassword)) {
         return fail(400, { invalidEntry: true });

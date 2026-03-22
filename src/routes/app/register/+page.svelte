@@ -6,7 +6,7 @@
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
     import Card from '@components/card/Card.svelte';
-    import { ActionResult } from '@sveltejs/kit';
+    import type { ActionResult } from '@sveltejs/kit';
 
     export let form;
 
