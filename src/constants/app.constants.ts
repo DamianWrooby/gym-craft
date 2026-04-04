@@ -7,7 +7,7 @@ export enum appConfig {
     openAIapiUrl = 'https://api.openai.com/v1/chat/completions',
     proxyApiUrlDEV = 'http://localhost:3000/api/generate-plan',
     proxyApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/generate-plan',
-    internalGarminApiUrl = 'https://gymcraft-python-connect.onrender.com/upload-workout',
+    internalGarminApiUrl = 'https://gymcraft-python-connect.onrender.com',
     plansApiUrl = '/api/plans',
     generalPlanLimitApiUrl = '/api/general-plan-limit',
     administratorEmail = 'dwroblewski89@gmail.com',

@@ -16,8 +16,6 @@
     import { sanitizeObject } from '$lib/utils/sanitize';
     import { workoutProperties } from '@/constants/workout.constants';
     import { validateGarminLoginFormData, isValidEmailFormat } from '$lib/utils/form-validation';
-    import { appConfig } from '@/constants/app.constants';
-
     const modalStore = getModalStore();
     const modalComponent: ModalComponent = { ref: GarminLoginForm };
 
@@ -98,39 +96,48 @@
             garminLoading = null;
             return;
         }
-        if (!isValidLoginFormData(loginFormData)) hadleFormValidationError();
+        if (!isValidLoginFormData(loginFormData)) {
+            handleFormValidationError();
+            return;
+        }
 
         const { email, password } = loginFormData;
         const formValidationError = validateGarminLoginFormData({ email, password });
 
         if (formValidationError) {
-            hadleFormValidationError();
+            handleFormValidationError();
+            return;
         }
 
-        const formData = prepareWorkoutFormData(email, password);
-        sendFormDataToGarmin(formData, email);
+        await sendWorkoutToGarmin(password, email);
     }
 
     async function sendToGarminEmailOnly(email: string) {
         if (!isValidEmailFormat(email)) {
-            hadleFormValidationError();
+            handleFormValidationError();
+            return;
         }
 
-        const formData = prepareWorkoutFormData(email);
-
-        sendFormDataToGarmin(formData);
+        await sendWorkoutToGarmin();
     }
 
-    async function sendFormDataToGarmin(formData: FormData, email?: string) {
-        const apiUrl = appConfig.internalGarminApiUrl;
+    async function sendWorkoutToGarmin(password?: string, emailToSave?: string) {
+        const workout = sanitizeObject(workoutToSend, workoutProperties);
+        const apiUrl = `/api/user/${userId}/garmin/upload-workout`;
 
-        const [error, garminPyConnectResponse] = await to(fetch(apiUrl, { method: 'POST', body: formData }));
+        const [error, response] = await to(
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ workout, password }),
+            }),
+        );
 
-        if (error || !garminPyConnectResponse || !garminPyConnectResponse.ok) {
+        if (error || !response || !response.ok) {
             let message = 'Unknown error';
             try {
-                if (garminPyConnectResponse) {
-                    const data = await garminPyConnectResponse.json();
+                if (response) {
+                    const data = await response.json();
                     message = data?.message ?? message;
                 } else if (error instanceof Error) {
                     message = error.message;
@@ -154,25 +161,12 @@
             return;
         }
 
-        const { status } = await garminPyConnectResponse.json();
+        const { status } = await response.json();
 
         if (status === 'success') {
-            handleWorkoutUploadSuccess(email);
+            handleWorkoutUploadSuccess(emailToSave);
             garminLoading = null;
         }
-    }
-
-    function prepareWorkoutFormData(email: string, password?: string): FormData {
-        const workout = sanitizeObject(workoutToSend, workoutProperties);
-        const jsonWorkout = JSON.stringify(workout);
-        const workoutBlob = new Blob([jsonWorkout], { type: 'application/json' });
-
-        const formData = new FormData();
-        formData.append('username', email);
-        if (password) formData.append('password', password);
-        formData.append('file', workoutBlob, 'workout.json');
-
-        return formData;
     }
 
     function handleGarminPyConnectError(message: string, error: Error | null) {
@@ -188,7 +182,7 @@
         garminLoading = null;
     }
 
-    function hadleFormValidationError() {
+    function handleFormValidationError() {
         makeToast(toastStore, 'Form validation error', 'variant-filled-error');
         garminLoading = null;
     }
