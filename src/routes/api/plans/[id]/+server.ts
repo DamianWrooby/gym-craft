@@ -1,41 +1,38 @@
 import { updatePlanName, deletePlan } from '$lib/prisma/prisma';
 import { createResponse } from '$lib/utils/response';
+import { getAuthenticatedUser } from '$lib/server/auth';
 import type { Plan } from '@prisma/client';
+import type { RequestEvent } from './$types';
 
-export async function POST({ request, params }: { request: Request; params: { id: string } }): Promise<Response> {
-    const body = await request.json();
-    let updatedPlan;
+export async function POST(event: RequestEvent): Promise<Response> {
+    const user = getAuthenticatedUser(event);
+    const body = await event.request.json();
 
-    if (!params.id) {
+    if (!event.params.id) {
         return createResponse(404, { message: 'Plan not found' });
     }
 
     try {
-        updatedPlan = await updatePlanName(params.id, body.name, body.userId);
+        await updatePlanName(event.params.id, body.name, user.id);
     } catch (error) {
         return createResponse(502, { message: 'Database error' });
     }
 
-    return createResponse(200, updatedPlan);
+    return createResponse(200, { success: true });
 }
 
-export async function DELETE({ request, params }: { request: Request; params: { id: string } }): Promise<Response> {
-    const body = await request.json();
-    const userId = body.userId;
+export async function DELETE(event: RequestEvent): Promise<Response> {
+    const user = getAuthenticatedUser(event);
     let removedPlan: Plan;
 
-    if (!userId) {
-        return createResponse(400, { message: 'Invalid credentials' });
-    }
-
-    if (!params.id) {
+    if (!event.params.id) {
         return createResponse(404, { message: 'Plan not found' });
     }
 
     try {
-        removedPlan = await deletePlan(params.id, userId);
+        removedPlan = await deletePlan(event.params.id, user.id);
     } catch (error) {
-        return createResponse(502, { message: (error as Error).message });
+        return createResponse(502, { message: 'Database error' });
     }
 
     return createResponse(200, removedPlan);

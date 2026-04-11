@@ -29,6 +29,7 @@ import { actions } from './+page.server';
 import { isProduction } from '$lib/utils/environment';
 import { isString } from '$lib/utils/form-validation';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 const mockFindUniqueUser = db.user.findUnique as unknown as Mock;
 const mockUpdateUser = db.user.update as unknown as Mock;
@@ -60,8 +61,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     vi.resetAllMocks();
 
-    vi.stubGlobal('crypto', { randomUUID: vi.fn() });
-    (crypto.randomUUID as any).mockReturnValue('uuid');
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('test-uuid' as `${string}-${string}-${string}-${string}-${string}`);
 
     vi.mocked(isString).mockReturnValue(true);
     vi.mocked(isProduction).mockReturnValue(true);
@@ -127,9 +127,9 @@ ActionFailure {
         } catch (e: any) {
             expect(mockUpdateUser).toHaveBeenCalledWith({
                 where: { username: 'john' },
-                data: { userAuthToken: 'uuid' },
+                data: { userAuthToken: 'df1c3ea58c80b791504742601b7bc41239eab2522822010e17d6b365fe2782f9' },
             });
-            expect(event.cookies.set).toHaveBeenCalledWith('session', 'uuid', {
+            expect(event.cookies.set).toHaveBeenCalledWith('session', 'test-uuid', {
                 path: '/',
                 httpOnly: true,
                 sameSite: 'strict',

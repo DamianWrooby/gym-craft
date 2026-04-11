@@ -1,10 +1,15 @@
 import { fail, redirect } from '@sveltejs/kit';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { isProduction } from '$lib/utils/environment';
 import type { Action, Actions } from '../$types';
 import { isString } from '$lib/utils/form-validation';
 
 import { db } from '$lib/database';
+
+function hashSessionToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 const login: Action = async ({ cookies, request }) => {
     const data = await request.formData();
@@ -32,12 +37,15 @@ const login: Action = async ({ cookies, request }) => {
         return fail(400, { credentials: true });
     }
 
-    const authenticatedUser = await db.user.update({
+    const rawToken = crypto.randomUUID();
+    const hashedToken = hashSessionToken(rawToken);
+
+    await db.user.update({
         where: { username: user.username },
-        data: { userAuthToken: crypto.randomUUID() },
+        data: { userAuthToken: hashedToken },
     });
 
-    cookies.set('session', authenticatedUser.userAuthToken, {
+    cookies.set('session', rawToken, {
         path: '/',
         httpOnly: true,
         sameSite: 'strict',

@@ -55,6 +55,7 @@ import { validateRegisterFormData, isString } from '$lib/utils/form-validation';
 import { sendVerificationToken } from '$lib/server/mail';
 import { to } from 'await-to-js';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 const mockFindUniqueUser = db.user.findUnique as unknown as Mock;
 const mockFindFirstUser = db.user.findFirst as unknown as Mock;
@@ -74,10 +75,9 @@ function setMocks() {
     mockCreateRole.mockResolvedValue(testRole);
     mockCreateUser.mockResolvedValue(testUser);
     mockFindFirstUser.mockResolvedValue({ email: 'user@example.com' });
-    vi.stubGlobal('crypto', { randomUUID: vi.fn() });
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('test-uuid' as `${string}-${string}-${string}-${string}-${string}`);
     vi.mocked(to).mockReturnValue(new Promise((resolve) => resolve([null, 'token'])));
     (bcrypt.hash as Mock).mockResolvedValue('hashed');
-    (crypto.randomUUID as any).mockReturnValue('uuid');
     vi.mocked(isString).mockReturnValue(true);
     vi.mocked(isProduction).mockReturnValue(true);
     vi.mocked(validateRegisterFormData).mockReturnValue(null);
@@ -89,7 +89,7 @@ function mockRequestWithFormData({
     email = 'john@example.com',
     password = 'secret123',
     confirmPassword = 'secret123',
-    termsOfUse = 'true',
+    termsOfUse = 'on',
     marketingAgreement = 'false',
 }: {
     username?: string;
@@ -157,20 +157,20 @@ describe('register action', () => {
         const result = await register(event as any);
         const snapshot = `ActionFailure {
   "data": {
-    "userExists": true,
+    "accountExists": true,
   },
   "status": 400,
 }`;
         expect(result).toMatchInlineSnapshot(snapshot);
     });
 
-    it('returns fail if email exists in production', async () => {
+    it('returns fail if email exists', async () => {
         mockFindFirstUser.mockResolvedValue({ email: 'email@test.com' });
         const event = mockRequestWithFormData({});
         const result = await register(event as any);
         const snapshot = `ActionFailure {
   "data": {
-    "emailExists": true,
+    "accountExists": true,
   },
   "status": 400,
 }`;
@@ -206,7 +206,7 @@ describe('register action', () => {
                             name: 'USER',
                         },
                     },
-                    userAuthToken: 'uuid',
+                    userAuthToken: 'df1c3ea58c80b791504742601b7bc41239eab2522822010e17d6b365fe2782f9',
                     username: 'john',
                 },
             });
@@ -259,7 +259,7 @@ describe('register action', () => {
         expect(result).toMatchInlineSnapshot(`
         ActionFailure {
           "data": {
-            "userExists": true,
+            "accountExists": true,
           },
           "status": 400,
         }
@@ -267,10 +267,9 @@ describe('register action', () => {
         expect(db.user.create).not.toHaveBeenCalled();
     });
 
-    it('does not create user if email exists in production', async () => {
+    it('does not create user if email exists', async () => {
         vi.mocked(validateRegisterFormData).mockReturnValue(null);
         vi.mocked(isString).mockReturnValue(true);
-        vi.mocked(isProduction).mockReturnValue(true);
 
         mockFindUniqueUser.mockResolvedValue(null);
 

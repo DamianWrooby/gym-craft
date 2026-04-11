@@ -6,7 +6,6 @@ export async function load({ params }) {
     const [err] = await to(verifyToken(params.userId, params.token));
 
     if (err) {
-        console.log(err);
         throw error(400, 'Token error');
     }
 

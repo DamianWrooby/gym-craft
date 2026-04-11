@@ -1,10 +1,20 @@
 import { sportTypes, stepTypes, targetTypes } from '@/garmin/mapping';
 import type { Plan, GeneratedWorkout, WorkoutStep } from '@models/plan/plan.model';
 
+function escapeHtml(str: string | number | null | undefined): string {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 export function generateFullPlanDescription(plan: Plan): string {
-    let html = `<h1>${plan.name}</h1>`;
+    let html = `<h1>${escapeHtml(plan.name)}</h1>`;
     if (plan.description) {
-        html += `<p>${plan.description}</p>`;
+        html += `<p>${escapeHtml(plan.description)}</p>`;
     }
     html += `<h2>Weekly Training Plan Overview</h2>`;
     if (plan.workouts?.length) {
@@ -22,30 +32,30 @@ export function generateFullWorkoutDescription(workout: GeneratedWorkout): strin
     const getSportTitle = (key: string) => sportTypes[key]?.title ?? key;
     const getStepTitle = (key: string) => stepTypes[key]?.title ?? key;
 
-    let html = `<h2>${workout.dayOfWeek} - ${workout.workoutName} <span style="font-weight:normal;color:#aaa;">| ${getSportTitle(workout.sportType.sportTypeKey)}</span></h2>`;
+    let html = `<h2>${escapeHtml(workout.dayOfWeek)} - ${escapeHtml(workout.workoutName)} <span style="font-weight:normal;color:#aaa;">| ${escapeHtml(getSportTitle(workout.sportType.sportTypeKey))}</span></h2>`;
     if (workout.justification) {
-        html += `<p style="color:#8ca0b3;">${workout.justification}</p>`;
+        html += `<p style="color:#8ca0b3;">${escapeHtml(workout.justification)}</p>`;
     }
 
     workout.workoutSegments.forEach((segment, segmentIdx) => {
         html += `<h3>Segment ${segmentIdx + 1}</h3>`;
         segment.workoutSteps.forEach((step, stepIdx) => {
             if (step.stepType.stepTypeKey === 'repeat') {
-                html += `<h4>${stepIdx + 1}. Repeat block - ${getEndConditionValue(step)} iterations</h4>`;
+                html += `<h4>${stepIdx + 1}. Repeat block - ${escapeHtml(getEndConditionValue(step))} iterations</h4>`;
                 if (step.workoutSteps?.length) {
                     html += `<div style="margin-left:1em;border-left:2px solid #ccc;padding-left:1em;">`;
                     step.workoutSteps.forEach((subStep) => {
-                        html += `<h5>${getStepTitle(subStep.stepType.stepTypeKey)}</h5>`;
-                        if (subStep.description) html += `<p>${subStep.description}</p>`;
+                        html += `<h5>${escapeHtml(getStepTitle(subStep.stepType.stepTypeKey))}</h5>`;
+                        if (subStep.description) html += `<p>${escapeHtml(subStep.description)}</p>`;
                         html += generateEndConditionDescription(subStep);
                         html += generateTargetDescription(subStep);
                     });
                     html += `</div>`;
                 }
             } else {
-                html += `<h4>${stepIdx + 1}. ${getStepTitle(step.stepType.stepTypeKey)}</h4>`;
+                html += `<h4>${stepIdx + 1}. ${escapeHtml(getStepTitle(step.stepType.stepTypeKey))}</h4>`;
                 html += generateExerciseName(step);
-                if (step.description) html += `<p>${step.description}</p>`;
+                if (step.description) html += `<p>${escapeHtml(step.description)}</p>`;
                 html += generateEndConditionDescription(step);
                 html += generateTargetDescription(step);
             }
@@ -69,13 +79,13 @@ export function getEndConditionValue(step: WorkoutStep): string | number {
 export function generateEndConditionDescription(step: WorkoutStep): string {
     const endConditionValue = step.endCondition?.conditionTypeKey ? getEndConditionValue(step) : 'N/A';
 
-    return `<p class="text-secondary-400">End condition: ${step.endCondition?.conditionTypeKey ?? 'unknown'} - ${endConditionValue}</p>`;
+    return `<p class="text-secondary-400">End condition: ${escapeHtml(step.endCondition?.conditionTypeKey ?? 'unknown')} - ${escapeHtml(endConditionValue)}</p>`;
 }
 
 export function generateTargetDescription(step: WorkoutStep): string {
     return step.targetType.workoutTargetTypeKey === 'no.target'
         ? ''
-        : `<p class="text-warning-400">Target: ${targetTypes[step.targetType.workoutTargetTypeKey as keyof typeof targetTypes].label} - ${step.targetValueOne ?? ''} - ${step.targetValueTwo ?? ''} ${step.targetValueUnit ?? ''}</p>`;
+        : `<p class="text-warning-400">Target: ${escapeHtml(targetTypes[step.targetType.workoutTargetTypeKey as keyof typeof targetTypes].label)} - ${escapeHtml(step.targetValueOne)} - ${escapeHtml(step.targetValueTwo)} ${escapeHtml(step.targetValueUnit)}</p>`;
 }
 
 export function generateExerciseName(step: WorkoutStep): string {
@@ -85,7 +95,9 @@ export function generateExerciseName(step: WorkoutStep): string {
             .replace(/_/g, ' ') // Replace underscores with spaces: "dumbbell row"
             .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word: "Dumbbell Row"
     };
-    return step.exerciseName ? `<h4 class="h6 font-bold">${formatExerciseName(step.exerciseName)}</h4>` : '';
+    return step.exerciseName
+        ? `<h4 class="h6 font-bold">${escapeHtml(formatExerciseName(step.exerciseName))}</h4>`
+        : '';
 }
 
 function formatDuration(seconds: number): string {
