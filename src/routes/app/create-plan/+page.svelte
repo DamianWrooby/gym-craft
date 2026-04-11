@@ -32,7 +32,6 @@
 
         // PREPARE PROXY SERVER RESPONSE
         const requestBody = JSON.stringify({
-            session: user.session,
             formData,
         });
 
@@ -47,7 +46,6 @@
 
         // PLANS API
         const plansAPIbody = JSON.stringify({
-            session: user.session,
             plan: validPlan,
         });
 

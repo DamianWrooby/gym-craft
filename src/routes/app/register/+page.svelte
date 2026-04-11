@@ -82,8 +82,8 @@
                     autocomplete="username"
                     bind:value={formData.username}
                     required />
-                {#if form?.userExists}
-                    <p class="text-error-500">Username is taken.</p>
+                {#if form?.accountExists}
+                    <p class="text-error-500">The username or email may already be in use.</p>
                 {/if}
             </div>
 
@@ -99,8 +99,6 @@
                     required />
                 {#if form?.emailInvalid}
                     <p class="text-error-500">Invalid email address</p>
-                {:else if form?.emailExists}
-                    <p class="text-error-500">Email is already in use.</p>
                 {/if}
             </div>
 

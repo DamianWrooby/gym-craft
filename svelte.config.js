@@ -10,6 +10,7 @@ const config = {
         inspector: true,
     },
     kit: {
+        csrf: { checkOrigin: true },
         adapter: adapter(),
         alias: {
             '@components': path.resolve('./src/lib/components'),

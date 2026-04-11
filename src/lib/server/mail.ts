@@ -47,8 +47,7 @@ export async function sendVerificationToken(userId: string, email: string) {
 
         return verificationToken;
     } catch (err) {
-        console.log('Error in sendVerificationToken:', err);
-        if (err) throw error(500, 'Error in sendVerificationToken');
+        if (err) throw error(500, 'Verification email could not be sent');
     }
 }
 
@@ -70,10 +69,8 @@ const sendMail = (to: string, content: string) =>
             },
             (err) => {
                 if (err) {
-                    console.error('Mail provider error:', err);
                     reject(error(400, 'Mail provider error'));
                 } else {
-                    console.log('Email sent successfully');
                     resolve();
                 }
             },

@@ -7,5 +7,4 @@ export interface User {
     role: string;
     generatedPlansNumber: number;
     plansLeft: number;
-    session: string;
 }

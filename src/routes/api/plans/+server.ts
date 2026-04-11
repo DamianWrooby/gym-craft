@@ -1,18 +1,14 @@
 import { NewPlan, Plan } from './../../../models/plan/plan.model';
 import { addPlan, getGeneralPlanLimit, updateGeneratedPlansNumber, getGeneratedPlansNumber } from '$lib/prisma/prisma';
 import { createResponse } from '$lib/utils/response';
-import { getUserBySession } from '$lib/prisma/prisma';
+import { getAuthenticatedUser } from '$lib/server/auth';
 import { to } from 'await-to-js';
 import type { RequestEvent } from './$types';
 
-export async function POST({ request }: RequestEvent): Promise<Response> {
-    const body = await request.json();
-    const { session }: { session: string } = body;
+export async function POST(event: RequestEvent): Promise<Response> {
+    const user = getAuthenticatedUser(event);
+    const body = await event.request.json();
     const { plan }: { plan: Plan } = body;
-
-    // Check user
-    const [userError, user] = await to(getUserBySession(session));
-    if (userError || user.id == null) return createResponse(400, { message: 'User error' });
     const userId = user.id;
 
     // Check if user has plans left
