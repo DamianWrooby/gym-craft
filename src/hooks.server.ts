@@ -2,19 +2,21 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { updateUser } from '$lib/utils/user';
 
-const publicPaths = [
+const publicPaths = new Set([
     '/',
     '/app',
     '/app/register',
     '/app/login',
-    '/app/verify',
     '/verification-mail-sent',
     '/privacy-policy',
     '/terms-of-use',
-];
+]);
+
+const publicPathPrefixes = ['/app/verify/'];
 
 function isPathAllowed(path: string) {
-    return publicPaths.some((allowedPath) => path === allowedPath || path.startsWith(allowedPath + '/'));
+    if (publicPaths.has(path)) return true;
+    return publicPathPrefixes.some((prefix) => path.startsWith(prefix));
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -23,7 +25,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     if (!session) {
         if (isPathAllowed(url.pathname)) {
-            return await resolve(event);
+            return addSecurityHeaders(await resolve(event));
         } else {
             throw redirect(302, '/app/login');
         }
@@ -31,5 +33,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     await updateUser(event);
 
-    return await resolve(event);
+    if (!event.locals.user && !isPathAllowed(url.pathname)) {
+        event.cookies.delete('session', { path: '/' });
+        throw redirect(302, '/app/login');
+    }
+
+    return addSecurityHeaders(await resolve(event));
 };
+
+function addSecurityHeaders(response: Response): Response {
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    return response;
+}

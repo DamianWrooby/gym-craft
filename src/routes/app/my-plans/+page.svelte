@@ -69,7 +69,7 @@
         plan.name = plan.edittedName;
         editNameEnabledIndex = -1;
 
-        const body = JSON.stringify({ name: plan.edittedName, userId: user.id });
+        const body = JSON.stringify({ name: plan.edittedName });
         try {
             const response: Response = await fetch(`${appConfig.plansApiUrl}/${plan.id}`, {
                 method: 'POST',
@@ -92,11 +92,15 @@
         tableRows[index].edittedName = tableRows[index].name;
     }
 
+    function escapeHtml(str: string): string {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function onDeleteClick(plan: MappedPlan) {
         const modal: ModalSettings = {
             type: 'confirm',
             title: 'Delete plan',
-            body: `<p>Are you sure you want to delete plan: ${plan.name}?</p><br><p>This action will not increase your plan limit.</p>`,
+            body: `<p>Are you sure you want to delete plan: ${escapeHtml(plan.name)}?</p><br><p>This action will not increase your plan limit.</p>`,
             buttonTextConfirm: 'Delete',
             response: async (response: boolean) => {
                 if (response) {
@@ -127,10 +131,8 @@
 
     async function deletePlan(plan: MappedPlan) {
         try {
-            const body = JSON.stringify({ userId: user.id });
             const response: Response = await fetch(`${appConfig.plansApiUrl}/${plan.id}`, {
                 method: 'DELETE',
-                body,
             });
             if (!response.ok) {
                 const { error } = await response.json();

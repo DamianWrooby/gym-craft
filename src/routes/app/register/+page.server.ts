@@ -2,12 +2,16 @@ import { fail, redirect, error } from '@sveltejs/kit';
 import type { Action, Actions } from '../$types';
 import { Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { sendVerificationToken } from '$lib/server/mail';
-import { isProduction } from '$lib/utils/environment';
 import { validateRegisterFormData, isString } from '$lib/utils/form-validation';
 import { to } from 'await-to-js';
 
 import { db } from '$lib/database';
+
+function hashSessionToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 const register: Action = async ({ request }) => {
     const data = await request.formData();
@@ -31,15 +35,13 @@ const register: Action = async ({ request }) => {
         where: { username },
         select: { username: true },
     });
-    if (userExists) return fail(400, { userExists: true });
+    if (userExists) return fail(400, { accountExists: true });
 
-    if (isProduction()) {
-        const emailExists = await db.user.findFirst({
-            where: { email },
-            select: { email: true },
-        });
-        if (emailExists) return fail(400, { emailExists: true });
-    }
+    const emailExists = await db.user.findFirst({
+        where: { email },
+        select: { email: true },
+    });
+    if (emailExists) return fail(400, { accountExists: true });
 
     const existingRole = await db.roles.findUnique({ where: { name: Role.USER } });
     if (!existingRole) await db.roles.create({ data: { name: Role.USER } });
@@ -50,8 +52,8 @@ const register: Action = async ({ request }) => {
             email,
             emailVerified: false,
             marketingAgreement,
-            passwordHash: await bcrypt.hash(password, 10),
-            userAuthToken: crypto.randomUUID(),
+            passwordHash: await bcrypt.hash(password, 12),
+            userAuthToken: hashSessionToken(crypto.randomUUID()),
             role: { connect: { name: Role.USER } },
         },
     });

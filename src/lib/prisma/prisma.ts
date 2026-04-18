@@ -83,14 +83,17 @@ export async function getGeneralPlanLimit(): Promise<number> {
     return generalPlanLimit ? +generalPlanLimit.value : 0;
 }
 
-export async function updatePlanName(planId: string, newName: string, userId: string): Promise<Plan> {
-    cache.del(`plans_${userId}`);
-    return await db.plan.update({
-        where: { id: planId },
-        data: {
-            name: newName,
-        },
+export async function updatePlanName(planId: string, newName: string, userId: string): Promise<void> {
+    const result = await db.plan.updateMany({
+        where: { id: planId, userId },
+        data: { name: newName },
     });
+
+    if (result.count === 0) {
+        return fail('Plan not found or not authorized');
+    }
+
+    cache.del(`plans_${userId}`);
 }
 
 export async function getPlans(userId: string): Promise<Plan[] | Error> {
@@ -172,7 +175,6 @@ export async function verifyToken(userId: string, token: string): Promise<boolea
         },
     });
 
-    console.log('User verified successfully');
     return true;
 }
 

@@ -1,12 +1,20 @@
+import crypto from 'crypto';
 import { db } from '$lib/database';
+import type { RequestEvent } from '@sveltejs/kit';
 
-export async function updateUser(event) {
+function hashSessionToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+export async function updateUser(event: RequestEvent) {
     const session = event.cookies?.get('session');
 
     if (!session) return;
 
+    const hashedSession = hashSessionToken(session);
+
     const user = await db.user.findUnique({
-        where: { userAuthToken: session },
+        where: { userAuthToken: hashedSession },
         select: {
             id: true,
             username: true,
@@ -34,7 +42,6 @@ export async function updateUser(event) {
                 role: role.name,
                 generatedPlansNumber,
                 plansLeft,
-                session,
                 emailVerified,
                 marketingAgreement,
                 email,
