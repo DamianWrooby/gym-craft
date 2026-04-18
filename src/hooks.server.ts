@@ -33,6 +33,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     await updateUser(event);
 
+    if (!event.locals.user && !isPathAllowed(url.pathname)) {
+        event.cookies.delete('session', { path: '/' });
+        throw redirect(302, '/app/login');
+    }
+
     return addSecurityHeaders(await resolve(event));
 };
 
