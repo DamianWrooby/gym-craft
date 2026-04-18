@@ -51,7 +51,7 @@
     metaDescription="Generate custom fitness plans based on your goals and abilities. AI-powered workout generator for beginners, pros, and personal trainers." />
 
 <section class="relative py-24 overflow-hidden w-full flex flex-col xl:flex-row items-center justify-center">
-    <div class="z-10 xl:w-1/2 p-5 xl:p-16 text-center">
+    <div class="z-10 w-full xl:w-1/2 p-5 xl:p-16 text-center">
         <h1 class="h1 font-bold mb-5">
             Create a <span
                 class="bg-gradient-to-br from-primary-500 to-surface-400 bg-clip-text text-transparent box-decoration-clone"
@@ -67,14 +67,13 @@
         </h2>
         <CtaButton url="/app" text="Try it for FREE" />
     </div>
-    <div class="z-10 xl:w-1/2 p-5 xl:p-16 xl:pl-0">
+    <div class="z-10 w-full xl:w-1/2 p-5 xl:p-16 xl:pl-0">
         <div class="relative perspective-right">
             <video
                 bind:this={video}
-                class="rounded-lg"
+                class="rounded-lg w-full aspect-video"
                 muted={false}
                 preload="metadata"
-                width="100%"
                 on:ended={() => (isPlayButtonVisible.demo = true)}>
                 <source src={DemoVideo} type="video/mp4" />
                 Your browser does not support the video tag.
@@ -183,10 +182,9 @@
         <div class="relative perspective-left">
             <video
                 bind:this={videoGarmin}
-                class="rounded-lg"
+                class="rounded-lg w-full aspect-video"
                 muted={false}
                 preload="metadata"
-                width="100%"
                 on:ended={() => (isPlayButtonVisible.garmin = true)}>
                 <source src={GarminDemoVideo} type="video/mp4" />
                 Your browser does not support the video tag.

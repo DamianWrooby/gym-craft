@@ -32,13 +32,25 @@
 <section class="text-surface-50">
     <Accordion hover="hover:bg-surface-700 rounded-md">
         {#each plan.workouts as workout}
-            <AccordionItem rounded="false" class="bg-surface-900 rounded rounded-md border border-surface-400">
-                <svelte:fragment slot="lead">
-                    <CalendarIcon />
-                </svelte:fragment>
-                <svelte:fragment slot="summary">
-                    <div class="flex justify-between items-center">
-                        <div>
+            <div class="relative">
+                <button
+                    type="button"
+                    class="btn btn-sm variant-ghost-primary group absolute top-4 right-12 z-10"
+                    on:click={() => dispatch('sendToGarminClicked', { workout })}
+                    disabled={!!garminLoading}>
+                    {#if garminLoading === workout.dayOfWeek}
+                        <Spinner size={4} />
+                    {:else}
+                        <ChevronsRightIcon class="group-hover:animate-pulse" />
+                    {/if}
+                    <span>Send to Garmin</span>
+                </button>
+                <AccordionItem class="bg-surface-900 rounded-md border border-surface-400">
+                    <svelte:fragment slot="lead">
+                        <CalendarIcon />
+                    </svelte:fragment>
+                    <svelte:fragment slot="summary">
+                        <div class="pr-36">
                             <h3 class="h4 font-bold pt-2">
                                 <span class="uppercase">{workout.dayOfWeek}</span> - {workout.workoutName}
                                 <span class="h4 font-light text-surface-300"
@@ -46,21 +58,7 @@
                             </h3>
                             <p class="pb-2 text-secondary-400 overflow-hidden text-ellipsis">{workout.justification}</p>
                         </div>
-                        <div>
-                            <button
-                                class="btn btn-sm variant-ghost-primary group"
-                                on:click|stopPropagation={() => dispatch('sendToGarminClicked', { workout })}
-                                disabled={!!garminLoading}>
-                                {#if garminLoading === workout.dayOfWeek}
-                                    <Spinner size={4} />
-                                {:else}
-                                    <ChevronsRightIcon class="group-hover:animate-pulse" />
-                                {/if}
-                                <span>Send to Garmin</span>
-                            </button>
-                        </div>
-                    </div>
-                </svelte:fragment>
+                    </svelte:fragment>
                 <svelte:fragment slot="content">
                     {#each workout.workoutSegments as segment}
                         {#each segment.workoutSteps as step, stepIndex}
@@ -128,6 +126,7 @@
                     {/each}
                 </svelte:fragment>
             </AccordionItem>
+            </div>
         {/each}
     </Accordion>
 </section>
