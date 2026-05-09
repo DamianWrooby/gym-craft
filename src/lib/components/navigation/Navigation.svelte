@@ -1,28 +1,43 @@
 <script lang="ts">
     import { Avatar } from '@skeletonlabs/skeleton';
+    import { page } from '$app/stores';
     import type { User } from '@/models/user/user.model';
 
     export let user: User;
 
     $: firstLetter = user?.name[0].toUpperCase();
+    $: isActive = (path: string) => $page.url.pathname.startsWith(path);
 </script>
 
 <nav class="flex items-center text-surface-500 font-semibold whitespace-nowrap">
     {#if !user}
-        <a class="px-4 hover:text-tertiary-500" href="/app/login">Login</a>
-        <a class="px-4 hover:text-tertiary-500" href="/app/register">Register</a>
+        <a class="px-4 hover:text-tertiary-500" class:text-tertiary-500={isActive('/app/login')} href="/app/login"
+            >Login</a>
+        <a class="px-4 hover:text-tertiary-500" class:text-tertiary-500={isActive('/app/register')} href="/app/register"
+            >Register</a>
     {:else}
-        <a class="px-4 hover:text-tertiary-500" href="/app/my-account" data-sveltekit-reload>
+        <a
+            class="px-4 hover:text-tertiary-500"
+            class:!border-tertiary-500={isActive('/app/my-account')}
+            href="/app/my-account"
+            data-sveltekit-reload>
             <Avatar
                 initials={firstLetter}
                 background="bg-tertiary-900"
                 border="border-2 border-surface-300-600-token hover:!border-tertiary-500"
                 width="w-8" />
         </a>
-        <a class="px-4 hover:text-tertiary-500" href="/app/my-plans">My plans</a>
-
+        <a
+            class="px-4 hover:text-tertiary-500 hidden sm:block"
+            class:text-tertiary-500={isActive('/app/create-plan')}
+            href="/app/create-plan">Create plan</a>
+        <a
+            class="px-4 hover:text-tertiary-500 hidden sm:block"
+            class:text-tertiary-500={isActive('/app/my-plans')}
+            href="/app/my-plans">My plans</a>
+        <span class="hidden sm:block text-surface-300 select-none">|</span>
         <form action="/app/logout" method="POST">
-            <button class="hover:text-tertiary-500" type="submit">Log out</button>
+            <button class="px-4 hover:text-tertiary-500" type="submit">Log out</button>
         </form>
     {/if}
 </nav>
