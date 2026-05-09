@@ -19,6 +19,7 @@ vi.mock('crypto', () => ({
                 digest: vi.fn().mockReturnValue('hashed-session'),
             }),
         }),
+        randomUUID: vi.fn().mockReturnValue('random-uuid'),
     },
 }));
 
@@ -46,7 +47,7 @@ describe('logout route', () => {
         } catch (e: any) {
             expect(db.user.updateMany).toHaveBeenCalledWith({
                 where: { userAuthToken: 'hashed-session' },
-                data: { userAuthToken: '' },
+                data: { userAuthToken: 'random-uuid' },
             });
             expect(cookies.set).toHaveBeenCalledWith('session', '', {
                 path: '/',
