@@ -59,73 +59,73 @@
                             <p class="pb-2 text-secondary-400 overflow-hidden text-ellipsis">{workout.justification}</p>
                         </div>
                     </svelte:fragment>
-                <svelte:fragment slot="content">
-                    {#each workout.workoutSegments as segment}
-                        {#each segment.workoutSteps as step, stepIndex}
-                            {#if step.stepType.stepTypeKey === 'repeat'}
-                                <h5 class="h5 font-bold pt-2">
-                                    {stepIndex + 1}. Repeat block - {getEndConditionValue(step)} iterations
-                                </h5>
-                                <div class="p-2 rounded border border-surface-400">
-                                    {#if step.workoutSteps?.length}
-                                        {#each step.workoutSteps as subStep}
-                                            <div class="text-tertiary-400">
-                                                <h5 class="h5 font-bold py-2">
-                                                    {stepTypes[subStep.stepType.stepTypeKey].title}
-                                                </h5>
-                                                <p>{subStep.description || ''}</p>
-                                                {#if getEndConditionData(subStep).hasCondition}
-                                                    <p class="text-secondary-400">
-                                                        End condition: {getEndConditionData(subStep).conditionType} - {getEndConditionData(
-                                                            subStep,
-                                                        ).value}
-                                                    </p>
-                                                {/if}
-                                                {#if getTargetData(subStep).hasTarget}
-                                                    <p class="text-warning-400">
-                                                        Target: {getTargetData(subStep).type} - {getTargetData(subStep)
-                                                            .valueOne} - {getTargetData(subStep).valueTwo}
-                                                        {getTargetData(subStep).unit}
-                                                    </p>
-                                                {/if}
-                                            </div>
-                                        {/each}
+                    <svelte:fragment slot="content">
+                        {#each workout.workoutSegments as segment}
+                            {#each segment.workoutSteps as step, stepIndex}
+                                {#if step.stepType.stepTypeKey === 'repeat'}
+                                    <h5 class="h5 font-bold pt-2">
+                                        {stepIndex + 1}. Repeat block - {getEndConditionValue(step)} iterations
+                                    </h5>
+                                    <div class="p-2 rounded border border-surface-400">
+                                        {#if step.workoutSteps?.length}
+                                            {#each step.workoutSteps as subStep}
+                                                <div class="text-tertiary-400">
+                                                    <h5 class="h5 font-bold py-2">
+                                                        {stepTypes[subStep.stepType.stepTypeKey].title}
+                                                    </h5>
+                                                    <p>{subStep.description || ''}</p>
+                                                    {#if getEndConditionData(subStep).hasCondition}
+                                                        <p class="text-secondary-400">
+                                                            End condition: {getEndConditionData(subStep).conditionType} -
+                                                            {getEndConditionData(subStep).value}
+                                                        </p>
+                                                    {/if}
+                                                    {#if getTargetData(subStep).hasTarget}
+                                                        <p class="text-warning-400">
+                                                            Target: {getTargetData(subStep).type} - {getTargetData(
+                                                                subStep,
+                                                            ).valueOne} - {getTargetData(subStep).valueTwo}
+                                                            {getTargetData(subStep).unit}
+                                                        </p>
+                                                    {/if}
+                                                </div>
+                                            {/each}
+                                        {/if}
+                                    </div>
+                                    <br />
+                                {:else}
+                                    <h3 class="h5 font-bold py-2">
+                                        {stepIndex + 1}. {stepTypes[step.stepType.stepTypeKey].title}
+                                    </h3>
+                                    {#if getExerciseData(step)?.name}
+                                        <p class="text-secondary-400">
+                                            Exercise: {getExerciseData(step)?.name}
+                                        </p>
                                     {/if}
-                                </div>
-                                <br />
-                            {:else}
-                                <h3 class="h5 font-bold py-2">
-                                    {stepIndex + 1}. {stepTypes[step.stepType.stepTypeKey].title}
-                                </h3>
-                                {#if getExerciseData(step)?.name}
-                                    <p class="text-secondary-400">
-                                        Exercise: {getExerciseData(step)?.name}
+                                    <p>
+                                        {step.description || ''}
                                     </p>
+                                    {#if getEndConditionData(step).hasCondition}
+                                        <p class="text-secondary-400">
+                                            End condition: {getEndConditionData(step).conditionType} - {getEndConditionData(
+                                                step,
+                                            ).value}
+                                        </p>
+                                    {/if}
+                                    {#if getTargetData(step).hasTarget}
+                                        <p class="text-warning-400">
+                                            Target: {getTargetData(step).type} - {getTargetData(step).valueOne} - {getTargetData(
+                                                step,
+                                            ).valueTwo}
+                                            {getTargetData(step).unit}
+                                        </p>
+                                    {/if}
+                                    <br />
                                 {/if}
-                                <p>
-                                    {step.description || ''}
-                                </p>
-                                {#if getEndConditionData(step).hasCondition}
-                                    <p class="text-secondary-400">
-                                        End condition: {getEndConditionData(step).conditionType} - {getEndConditionData(
-                                            step,
-                                        ).value}
-                                    </p>
-                                {/if}
-                                {#if getTargetData(step).hasTarget}
-                                    <p class="text-warning-400">
-                                        Target: {getTargetData(step).type} - {getTargetData(step).valueOne} - {getTargetData(
-                                            step,
-                                        ).valueTwo}
-                                        {getTargetData(step).unit}
-                                    </p>
-                                {/if}
-                                <br />
-                            {/if}
+                            {/each}
                         {/each}
-                    {/each}
-                </svelte:fragment>
-            </AccordionItem>
+                    </svelte:fragment>
+                </AccordionItem>
             </div>
         {/each}
     </Accordion>

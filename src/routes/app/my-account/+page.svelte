@@ -8,7 +8,6 @@
     import Card from '@components/card/Card.svelte';
     import { goto } from '$app/navigation';
 
-
     const user: User = $page.data.user;
     const formData = { password: '' };
     const toastStore = getToastStore();
