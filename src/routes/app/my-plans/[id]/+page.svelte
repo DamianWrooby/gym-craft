@@ -17,6 +17,7 @@
     import { workoutProperties } from '@/constants/workout.constants';
     import { validateGarminLoginFormData, isValidEmailFormat } from '$lib/utils/form-validation';
     import { appConfig } from '@/constants/app.constants';
+    import { isProduction } from '$lib/utils/environment';
 
     const modalStore = getModalStore();
     const modalComponent: ModalComponent = { ref: GarminLoginForm };
@@ -122,7 +123,7 @@
     }
 
     async function sendFormDataToGarmin(formData: FormData, email?: string) {
-        const apiUrl = appConfig.internalGarminApiUrl;
+        const apiUrl = isProduction() ? appConfig.internalGarminApiUrlPROD : appConfig.internalGarminApiUrlDEV;
 
         const [error, garminPyConnectResponse] = await to(fetch(apiUrl, { method: 'POST', body: formData }));
 
