@@ -49,6 +49,10 @@
                 </a>
             </svelte:fragment>
             <svelte:fragment slot="trail">
+                <nav class="flex items-center text-surface-500 font-semibold whitespace-nowrap">
+                    <a class="px-4 hover:text-tertiary-500" href="/app/login">Login</a>
+                    <a class="px-4 hover:text-tertiary-500" href="/app/register">Register</a>
+                </nav>
                 <LightSwitch></LightSwitch>
             </svelte:fragment>
         </AppBar>
