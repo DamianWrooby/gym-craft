@@ -12,6 +12,8 @@ const publicPaths = new Set([
     '/terms-of-use',
 ]);
 
+const LOGIN_PAGE_PATH = '/app/login';
+
 const publicPathPrefixes = ['/app/verify/'];
 
 function isPathAllowed(path: string) {
@@ -19,23 +21,38 @@ function isPathAllowed(path: string) {
     return publicPathPrefixes.some((prefix) => path.startsWith(prefix));
 }
 
+const DATA_SUFFIX = '/__data.json';
+
+function routePath(rawPath: string) {
+    if (!rawPath.endsWith(DATA_SUFFIX)) return rawPath;
+    const stripped = rawPath.slice(0, -DATA_SUFFIX.length);
+    return stripped === '' ? '/' : stripped;
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
     const session = event.cookies.get('session');
-    const url = new URL(event.request.url);
+    const pathname = routePath(new URL(event.request.url).pathname);
+
+    if (pathname === LOGIN_PAGE_PATH) {
+        if (session) await updateUser(event);
+        return addSecurityHeaders(await resolve(event));
+    }
 
     if (!session) {
-        if (isPathAllowed(url.pathname)) {
+        if (isPathAllowed(pathname)) {
             return addSecurityHeaders(await resolve(event));
-        } else {
-            throw redirect(302, '/app/login');
         }
+        throw redirect(302, LOGIN_PAGE_PATH);
     }
 
     await updateUser(event);
 
-    if (!event.locals.user && !isPathAllowed(url.pathname)) {
+    if (!event.locals.user) {
         event.cookies.delete('session', { path: '/' });
-        throw redirect(302, '/app/login');
+        if (isPathAllowed(pathname)) {
+            return addSecurityHeaders(await resolve(event));
+        }
+        throw redirect(302, LOGIN_PAGE_PATH);
     }
 
     return addSecurityHeaders(await resolve(event));
