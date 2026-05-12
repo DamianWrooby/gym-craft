@@ -7,6 +7,15 @@ html,
 body {
     @apply h-full;
 }
+@layer base {
+    body {
+        @apply bg-gradient-to-tr from-slate-500 to-slate-300;
+    }
+    .dark body {
+        @apply from-slate-900 to-slate-800;
+        background-color: transparent;
+    }
+}
 .list li {
     margin: 0;
     border-radius: 0;
