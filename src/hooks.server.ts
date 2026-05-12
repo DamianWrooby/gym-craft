@@ -13,6 +13,7 @@ const publicPaths = new Set([
 ]);
 
 const LOGIN_PAGE_PATH = '/app/login';
+const DATA_SUFFIX = '/__data.json';
 
 const publicPathPrefixes = ['/app/verify/'];
 
@@ -20,8 +21,6 @@ function isPathAllowed(path: string) {
     if (publicPaths.has(path)) return true;
     return publicPathPrefixes.some((prefix) => path.startsWith(prefix));
 }
-
-const DATA_SUFFIX = '/__data.json';
 
 function routePath(rawPath: string) {
     if (!rawPath.endsWith(DATA_SUFFIX)) return rawPath;
