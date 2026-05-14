@@ -34,7 +34,7 @@
     type EmailVerificationResponse = { email: string | false };
 
     function goBackToPlanList() {
-        goto('/app/my-plans');
+        goto('/app/gym/my-plans');
     }
 
     function openGarminLoginModal() {
@@ -123,7 +123,8 @@
     }
 
     async function sendFormDataToGarmin(formData: FormData, email?: string) {
-        const apiUrl = isProduction() ? appConfig.internalGarminApiUrlPROD : appConfig.internalGarminApiUrlDEV;
+        const baseUrl = isProduction() ? appConfig.internalGarminApiUrlPROD : appConfig.internalGarminApiUrlDEV;
+        const apiUrl = `${baseUrl}/upload-workout`;
 
         const [error, garminPyConnectResponse] = await to(fetch(apiUrl, { method: 'POST', body: formData }));
 

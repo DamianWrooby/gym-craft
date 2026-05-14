@@ -68,7 +68,7 @@
         const { generatedPlan } = await plansAPIresponse.json();
 
         loadingState.set(false);
-        goto(`/app/my-plans/${generatedPlan.id}`);
+        goto(`/app/gym/my-plans/${generatedPlan.id}`);
     };
 
     const planLimitHandler = () => {

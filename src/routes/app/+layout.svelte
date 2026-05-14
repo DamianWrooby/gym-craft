@@ -55,7 +55,7 @@
     <svelte:fragment slot="header">
         <AppBar background="bg-primary-500">
             <svelte:fragment slot="lead">
-                <a class="px-4 text-surface-500 hover:text-tertiary-500 block md:hidden" href="/app">
+                <a class="px-2 sm:px-4 text-surface-500 hover:text-tertiary-500 block md:hidden" href="/app">
                     <HomeIcon />
                 </a>
                 <a class="px-4 text-surface-500 hover:text-tertiary-500 w-40 hidden md:block" href="/app">

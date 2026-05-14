@@ -148,7 +148,7 @@
     }
 
     function showPlan(plan: MappedPlan) {
-        goto(`/app/my-plans/${plan.id}`);
+        goto(`/app/gym/my-plans/${plan.id}`);
     }
 </script>
 
@@ -199,7 +199,7 @@
             </ul>
         {:else if !isLoading}
             <p class="text-center">No plans found</p>
-            <CtaButton url="/app/create-plan" text="Create new plan" />
+            <CtaButton url="/app/gym/create-plan" text="Create new plan" />
         {:else}
             <Spinner size={10} />
         {/if}
