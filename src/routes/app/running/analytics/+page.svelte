@@ -227,7 +227,10 @@
 
 <Card width="3/4">
     <div class="md:w-3/4 m-auto pb-8">
-        <h2 class="h2 text-center text-xl py-10">Garmin Activities</h2>
+        <div class="flex justify-end pt-6">
+            <a href="/app/running/reports" class="btn variant-soft-primary">View weekly reports →</a>
+        </div>
+        <h2 class="h2 text-center text-xl py-4">Garmin Activities</h2>
         <div class="flex flex-col md:flex-row gap-4 justify-center items-center md:items-end mb-4">
             <label class="label">
                 <span>Start date</span>

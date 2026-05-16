@@ -9,21 +9,25 @@ datasource db {
 }
 
 model User {
-    id                   String              @id @default(uuid())
-    username             String              @unique
-    email                String              @default("") @db.VarChar(50)
-    emailVerified        Boolean             @default(false)
-    marketingAgreement   Boolean             @default(false)
-    passwordHash         String
-    userAuthToken        String              @unique
-    createdAt            DateTime            @default(now())
-    updatedAt            DateTime            @updatedAt
-    roleId               Int
-    role                 Roles               @relation(fields: [roleId], references: [id])
-    generatedPlansNumber Int                 @default(0)
-    plans                Plan[]
-    verificationTokens   VerificationToken[]
-    garminData           GarminData?
+    id                    String              @id @default(uuid())
+    username              String              @unique
+    email                 String              @default("") @db.VarChar(50)
+    emailVerified         Boolean             @default(false)
+    marketingAgreement    Boolean             @default(false)
+    passwordHash          String
+    userAuthToken         String              @unique
+    createdAt             DateTime            @default(now())
+    updatedAt             DateTime            @updatedAt
+    roleId                Int
+    role                  Roles               @relation(fields: [roleId], references: [id])
+    generatedPlansNumber  Int                 @default(0)
+    reportGenerationCount Int                 @default(0)
+    plans                 Plan[]
+    verificationTokens    VerificationToken[]
+    garminData            GarminData?
+    athleteProfile        AthleteProfile?
+    runningGoals          RunningGoal[]
+    trainingReports       TrainingReport[]
 
     @@index([roleId])
 }
@@ -83,4 +87,73 @@ model GarminData {
     User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
+}
+
+model AthleteProfile {
+    id           String   @id @default(uuid())
+    userId       String   @unique
+    birthDate    DateTime
+    sex          Sex
+    weightKg     Decimal  @db.Decimal(5, 2)
+    heightCm     Int
+    timezone     String   @default("UTC")
+    restingHR    Int?
+    maxHR        Int?
+    hrZoneBounds Json?
+    vo2max       Decimal? @db.Decimal(4, 1)
+    updatedAt    DateTime @updatedAt
+    User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Sex {
+    MALE
+    FEMALE
+    OTHER
+}
+
+model RunningGoal {
+    id              String    @id @default(uuid())
+    userId          String
+    goalType        GoalType
+    targetEventName String?
+    targetEventDate DateTime?
+    targetDistanceM Int?
+    targetTimeSec   Int?
+    notes           String?   @db.VarChar(500)
+    priority        Int       @default(1)
+    archivedAt      DateTime?
+    createdAt       DateTime  @default(now())
+    updatedAt       DateTime  @updatedAt
+    User            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+}
+
+enum GoalType {
+    RACE
+    GENERAL_FITNESS
+    BASE_BUILDING
+    TEMPO_WORK
+    RECOVERY
+}
+
+model TrainingReport {
+    id          String     @id @default(uuid())
+    userId      String
+    type        ReportType
+    periodStart String     @db.VarChar(10)
+    periodEnd   String     @db.VarChar(10)
+    metrics     Json
+    summary     String     @db.Text
+    goalContext Json
+    createdAt   DateTime   @default(now())
+    User        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, type, periodStart])
+}
+
+enum ReportType {
+    WEEKLY
+    MONTHLY
+    MICROCYCLE
 }

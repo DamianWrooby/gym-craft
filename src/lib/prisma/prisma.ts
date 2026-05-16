@@ -1,11 +1,37 @@
 import { db } from '$lib/database';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
-import type { Plan, User } from '@prisma/client';
+import type {
+    AthleteProfile,
+    Plan,
+    Prisma,
+    ReportType,
+    RunningGoal,
+    TrainingReport,
+    User,
+} from '@prisma/client';
 import type { NewPlan } from '../../models/plan/plan.model';
 import bcrypt from 'bcrypt';
 
 const cache = new NodeCache({ stdTTL: 120 });
+
+const athleteProfileKey = (userId: string) => `athlete_profile_${userId}`;
+const runningGoalsKey = (userId: string, includeArchived: boolean) =>
+    `running_goals_${includeArchived ? 'all' : 'active'}_${userId}`;
+const trainingReportsKey = (userId: string) => `training_reports_${userId}`;
+
+function invalidateAthleteProfile(userId: string): void {
+    cache.del(athleteProfileKey(userId));
+}
+
+function invalidateRunningGoals(userId: string): void {
+    cache.del(runningGoalsKey(userId, true));
+    cache.del(runningGoalsKey(userId, false));
+}
+
+function invalidateTrainingReports(userId: string): void {
+    cache.del(trainingReportsKey(userId));
+}
 
 export async function getUserBySession(session: string): Promise<Pick<User, 'id'>> {
     const user = await db.user.findUnique({
@@ -239,4 +265,185 @@ export async function saveGarminEmail(userId: string, garminEmail: string): Prom
     }
 
     return true;
+}
+
+export async function getAthleteProfile(userId: string): Promise<AthleteProfile | null> {
+    const key = athleteProfileKey(userId);
+    const cached = cache.get<AthleteProfile | null>(key);
+    if (cached !== undefined) return cached;
+
+    const profile = await db.athleteProfile.findUnique({ where: { userId } });
+    cache.set(key, profile);
+    return profile;
+}
+
+export type AthleteProfileInput = Omit<Prisma.AthleteProfileUncheckedCreateInput, 'id' | 'userId' | 'updatedAt'>;
+
+export async function upsertAthleteProfile(userId: string, data: AthleteProfileInput): Promise<AthleteProfile> {
+    const profile = await db.athleteProfile.upsert({
+        where: { userId },
+        create: { userId, ...data },
+        update: data,
+    });
+    invalidateAthleteProfile(userId);
+    return profile;
+}
+
+export async function getRunningGoals(
+    userId: string,
+    options: { includeArchived?: boolean } = {},
+): Promise<RunningGoal[]> {
+    const includeArchived = options.includeArchived ?? false;
+    const key = runningGoalsKey(userId, includeArchived);
+    const cached = cache.get<RunningGoal[]>(key);
+    if (cached !== undefined) return cached;
+
+    const goals = await db.runningGoal.findMany({
+        where: { userId, ...(includeArchived ? {} : { archivedAt: null }) },
+        orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
+    });
+    cache.set(key, goals);
+    return goals;
+}
+
+export type RunningGoalCreateInput = Omit<
+    Prisma.RunningGoalUncheckedCreateInput,
+    'id' | 'userId' | 'createdAt' | 'updatedAt'
+>;
+
+export async function createRunningGoal(userId: string, data: RunningGoalCreateInput): Promise<RunningGoal> {
+    const goal = await db.runningGoal.create({ data: { userId, ...data } });
+    invalidateRunningGoals(userId);
+    return goal;
+}
+
+export type RunningGoalUpdateInput = Partial<RunningGoalCreateInput>;
+
+export async function updateRunningGoal(
+    goalId: string,
+    userId: string,
+    data: RunningGoalUpdateInput,
+): Promise<RunningGoal | null> {
+    const result = await db.runningGoal.updateMany({
+        where: { id: goalId, userId },
+        data,
+    });
+    if (result.count === 0) return null;
+    invalidateRunningGoals(userId);
+    return await db.runningGoal.findUnique({ where: { id: goalId } });
+}
+
+export async function archiveRunningGoal(goalId: string, userId: string): Promise<boolean> {
+    const result = await db.runningGoal.updateMany({
+        where: { id: goalId, userId, archivedAt: null },
+        data: { archivedAt: new Date() },
+    });
+    if (result.count === 0) return false;
+    invalidateRunningGoals(userId);
+    return true;
+}
+
+export async function getRunningGoalsByIds(
+    userId: string,
+    goalIds: string[],
+    options: { includeArchived?: boolean } = {},
+): Promise<RunningGoal[]> {
+    if (goalIds.length === 0) return [];
+    const includeArchived = options.includeArchived ?? false;
+    return await db.runningGoal.findMany({
+        where: {
+            userId,
+            id: { in: goalIds },
+            ...(includeArchived ? {} : { archivedAt: null }),
+        },
+    });
+}
+
+export async function getWeeklyReports(userId: string): Promise<TrainingReport[]> {
+    const key = trainingReportsKey(userId);
+    const cached = cache.get<TrainingReport[]>(key);
+    if (cached !== undefined) return cached;
+
+    const reports = await db.trainingReport.findMany({
+        where: { userId, type: 'WEEKLY' },
+        orderBy: { periodStart: 'desc' },
+        take: 52,
+    });
+    cache.set(key, reports);
+    return reports;
+}
+
+export async function getReportById(reportId: string, userId: string): Promise<TrainingReport | null> {
+    const report = await db.trainingReport.findUnique({ where: { id: reportId } });
+    if (!report || report.userId !== userId) return null;
+    return report;
+}
+
+export async function getReportGenerationCount(userId: string): Promise<number> {
+    // NOT cached — atomic update is source of truth; this read is a fail-fast hint only.
+    const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { reportGenerationCount: true },
+    });
+    return user?.reportGenerationCount ?? 0;
+}
+
+export interface PersistTrainingReportInput {
+    userId: string;
+    type: ReportType;
+    periodStart: string;
+    periodEnd: string;
+    metrics: Prisma.InputJsonValue;
+    summary: string;
+    goalContext: Prisma.InputJsonValue;
+}
+
+export class ReportLimitReachedError extends Error {
+    constructor() {
+        super('Report generation limit reached');
+        this.name = 'ReportLimitReachedError';
+    }
+}
+
+/**
+ * Atomically increments the user's lifetime report counter and upserts the report row.
+ * Pass `consumeSlot: false` for empty-week reports — the row is persisted without
+ * incrementing the counter and the cap check is skipped.
+ */
+export async function persistTrainingReport(
+    input: PersistTrainingReportInput,
+    cap: number,
+    options: { consumeSlot: boolean } = { consumeSlot: true },
+): Promise<TrainingReport> {
+    const { userId, type, periodStart, periodEnd, metrics, summary, goalContext } = input;
+    const reportPayload = { userId, type, periodStart, periodEnd, metrics, summary, goalContext };
+
+    const report = await db.$transaction(async (tx) => {
+        if (options.consumeSlot) {
+            const updated = await tx.user.updateMany({
+                where: { id: userId, reportGenerationCount: { lt: cap } },
+                data: { reportGenerationCount: { increment: 1 } },
+            });
+            if (updated.count === 0) throw new ReportLimitReachedError();
+        }
+
+        return await tx.trainingReport.upsert({
+            where: { userId_type_periodStart: { userId, type, periodStart } },
+            create: reportPayload,
+            update: { ...reportPayload, createdAt: new Date() },
+        });
+    });
+
+    invalidateTrainingReports(userId);
+    return report;
+}
+
+export async function findExistingReport(
+    userId: string,
+    type: ReportType,
+    periodStart: string,
+): Promise<TrainingReport | null> {
+    return await db.trainingReport.findUnique({
+        where: { userId_type_periodStart: { userId, type, periodStart } },
+    });
 }

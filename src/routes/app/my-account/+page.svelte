@@ -53,6 +53,12 @@
     <p>Name: <span class="text-secondary-400 font-bold">{user.name}</span></p>
     <p>Generated plans number: {user.generatedPlansNumber}</p>
     <p>Plans left: {user.plansLeft}</p>
+    <div class="flex justify-center mt-8">
+        <a href="/app/profile" class="btn variant-soft-primary">
+            <span>Edit athlete profile &amp; running goals</span>
+            <span aria-hidden="true">→</span>
+        </a>
+    </div>
     <div class="relative flex flex-col justify-center mt-8 border rounded border-solid border-red-500">
         <div class="absolute top-0">
             <p class="text-red-500 font-thin pl-1">Danger zone</p>
