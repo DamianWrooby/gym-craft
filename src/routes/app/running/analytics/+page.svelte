@@ -13,6 +13,7 @@
     import type { GarminActivity, FetchActivitiesParams } from '@/models/garmin/activity.model';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
+    import { PACE_ACTIVITY_TYPES, formatPaceOrSpeed } from '$lib/utils/pace';
 
     type LoginFormData = { email: string; password: string };
 
@@ -21,8 +22,6 @@
     const modalStore = getModalStore();
     const modalComponent: ModalComponent = { ref: GarminLoginForm };
     const toastStore = getToastStore();
-
-    const PACE_TYPES = ['running', 'walking', 'hiking', 'treadmill_running', 'trail_running'];
 
     const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
@@ -67,18 +66,6 @@
         const s = Math.floor(seconds % 60);
         if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         return `${m}:${s.toString().padStart(2, '0')}`;
-    }
-
-    function formatPaceOrSpeed(activity: GarminActivity): string {
-        const speed = activity.averageSpeed;
-        if (!speed || speed <= 0) return '—';
-        if (PACE_TYPES.includes(activity.activityType.typeKey)) {
-            const secPerKm = 1000 / speed;
-            const m = Math.floor(secPerKm / 60);
-            const s = Math.floor(secPerKm % 60);
-            return `${m}:${s.toString().padStart(2, '0')} /km`;
-        }
-        return `${(speed * 3.6).toFixed(1)} km/h`;
     }
 
     function formatElevation(meters: number | undefined): string {
@@ -272,7 +259,11 @@
                 {#each paginatedActivities as activity}
                     {@const date = formatActivityDate(activity.startTimeLocal)}
                     <li
-                        class="group !m-0 px-4 py-3 text-surface-500 dark:text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-200 dark:odd:bg-surface-900 even:bg-surface-300 dark:even:bg-surface-800 hover:bg-white dark:hover:bg-surface-600">
+                        class="group !m-0 text-surface-500 dark:text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-200 dark:odd:bg-surface-900 even:bg-surface-300 dark:even:bg-surface-800 hover:bg-white dark:hover:bg-surface-600">
+                        <a
+                            href="/app/running/activities/{activity.activityId}"
+                            data-sveltekit-preload-data="hover"
+                            class="block px-4 py-3 no-underline text-inherit">
                         <div class="flex flex-row items-center gap-3 flex-wrap">
                             <div class="flex flex-row items-center gap-2 w-28 shrink-0">
                                 <ActivityTypeIcon typeKey={activity.activityType.typeKey} size={22} />
@@ -296,9 +287,11 @@
                                 <span class="text-xs opacity-70">TIME</span>
                             </div>
                             <div class="flex flex-col leading-tight w-24">
-                                <span class="font-semibold">{formatPaceOrSpeed(activity)}</span>
+                                <span class="font-semibold">
+                                    {formatPaceOrSpeed(activity.averageSpeed, activity.activityType.typeKey)}
+                                </span>
                                 <span class="text-xs opacity-70">
-                                    {PACE_TYPES.includes(activity.activityType.typeKey)
+                                    {PACE_ACTIVITY_TYPES.has(activity.activityType.typeKey)
                                         ? 'AVG PACE'
                                         : 'AVG SPEED'}
                                 </span>
@@ -316,6 +309,7 @@
                                 <span class="text-xs opacity-70">CALORIES</span>
                             </div>
                         </div>
+                        </a>
                     </li>
                 {/each}
             </ul>

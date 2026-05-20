@@ -5,6 +5,11 @@ import type { GoalType, ReportType, Sex } from '@prisma/client';
 // Increase once subscriptions land.
 export const WEEKLY_REPORT_LIFETIME_LIMIT = 3;
 
+// Per-user daily cap on AI "Explain my run" calls. Raise once subscriptions land.
+export const EXPLAIN_RUN_DAILY_LIMIT = 10;
+
+export const EXPLAIN_QUESTION_MAX_LENGTH = 280;
+
 export const REPORT_NOTES_MAX_LENGTH = 200;
 
 export const GOAL_TYPE_LABELS: Record<GoalType, string> = {

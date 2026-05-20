@@ -8,7 +8,10 @@ import {
     ReportLimitReachedError,
 } from '$lib/prisma/prisma';
 import { fetchGarminActivities } from '$lib/server/garmin/fetch-activities';
+import { syncUserActivities } from '$lib/server/garmin/sync-activities';
 import { computeWeeklyMetrics } from '$lib/server/analytics';
+import { computeLoadProfile } from '$lib/server/analytics/load';
+import type { TrimpSex } from '$lib/server/analytics/load/trimp';
 import { buildReportPrompt } from '$lib/server/reports/build-prompt';
 import { callWeeklyReportProxy } from '$lib/server/reports/call-proxy';
 import { validateBody, validateDates } from '$lib/server/reports/weekly-validation';
@@ -80,6 +83,11 @@ export async function POST({
         });
     }
 
+    const syncResult = await syncUserActivities(userId, password);
+    if (!syncResult.ok) {
+        console.warn(`[weekly-report] activity sync failed for user ${userId}: ${syncResult.code}`);
+    }
+
     const prevStart = addDays(periodStart, -7);
     const prevEnd = addDays(periodStart, -1);
     const [currentWeek, previousWeek] = await Promise.all([
@@ -103,6 +111,16 @@ export async function POST({
         crossTrainingActivities: currentPartition.crossTraining,
         hasHrZoneBounds: profile.hrZoneBounds != null,
     });
+
+    try {
+        metrics.loadProfile = await computeLoadProfile(userId, parsePeriodEnd(periodEnd), {
+            restingHR: profile.restingHR,
+            maxHR: profile.maxHR,
+            sex: mapProfileSex(profile.sex),
+        });
+    } catch (err) {
+        console.warn(`[weekly-report] load profile failed for user ${userId}: ${(err as Error).message}`);
+    }
 
     const goalContext = buildGoalContext({ profile, goals, notes });
     const metricsJson = metrics as unknown as Prisma.InputJsonValue;
@@ -164,6 +182,14 @@ export async function POST({
         }
         throw err;
     }
+}
+
+function parsePeriodEnd(periodEnd: string): Date {
+    return new Date(`${periodEnd}T23:59:59Z`);
+}
+
+function mapProfileSex(sex: AthleteProfile['sex']): TrimpSex {
+    return sex === 'FEMALE' ? 'female' : 'male';
 }
 
 function buildGoalContext({

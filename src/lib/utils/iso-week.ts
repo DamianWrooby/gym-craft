@@ -50,6 +50,10 @@ export function isFutureDate(yyyymmdd: string, timezone: string = 'UTC'): boolea
     return yyyymmdd > todayInTimezone(timezone);
 }
 
+export function toIsoDate(d: Date): string {
+    return d.toISOString().slice(0, 10);
+}
+
 function formatUTCDate(d: Date): string {
     const y = d.getUTCFullYear();
     const m = String(d.getUTCMonth() + 1).padStart(2, '0');

@@ -9,6 +9,9 @@
     import HrZoneDonut from '$lib/components/training-report/HrZoneDonut.svelte';
     import PaceHrScatter from '$lib/components/training-report/PaceHrScatter.svelte';
     import StatDeltas from '$lib/components/training-report/StatDeltas.svelte';
+    import TrainingLoadCard from '$lib/components/training-report/TrainingLoadCard.svelte';
+    import RecommendationsPanel from '$lib/components/training-report/RecommendationsPanel.svelte';
+    import { splitRecommendations } from '$lib/utils/split-recommendations';
     import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
     import type { MetricsBundle } from '$lib/server/analytics/types';
     import type { GoalType } from '@prisma/client';
@@ -77,6 +80,12 @@
         {/if}
     </header>
 
+    {#if report.metrics.loadProfile}
+        <section class="mb-10">
+            <TrainingLoadCard loadProfile={report.metrics.loadProfile} />
+        </section>
+    {/if}
+
     {#if report.metrics.flags.noActivities}
         <p class="text-center italic opacity-70 my-8">No activities were recorded for this period.</p>
     {:else}
@@ -113,9 +122,16 @@
             </section>
         {/if}
 
-        <section class="mb-16">
+        {@const split = splitRecommendations(report.summary)}
+        <section class="mb-10">
             <h2 class="h3 font-semibold mb-4">Coach review</h2>
-            <Markdown source={report.summary} />
+            <Markdown source={split.review} />
         </section>
+
+        {#if split.recommendations}
+            <section class="mb-16">
+                <RecommendationsPanel source={split.recommendations} />
+            </section>
+        {/if}
     {/if}
 </Card>

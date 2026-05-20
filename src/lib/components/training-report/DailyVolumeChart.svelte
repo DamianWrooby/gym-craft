@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { LayerCake, Svg } from 'layercake';
-    import { scaleBand, scaleLinear } from 'd3-scale';
     import { max } from 'd3-array';
     import type { MetricsBundle } from '$lib/server/analytics/types';
 
@@ -21,10 +19,32 @@
     }));
     $: yMax = Math.max(1, max(data, (d) => d.km) ?? 1);
 
+    let chartWidth = 0;
+    const chartHeight = 240;
+    const padLeft = 28;
+    const padRight = 4;
+    const padTop = 18;
+    const padBottom = 36;
+    const axisFont = 10;
+    const barFill = 0.6;
+    $: plotW = Math.max(0, chartWidth - padLeft - padRight);
+    $: plotH = Math.max(0, chartHeight - padTop - padBottom);
+
     let activeDate: string | null = null;
     $: activeBar = data.find((d) => d.date === activeDate) ?? null;
     $: activeIndex = activeBar ? data.findIndex((d) => d.date === activeBar.date) : -1;
     $: tooltipStyle = activeBar && activeIndex >= 0 ? computeTooltipStyle(activeBar, activeIndex) : '';
+
+    function barX(i: number, n: number): number {
+        const slot = plotW / n;
+        return padLeft + i * slot + (slot * (1 - barFill)) / 2;
+    }
+    function barW(n: number): number {
+        return Math.max(2, (plotW / n) * barFill);
+    }
+    function barH(km: number): number {
+        return (km / yMax) * plotH;
+    }
 
     function weekdayLabel(yyyymmdd: string): string {
         const d = new Date(`${yyyymmdd}T00:00:00Z`);
@@ -63,11 +83,12 @@
     }
 
     function computeTooltipStyle(bar: Bar, index: number): string {
-        const xPct = (index / data.length) * 100 + (1 / data.length) * 50;
-        const heightPct = (bar.km / yMax) * 100;
-        const yPct = Math.max(0, 100 - heightPct);
-        const tx = xPct > 70 ? '-100%' : xPct < 30 ? '0%' : '-50%';
-        return `left:${xPct}%;top:${yPct}%;transform:translate(${tx},calc(-100% - 0.5rem));`;
+        if (chartWidth <= 0) return '';
+        const cx = barX(index, data.length) + barW(data.length) / 2;
+        const top = padTop + plotH - barH(bar.km);
+        const leftPct = (cx / chartWidth) * 100;
+        const tx = leftPct > 70 ? '-100%' : leftPct < 30 ? '0%' : '-50%';
+        return `left:${cx}px;top:${top}px;transform:translate(${tx},calc(-100% - 0.5rem));`;
     }
 
     function handleSelect(date: string) {
@@ -91,59 +112,63 @@
 <div class="chart-root" role="img" aria-label={summary(data)}>
     <div class="flex gap-2 items-stretch">
         <div class="y-axis-title">Distance (km)</div>
-        <div class="chart-wrapper flex-1">
-            <LayerCake
-                data={data}
-                x="label"
-                y="km"
-                xScale={scaleBand().paddingInner(0.2).paddingOuter(0.1)}
-                yScale={scaleLinear()}
-                yDomain={[0, yMax]}
-                padding={{ top: 16, right: 8, bottom: 28, left: 36 }}>
-                <Svg>
+        <div
+            class="chart-wrapper flex-1"
+            style="height:{chartHeight}px"
+            bind:clientWidth={chartWidth}
+            on:mouseleave={handleDismiss}
+            role="presentation">
+            {#if chartWidth > 0}
+                <svg width={chartWidth} height={chartHeight} class="block">
                     <g class="axis-y">
                         {#each [0, 0.25, 0.5, 0.75, 1] as t}
+                            {@const ty = padTop + (1 - t) * plotH}
                             <line
-                                x1={0}
-                                x2="100%"
-                                y1={`${(1 - t) * 100}%`}
-                                y2={`${(1 - t) * 100}%`}
+                                x1={padLeft}
+                                x2={chartWidth - padRight}
+                                y1={ty}
+                                y2={ty}
                                 stroke="currentColor"
                                 stroke-opacity="0.1" />
                             <text
-                                x={-6}
-                                y={`${(1 - t) * 100}%`}
+                                x={padLeft - 6}
+                                y={ty}
                                 dy="3"
                                 text-anchor="end"
                                 class="fill-current opacity-70"
-                                font-size="10">{formatTick(t * yMax)}</text>
+                                font-size={axisFont}>{formatTick(t * yMax)}</text>
                         {/each}
                     </g>
                     <rect
                         x="0"
                         y="0"
-                        width="100%"
-                        height="100%"
+                        width={chartWidth}
+                        height={chartHeight}
                         fill="transparent"
                         on:click|self={handleDismiss}
                         role="presentation" />
                     {#each data as d, i (d.date)}
-                        {@const x = (i / data.length) * 100 + (1 / data.length) * 10}
-                        {@const w = (1 / data.length) * 80}
-                        {@const h = (d.km / yMax) * 100}
+                        {@const x = barX(i, data.length)}
+                        {@const w = barW(data.length)}
+                        {@const h = barH(d.km)}
+                        {@const y = padTop + plotH - h}
                         {@const hitH = Math.max(h, 6)}
+                        {@const hitY = padTop + plotH - hitH}
+                        {@const radius = Math.min(4, w / 2, h / 2)}
                         <rect
-                            x={`${x}%`}
-                            y={`${100 - h}%`}
-                            width={`${w}%`}
-                            height={`${h}%`}
+                            {x}
+                            {y}
+                            width={w}
+                            height={h}
+                            rx={radius}
+                            ry={radius}
                             class="bar fill-primary-500 dark:fill-tertiary-500"
                             class:active={activeDate === d.date} />
                         <rect
-                            x={`${x}%`}
-                            y={`${100 - hitH}%`}
-                            width={`${w}%`}
-                            height={`${hitH}%`}
+                            {x}
+                            y={hitY}
+                            width={w}
+                            height={hitH}
                             class="hit"
                             tabindex="0"
                             role="button"
@@ -159,24 +184,22 @@
                                 }
                             }} />
                         <text
-                            x={`${x + w / 2}%`}
-                            y="100%"
-                            dy="20"
+                            x={x + w / 2}
+                            y={padTop + plotH + axisFont + 8}
                             text-anchor="middle"
-                            class="fill-current opacity-70"
-                            font-size="10">{d.label}</text>
+                            class="fill-current opacity-60"
+                            font-size={axisFont}>{d.label}</text>
                         {#if d.km > 0}
                             <text
-                                x={`${x + w / 2}%`}
-                                y={`${100 - h}%`}
-                                dy="-4"
+                                x={x + w / 2}
+                                y={y - 4}
                                 text-anchor="middle"
                                 class="fill-current"
-                                font-size="10">{d.km.toFixed(1)}</text>
+                                font-size={axisFont}>{d.km.toFixed(1)}</text>
                         {/if}
                     {/each}
-                </Svg>
-            </LayerCake>
+                </svg>
+            {/if}
             {#if activeBar}
                 <div class="tooltip" style={tooltipStyle}>
                     <p class="font-semibold text-sm">{formatFullDate(activeBar.date)}</p>
@@ -198,7 +221,7 @@
             {/if}
         </div>
     </div>
-    <p class="text-xs opacity-70 text-center mt-10">Day of week</p>
+    <p class="day-axis-title">Day of week</p>
 </div>
 
 <style>
@@ -207,15 +230,27 @@
     }
     .chart-wrapper {
         width: 100%;
-        height: 240px;
         position: relative;
+        overflow: hidden;
     }
     .y-axis-title {
         writing-mode: vertical-rl;
         transform: rotate(180deg);
-        font-size: 0.75rem;
-        opacity: 0.7;
+        font-size: 0.7rem;
+        opacity: 0.6;
         align-self: center;
+        flex-shrink: 0;
+    }
+    .day-axis-title {
+        font-size: 0.7rem;
+        opacity: 0.6;
+        text-align: center;
+        margin-top: 1rem;
+    }
+    @media (max-width: 380px) {
+        .y-axis-title {
+            display: none;
+        }
     }
     .bar {
         transition: opacity 120ms ease;

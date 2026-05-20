@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => {
         persistTrainingReport: vi.fn(),
         fetchGarminActivities: vi.fn(),
         callWeeklyReportProxy: vi.fn(),
+        syncUserActivities: vi.fn(),
+        computeLoadProfile: vi.fn(),
         FakeReportLimitReachedError,
     };
 });
@@ -32,6 +34,14 @@ vi.mock('$lib/prisma/prisma', () => ({
 
 vi.mock('$lib/server/garmin/fetch-activities', () => ({
     fetchGarminActivities: mocks.fetchGarminActivities,
+}));
+
+vi.mock('$lib/server/garmin/sync-activities', () => ({
+    syncUserActivities: mocks.syncUserActivities,
+}));
+
+vi.mock('$lib/server/analytics/load', () => ({
+    computeLoadProfile: mocks.computeLoadProfile,
 }));
 
 vi.mock('$lib/server/reports/call-proxy', () => ({
@@ -111,6 +121,13 @@ function defaultHappyPathMocks() {
     mocks.fetchGarminActivities.mockResolvedValue({ ok: true, activities: activitySample });
     mocks.callWeeklyReportProxy.mockResolvedValue({ ok: true, summary: 'Great week!' });
     mocks.persistTrainingReport.mockResolvedValue({ id: 'report-1', userId, summary: 'Great week!' });
+    mocks.syncUserActivities.mockResolvedValue({
+        ok: true,
+        mode: 'incremental',
+        activitiesUpserted: 0,
+        lastSyncedAt: new Date(),
+    });
+    mocks.computeLoadProfile.mockResolvedValue(null);
 }
 
 beforeEach(() => {

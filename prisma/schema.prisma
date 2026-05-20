@@ -28,6 +28,9 @@ model User {
     athleteProfile        AthleteProfile?
     runningGoals          RunningGoal[]
     trainingReports       TrainingReport[]
+    activities            Activity[]
+    garminSyncState       GarminSyncState?
+    aiUsage               AiUsage[]
 
     @@index([roleId])
 }
@@ -156,4 +159,73 @@ enum ReportType {
     WEEKLY
     MONTHLY
     MICROCYCLE
+}
+
+model Activity {
+    id                String   @id @default(uuid())
+    userId            String
+    garminActivityId  BigInt
+    activityType      String
+    activityName      String?
+    startTime         DateTime
+    durationSec       Int
+    movingDurationSec Int?
+    distanceM         Float?
+    calories          Int?
+    averageHr         Int?
+    maxHr             Int?
+    hrZone1Sec        Int?
+    hrZone2Sec        Int?
+    hrZone3Sec        Int?
+    hrZone4Sec        Int?
+    hrZone5Sec        Int?
+    moderateMinutes   Int?
+    vigorousMinutes   Int?
+    averageSpeed      Float?
+    maxSpeed          Float?
+    averageCadence    Float?
+    maxCadence        Float?
+    avgStrideLength   Float?
+    elevationGainM    Float?
+    elevationLossM    Float?
+    trimpLoad         Float?
+    raw               Json
+    fetchedAt         DateTime        @default(now())
+    User              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    detail            ActivityDetail?
+
+    @@unique([userId, garminActivityId])
+    @@index([userId, startTime(sort: Desc)])
+    @@index([userId, activityType, startTime(sort: Desc)])
+}
+
+model ActivityDetail {
+    activityId String   @id
+    splits     Json
+    samples    Json
+    raw        Json?
+    fetchedAt  DateTime @default(now())
+    Activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+}
+
+model AiUsage {
+    id        String   @id @default(uuid())
+    userId    String
+    kind      String
+    day       String   @db.VarChar(10)
+    count     Int      @default(0)
+    updatedAt DateTime @updatedAt
+    User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, kind, day])
+    @@index([userId, kind])
+}
+
+model GarminSyncState {
+    userId           String    @id
+    lastSyncedAt     DateTime?
+    oldestActivityAt DateTime?
+    backfillComplete Boolean   @default(false)
+    updatedAt        DateTime  @updatedAt
+    User             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

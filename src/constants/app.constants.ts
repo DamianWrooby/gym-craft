@@ -9,6 +9,8 @@ export enum appConfig {
     proxyApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/generate-plan',
     weeklyReportApiUrlDEV = 'http://localhost:3000/api/weekly-report',
     weeklyReportApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/weekly-report',
+    explainRunApiUrlDEV = 'http://localhost:3000/api/explain-run',
+    explainRunApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/explain-run',
     internalGarminApiUrlDEV = 'http://localhost:5000',
     internalGarminApiUrlPROD = 'https://gymcraft-curl-cffi.onrender.com',
     plansApiUrl = '/api/plans',

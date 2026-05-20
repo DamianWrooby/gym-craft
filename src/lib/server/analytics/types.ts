@@ -88,6 +88,26 @@ export interface CrossTrainingSummary {
     byType: Record<string, CrossTrainingByType>;
 }
 
+export type AcwrStatus = 'undertraining' | 'optimal' | 'overreach' | 'high-risk';
+
+export interface MetricsLoadProfile {
+    asOf: string;
+    acute7d: number;
+    chronic28d: number;
+    acwr: number;
+    acwrStatus: AcwrStatus;
+    acwrNarrative: string;
+    monotony: number;
+    strain: number;
+    weeklyTotalLoad: number;
+    previousWeekTotalLoad: number | null;
+    weekOverWeekLoadChangePct: number | null;
+    monotonyIsHigh: boolean;
+    monotonyNarrative: string;
+    activitiesConsidered: number;
+    hasSufficientHistory: boolean;
+}
+
 export interface MetricsBundle {
     period: MetricsPeriod;
     volume: MetricsVolume;
@@ -96,4 +116,5 @@ export interface MetricsBundle {
     deltas: MetricsDeltas | null;
     flags: MetricsFlags;
     crossTraining?: CrossTrainingSummary;
+    loadProfile?: MetricsLoadProfile;
 }
