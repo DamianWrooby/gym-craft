@@ -2,10 +2,9 @@ import { createResponse } from '$lib/utils/response';
 import {
     findExistingReport,
     getAthleteProfile,
-    getReportGenerationCount,
+    getMonthlyWeeklyReportCount,
     getRunningGoalsByIds,
     persistTrainingReport,
-    ReportLimitReachedError,
 } from '$lib/prisma/prisma';
 import { fetchGarminActivities } from '$lib/server/garmin/fetch-activities';
 import { syncUserActivities } from '$lib/server/garmin/sync-activities';
@@ -17,7 +16,7 @@ import { callWeeklyReportProxy } from '$lib/server/reports/call-proxy';
 import { validateBody, validateDates } from '$lib/server/reports/weekly-validation';
 import { addDays } from '$lib/utils/iso-week';
 import { partitionRunningActivities } from '$lib/utils/activity-type';
-import { WEEKLY_REPORT_LIFETIME_LIMIT } from '@/constants/training-report.constants';
+import { WEEKLY_REPORT_MONTHLY_LIMIT } from '@/constants/training-report.constants';
 import type { AthleteProfile, Prisma, RunningGoal } from '@prisma/client';
 import type { MetricsBundle } from '$lib/server/analytics/types';
 
@@ -47,7 +46,7 @@ export async function POST({
 
     const [profile, count, existing, goals] = await Promise.all([
         getAthleteProfile(userId),
-        getReportGenerationCount(userId),
+        getMonthlyWeeklyReportCount(userId),
         findExistingReport(userId, 'WEEKLY', periodStart),
         goalIds.length > 0 ? getRunningGoalsByIds(userId, goalIds) : Promise.resolve([]),
     ]);
@@ -61,10 +60,10 @@ export async function POST({
         return createResponse(400, { code: 'INVALID_PERIOD', message: dateValidation.error });
     }
 
-    if (count >= WEEKLY_REPORT_LIFETIME_LIMIT) {
+    if (count >= WEEKLY_REPORT_MONTHLY_LIMIT) {
         return createResponse(403, {
             code: 'REPORT_LIMIT_REACHED',
-            message: 'Weekly report generation limit reached',
+            message: 'Monthly report generation limit reached',
         });
     }
 
@@ -127,30 +126,19 @@ export async function POST({
     const goalContextJson = goalContext as unknown as Prisma.InputJsonValue;
 
     if (metrics.flags.noActivities) {
-        try {
-            const report = await persistTrainingReport(
-                {
-                    userId,
-                    type: 'WEEKLY',
-                    periodStart,
-                    periodEnd,
-                    metrics: metricsJson,
-                    summary: EMPTY_WEEK_SUMMARY,
-                    goalContext: goalContextJson,
-                },
-                WEEKLY_REPORT_LIFETIME_LIMIT,
-                { consumeSlot: false },
-            );
-            return createResponse(200, { data: report });
-        } catch (err) {
-            if (err instanceof ReportLimitReachedError) {
-                return createResponse(403, {
-                    code: 'REPORT_LIMIT_REACHED',
-                    message: 'Weekly report generation limit reached',
-                });
-            }
-            throw err;
-        }
+        const report = await persistTrainingReport(
+            {
+                userId,
+                type: 'WEEKLY',
+                periodStart,
+                periodEnd,
+                metrics: metricsJson,
+                summary: EMPTY_WEEK_SUMMARY,
+                goalContext: goalContextJson,
+            },
+            { consumeSlot: false },
+        );
+        return createResponse(200, { data: report });
     }
 
     const prompt = buildReportPrompt({ metrics, profile, goals, notes });
@@ -159,29 +147,16 @@ export async function POST({
         return createResponse(502, { code: 'LLM_FAILED', message: proxy.error ?? 'LLM proxy failed' });
     }
 
-    try {
-        const report = await persistTrainingReport(
-            {
-                userId,
-                type: 'WEEKLY',
-                periodStart,
-                periodEnd,
-                metrics: metricsJson,
-                summary: proxy.summary,
-                goalContext: goalContextJson,
-            },
-            WEEKLY_REPORT_LIFETIME_LIMIT,
-        );
-        return createResponse(200, { data: report });
-    } catch (err) {
-        if (err instanceof ReportLimitReachedError) {
-            return createResponse(403, {
-                code: 'REPORT_LIMIT_REACHED',
-                message: 'Weekly report generation limit reached',
-            });
-        }
-        throw err;
-    }
+    const report = await persistTrainingReport({
+        userId,
+        type: 'WEEKLY',
+        periodStart,
+        periodEnd,
+        metrics: metricsJson,
+        summary: proxy.summary,
+        goalContext: goalContextJson,
+    });
+    return createResponse(200, { data: report });
 }
 
 function parsePeriodEnd(periodEnd: string): Date {

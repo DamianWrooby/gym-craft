@@ -2,34 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('$env/static/public', () => ({ PUBLIC_APP_ENV: 'test' }));
 
-const mocks = vi.hoisted(() => {
-    class FakeReportLimitReachedError extends Error {
-        constructor() {
-            super('Report generation limit reached');
-            this.name = 'ReportLimitReachedError';
-        }
-    }
-    return {
-        getAthleteProfile: vi.fn(),
-        getRunningGoalsByIds: vi.fn(),
-        getReportGenerationCount: vi.fn(),
-        findExistingReport: vi.fn(),
-        persistTrainingReport: vi.fn(),
-        fetchGarminActivities: vi.fn(),
-        callWeeklyReportProxy: vi.fn(),
-        syncUserActivities: vi.fn(),
-        computeLoadProfile: vi.fn(),
-        FakeReportLimitReachedError,
-    };
-});
+const mocks = vi.hoisted(() => ({
+    getAthleteProfile: vi.fn(),
+    getRunningGoalsByIds: vi.fn(),
+    getMonthlyWeeklyReportCount: vi.fn(),
+    findExistingReport: vi.fn(),
+    persistTrainingReport: vi.fn(),
+    fetchGarminActivities: vi.fn(),
+    callWeeklyReportProxy: vi.fn(),
+    syncUserActivities: vi.fn(),
+    computeLoadProfile: vi.fn(),
+}));
 
 vi.mock('$lib/prisma/prisma', () => ({
     getAthleteProfile: mocks.getAthleteProfile,
     getRunningGoalsByIds: mocks.getRunningGoalsByIds,
-    getReportGenerationCount: mocks.getReportGenerationCount,
+    getMonthlyWeeklyReportCount: mocks.getMonthlyWeeklyReportCount,
     findExistingReport: mocks.findExistingReport,
     persistTrainingReport: mocks.persistTrainingReport,
-    ReportLimitReachedError: mocks.FakeReportLimitReachedError,
 }));
 
 vi.mock('$lib/server/garmin/fetch-activities', () => ({
@@ -115,7 +105,7 @@ function makeRequest(body: unknown): Request {
 
 function defaultHappyPathMocks() {
     mocks.getAthleteProfile.mockResolvedValue(profile);
-    mocks.getReportGenerationCount.mockResolvedValue(0);
+    mocks.getMonthlyWeeklyReportCount.mockResolvedValue(0);
     mocks.findExistingReport.mockResolvedValue(null);
     mocks.getRunningGoalsByIds.mockResolvedValue([goal]);
     mocks.fetchGarminActivities.mockResolvedValue({ ok: true, activities: activitySample });
@@ -198,8 +188,8 @@ describe('POST /api/user/[id]/reports/weekly — auth and gating', () => {
         expect(response.status).toBe(400);
     });
 
-    it('returns 403 when pre-flight cap read is already at the limit', async () => {
-        mocks.getReportGenerationCount.mockResolvedValueOnce(3);
+    it('returns 403 when pre-flight count already meets the monthly limit', async () => {
+        mocks.getMonthlyWeeklyReportCount.mockResolvedValueOnce(4);
         const response = await POST({ request: makeRequest(validBody), params: { id: userId }, locals });
         expect(response.status).toBe(403);
         expect(mocks.fetchGarminActivities).not.toHaveBeenCalled();
@@ -233,8 +223,7 @@ describe('POST /api/user/[id]/reports/weekly — overwrite, empty week, LLM fail
         expect(response.status).toBe(200);
         expect(mocks.persistTrainingReport).toHaveBeenCalledTimes(1);
         const callArgs = mocks.persistTrainingReport.mock.calls[0];
-        const consumeSlot = callArgs[2]?.consumeSlot;
-        // Default for non-empty week is consumeSlot: true (undefined falls back to default)
+        const consumeSlot = callArgs[1]?.consumeSlot;
         expect(consumeSlot === undefined || consumeSlot === true).toBe(true);
     });
 
@@ -245,7 +234,7 @@ describe('POST /api/user/[id]/reports/weekly — overwrite, empty week, LLM fail
         expect(mocks.callWeeklyReportProxy).not.toHaveBeenCalled();
         expect(mocks.persistTrainingReport).toHaveBeenCalledTimes(1);
         const callArgs = mocks.persistTrainingReport.mock.calls[0];
-        expect(callArgs[2]).toEqual({ consumeSlot: false });
+        expect(callArgs[1]).toEqual({ consumeSlot: false });
     });
 
     it('returns 502 when LLM proxy fails and never persists the report', async () => {
@@ -257,23 +246,15 @@ describe('POST /api/user/[id]/reports/weekly — overwrite, empty week, LLM fail
         expect(mocks.persistTrainingReport).not.toHaveBeenCalled();
     });
 
-    it('persists the report on the happy path with consumeSlot: true (default)', async () => {
+    it('persists the report on the happy path with default consumeSlot', async () => {
         const response = await POST({ request: makeRequest(validBody), params: { id: userId }, locals });
         expect(response.status).toBe(200);
         expect(mocks.callWeeklyReportProxy).toHaveBeenCalledTimes(1);
         expect(mocks.persistTrainingReport).toHaveBeenCalledTimes(1);
         const callArgs = mocks.persistTrainingReport.mock.calls[0];
-        // Third arg is omitted on default path
-        expect(callArgs[2]).toBeUndefined();
+        expect(callArgs[1]).toBeUndefined();
     });
 
-    it('returns 403 when the atomic update raises ReportLimitReachedError', async () => {
-        mocks.persistTrainingReport.mockRejectedValueOnce(new mocks.FakeReportLimitReachedError());
-        const response = await POST({ request: makeRequest(validBody), params: { id: userId }, locals });
-        expect(response.status).toBe(403);
-        const json = await response.json();
-        expect(json.code).toBe('REPORT_LIMIT_REACHED');
-    });
 });
 
 describe('POST /api/user/[id]/reports/weekly — Garmin errors', () => {
