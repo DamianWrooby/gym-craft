@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { to } from 'await-to-js';
 import {
     getAthleteProfile,
-    getReportGenerationCount,
+    getMonthlyWeeklyReportCount,
     getRunningGoals,
     getWeeklyReports,
 } from '$lib/prisma/prisma';
@@ -14,20 +14,20 @@ export async function load({ locals }) {
     const [err, results] = await to(
         Promise.all([
             getWeeklyReports(userId),
-            getReportGenerationCount(userId),
+            getMonthlyWeeklyReportCount(userId),
             getAthleteProfile(userId),
             getRunningGoals(userId, { includeArchived: false }),
         ]),
     );
     if (err || !results) throw error(500, 'Cannot load reports');
-    const [reports, reportGenerationCount, profile, goals] = results;
+    const [reports, monthlyReportCount, profile, goals] = results;
 
     return {
         reports: reports.map((r) => ({
             ...r,
             createdAt: r.createdAt.toISOString(),
         })),
-        reportGenerationCount,
+        monthlyReportCount,
         hasProfile: profile !== null,
         goals: goals.map((g) => ({
             ...g,

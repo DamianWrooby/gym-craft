@@ -14,7 +14,7 @@
     import GenerateReportModal from '$lib/components/training-report/GenerateReportModal.svelte';
     import { makeToast } from '$lib/utils/toasts';
     import { to } from 'await-to-js';
-    import { WEEKLY_REPORT_LIFETIME_LIMIT } from '@/constants/training-report.constants';
+    import { WEEKLY_REPORT_MONTHLY_LIMIT } from '@/constants/training-report.constants';
     import type { User } from '@/models/user/user.model';
     import type { GoalType } from '@prisma/client';
 
@@ -44,11 +44,11 @@
 
     const user: User = $page.data.user;
     const reports: ReportSummary[] = $page.data.reports;
-    const reportGenerationCount: number = $page.data.reportGenerationCount;
+    const monthlyReportCount: number = $page.data.monthlyReportCount;
     const hasProfile: boolean = $page.data.hasProfile;
     const goals: RunningGoalSummary[] = $page.data.goals;
 
-    $: slotsRemaining = WEEKLY_REPORT_LIFETIME_LIMIT - reportGenerationCount;
+    $: slotsRemaining = WEEKLY_REPORT_MONTHLY_LIMIT - monthlyReportCount;
     $: canGenerate = hasProfile && slotsRemaining > 0;
 
     const modalStore = getModalStore();
@@ -74,7 +74,7 @@
         if (slotsRemaining <= 0) {
             makeToast(
                 toastStore,
-                `You've used all ${WEEKLY_REPORT_LIFETIME_LIMIT} report generations.`,
+                `You've used all ${WEEKLY_REPORT_MONTHLY_LIMIT} report generations this month.`,
                 'variant-filled-warning',
             );
             return;
@@ -181,7 +181,7 @@
             case 'REPORT_LIMIT_REACHED':
                 makeToast(
                     toastStore,
-                    `You've used all ${WEEKLY_REPORT_LIFETIME_LIMIT} report generations.`,
+                    `You've used all ${WEEKLY_REPORT_MONTHLY_LIMIT} report generations this month.`,
                     'variant-filled-warning',
                 );
                 break;
@@ -221,7 +221,7 @@
         <div class="flex flex-row justify-between items-center py-6">
             <h2 class="h2 text-xl font-bold">Weekly reports</h2>
             <span class="text-sm opacity-70">
-                {reportGenerationCount}/{WEEKLY_REPORT_LIFETIME_LIMIT} used
+                {monthlyReportCount}/{WEEKLY_REPORT_MONTHLY_LIMIT} used this month
             </span>
         </div>
 
