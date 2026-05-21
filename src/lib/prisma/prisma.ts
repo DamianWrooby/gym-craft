@@ -1,4 +1,5 @@
 import { db } from '$lib/database';
+import { currentMonthStartIso } from '$lib/utils/iso-week';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
 import type {
@@ -379,13 +380,15 @@ export async function getReportById(reportId: string, userId: string): Promise<T
     return report;
 }
 
-export async function getReportGenerationCount(userId: string): Promise<number> {
-    // NOT cached — atomic update is source of truth; this read is a fail-fast hint only.
-    const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { reportGenerationCount: true },
+export async function getMonthlyWeeklyReportCount(userId: string, now: Date = new Date()): Promise<number> {
+    // NOT cached — the increment write is the source of truth; this read is a
+    // fail-fast hint for the pre-flight cap check in the API handler.
+    const monthKey = currentMonthStartIso(now);
+    const row = await db.aiUsage.findUnique({
+        where: { userId_kind_day: { userId, kind: 'weekly_report', day: monthKey } },
+        select: { count: true },
     });
-    return user?.reportGenerationCount ?? 0;
+    return row?.count ?? 0;
 }
 
 export interface PersistTrainingReportInput {
@@ -398,33 +401,30 @@ export interface PersistTrainingReportInput {
     goalContext: Prisma.InputJsonValue;
 }
 
-export class ReportLimitReachedError extends Error {
-    constructor() {
-        super('Report generation limit reached');
-        this.name = 'ReportLimitReachedError';
-    }
-}
-
 /**
- * Atomically increments the user's lifetime report counter and upserts the report row.
- * Pass `consumeSlot: false` for empty-week reports — the row is persisted without
- * incrementing the counter and the cap check is skipped.
+ * Persists a weekly training report and (when consumeSlot is true) increments the
+ * user's AiUsage counter for the current calendar month. Empty-week reports are
+ * saved with consumeSlot: false so they do not eat a monthly slot.
+ *
+ * The cap is enforced at the API layer via a pre-flight read; this function does
+ * not re-check it. The race window is acceptable because the cap is 4/month and
+ * report generation takes seconds (LLM call + Garmin sync).
  */
 export async function persistTrainingReport(
     input: PersistTrainingReportInput,
-    cap: number,
     options: { consumeSlot: boolean } = { consumeSlot: true },
 ): Promise<TrainingReport> {
     const { userId, type, periodStart, periodEnd, metrics, summary, goalContext } = input;
     const reportPayload = { userId, type, periodStart, periodEnd, metrics, summary, goalContext };
+    const monthKey = currentMonthStartIso();
 
     const report = await db.$transaction(async (tx) => {
         if (options.consumeSlot) {
-            const updated = await tx.user.updateMany({
-                where: { id: userId, reportGenerationCount: { lt: cap } },
-                data: { reportGenerationCount: { increment: 1 } },
+            await tx.aiUsage.upsert({
+                where: { userId_kind_day: { userId, kind: 'weekly_report', day: monthKey } },
+                create: { userId, kind: 'weekly_report', day: monthKey, count: 1 },
+                update: { count: { increment: 1 } },
             });
-            if (updated.count === 0) throw new ReportLimitReachedError();
         }
 
         return await tx.trainingReport.upsert({
