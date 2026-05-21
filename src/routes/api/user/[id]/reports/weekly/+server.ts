@@ -125,17 +125,18 @@ export async function POST({
     const metricsJson = metrics as unknown as Prisma.InputJsonValue;
     const goalContextJson = goalContext as unknown as Prisma.InputJsonValue;
 
+    const baseInput = {
+        userId,
+        type: 'WEEKLY' as const,
+        periodStart,
+        periodEnd,
+        metrics: metricsJson,
+        goalContext: goalContextJson,
+    };
+
     if (metrics.flags.noActivities) {
         const report = await persistTrainingReport(
-            {
-                userId,
-                type: 'WEEKLY',
-                periodStart,
-                periodEnd,
-                metrics: metricsJson,
-                summary: EMPTY_WEEK_SUMMARY,
-                goalContext: goalContextJson,
-            },
+            { ...baseInput, summary: EMPTY_WEEK_SUMMARY },
             { consumeSlot: false },
         );
         return createResponse(200, { data: report });
@@ -147,15 +148,7 @@ export async function POST({
         return createResponse(502, { code: 'LLM_FAILED', message: proxy.error ?? 'LLM proxy failed' });
     }
 
-    const report = await persistTrainingReport({
-        userId,
-        type: 'WEEKLY',
-        periodStart,
-        periodEnd,
-        metrics: metricsJson,
-        summary: proxy.summary,
-        goalContext: goalContextJson,
-    });
+    const report = await persistTrainingReport({ ...baseInput, summary: proxy.summary });
     return createResponse(200, { data: report });
 }
 

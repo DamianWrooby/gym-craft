@@ -254,7 +254,6 @@ describe('POST /api/user/[id]/reports/weekly — overwrite, empty week, LLM fail
         const callArgs = mocks.persistTrainingReport.mock.calls[0];
         expect(callArgs[1]).toBeUndefined();
     });
-
 });
 
 describe('POST /api/user/[id]/reports/weekly — Garmin errors', () => {

@@ -380,10 +380,10 @@ export async function getReportById(reportId: string, userId: string): Promise<T
     return report;
 }
 
-export async function getMonthlyWeeklyReportCount(userId: string, now: Date = new Date()): Promise<number> {
+export async function getMonthlyWeeklyReportCount(userId: string): Promise<number> {
     // NOT cached — the increment write is the source of truth; this read is a
     // fail-fast hint for the pre-flight cap check in the API handler.
-    const monthKey = currentMonthStartIso(now);
+    const monthKey = currentMonthStartIso();
     const row = await db.aiUsage.findUnique({
         where: { userId_kind_day: { userId, kind: 'weekly_report', day: monthKey } },
         select: { count: true },
