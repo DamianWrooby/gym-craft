@@ -21,7 +21,6 @@ model User {
     roleId                Int
     role                  Roles               @relation(fields: [roleId], references: [id])
     generatedPlansNumber  Int                 @default(0)
-    reportGenerationCount Int                 @default(0)
     plans                 Plan[]
     verificationTokens    VerificationToken[]
     garminData            GarminData?
