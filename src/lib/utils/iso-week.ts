@@ -54,6 +54,12 @@ export function toIsoDate(d: Date): string {
     return d.toISOString().slice(0, 10);
 }
 
+export function currentMonthStartIso(date: Date = new Date()): string {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    return `${y}-${m}-01`;
+}
+
 function formatUTCDate(d: Date): string {
     const y = d.getUTCFullYear();
     const m = String(d.getUTCMonth() + 1).padStart(2, '0');

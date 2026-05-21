@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     addDays,
+    currentMonthStartIso,
     daysBetween,
     isFutureDate,
     isMonday,
@@ -140,5 +141,28 @@ describe('isFutureDate', () => {
 
     it('returns false on invalid input rather than throwing', () => {
         expect(isFutureDate('not-a-date')).toBe(false);
+    });
+});
+
+describe('currentMonthStartIso', () => {
+    it('returns YYYY-MM-01 in UTC for a mid-month date', () => {
+        expect(currentMonthStartIso(new Date('2026-05-21T12:34:56Z'))).toBe('2026-05-01');
+    });
+
+    it('returns the same month on the first instant of the month', () => {
+        expect(currentMonthStartIso(new Date('2026-05-01T00:00:00Z'))).toBe('2026-05-01');
+    });
+
+    it('rolls into the next month at the first instant of that month', () => {
+        expect(currentMonthStartIso(new Date('2026-06-01T00:00:00Z'))).toBe('2026-06-01');
+    });
+
+    it('pads single-digit months', () => {
+        expect(currentMonthStartIso(new Date('2026-01-15T00:00:00Z'))).toBe('2026-01-01');
+    });
+
+    it('defaults to now when called without an argument', () => {
+        const result = currentMonthStartIso();
+        expect(result).toMatch(/^\d{4}-\d{2}-01$/);
     });
 });
