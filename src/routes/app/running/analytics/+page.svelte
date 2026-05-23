@@ -1,6 +1,7 @@
 <script lang="ts">
     import Seo from '$lib/components/seo/Seo.svelte';
     import { page } from '$app/stores';
+    import { invalidate } from '$app/navigation';
     import { onMount } from 'svelte';
     import { getModalStore, type ModalSettings, type ModalComponent } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
@@ -10,91 +11,48 @@
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { to } from 'await-to-js';
     import type { User } from '@/models/user/user.model';
-    import type { GarminActivity, FetchActivitiesParams } from '@/models/garmin/activity.model';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
     import { PACE_ACTIVITY_TYPES, formatPaceOrSpeed } from '$lib/utils/pace';
+    import { isSyncStale } from '$lib/utils/sync-staleness';
+    import type { AnalyticsPageData } from './+page.server';
 
     type LoginFormData = { email: string; password: string };
 
     const user: User = $page.data.user;
-
     const modalStore = getModalStore();
     const modalComponent: ModalComponent = { ref: GarminLoginForm };
     const toastStore = getToastStore();
 
+    export let data: AnalyticsPageData;
+
     const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
-    let activitiesLoading: boolean = false;
-    let activitiesParams: FetchActivitiesParams | null = null;
-    let activities: GarminActivity[] | null = null;
-    let hasFetched: boolean = false;
+    let syncing: boolean = false;
     let currentPage: number = 1;
     let pageSize: number = 10;
 
-    $: totalPages = activities?.length ? Math.ceil(activities.length / pageSize) : 1;
-    $: paginatedActivities = activities ? activities.slice((currentPage - 1) * pageSize, currentPage * pageSize) : [];
-    $: if (currentPage > totalPages) currentPage = totalPages;
-
-    function formatDate(date: Date): string {
-        return date.toISOString().slice(0, 10);
+    function formatYmd(d: Date): string {
+        return d.toISOString().slice(0, 10);
     }
 
     const today = new Date();
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(today.getDate() - 7);
 
-    let startDate: string = formatDate(sevenDaysAgo);
-    let endDate: string = formatDate(today);
+    let startDate: string = formatYmd(sevenDaysAgo);
+    let endDate: string = formatYmd(today);
     let dateError: string = '';
 
-    $: maxDate = formatDate(new Date());
+    $: maxDate = formatYmd(new Date());
 
-    onMount(() => {
-        modalStore.clear();
+    $: filteredActivities = data.activities.filter((a) => {
+        const day = a.startTime.slice(0, 10);
+        return day >= startDate && day <= endDate;
     });
-
-    function formatDistance(meters: number | undefined): string {
-        if (!meters) return '—';
-        return `${(meters / 1000).toFixed(2)} km`;
-    }
-
-    function formatDuration(seconds: number | undefined): string {
-        if (!seconds) return '—';
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.floor(seconds % 60);
-        if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    }
-
-    function formatElevation(meters: number | undefined): string {
-        if (meters === undefined || meters === null) return '—';
-        return `${Math.round(meters)} m`;
-    }
-
-    function formatHr(bpm: number | undefined): string {
-        if (!bpm) return '—';
-        return `${Math.round(bpm)} bpm`;
-    }
-
-    function formatCalories(kcal: number | undefined): string {
-        if (!kcal) return '—';
-        return `${Math.round(kcal)}`;
-    }
-
-    function formatActivityDate(iso: string): { month: string; day: string; year: string } {
-        const d = new Date(iso);
-        return {
-            month: d.toLocaleString('en-US', { month: 'short' }),
-            day: d.getDate().toString(),
-            year: d.getFullYear().toString(),
-        };
-    }
-
-    function formatActivityType(typeKey: string): string {
-        return typeKey.replace(/_/g, ' ').toUpperCase();
-    }
+    $: totalPages = filteredActivities.length ? Math.ceil(filteredActivities.length / pageSize) : 1;
+    $: paginated = filteredActivities.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    $: if (currentPage > totalPages) currentPage = totalPages;
 
     function validateDates(): boolean {
         if (!startDate || !endDate) {
@@ -113,78 +71,72 @@
         return true;
     }
 
-    async function fetchActivities(
-        params: FetchActivitiesParams,
-    ): Promise<{ data?: GarminActivity[]; message?: string; code?: string }> {
-        const [error, response] = await to(
-            fetch(`/api/user/${user.id}/garmin/activities`, {
+    onMount(async () => {
+        modalStore.clear();
+        if (data.needsInitialSync) {
+            await runSync({ blocking: true });
+        } else if (isSyncStale(data.lastSyncedAt)) {
+            void runSync({ blocking: false });
+        }
+    });
+
+    async function runSync(opts: { blocking: boolean; password?: string }) {
+        if (syncing) return;
+        syncing = true;
+
+        const body = opts.password ? JSON.stringify({ password: opts.password }) : '{}';
+        const [fetchError, response] = await to(
+            fetch(`/api/user/${user.id}/garmin/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(params),
+                body,
             }),
         );
 
-        if (error || !response) {
-            return { message: error?.message || 'Failed to fetch activities' };
+        if (fetchError || !response) {
+            makeToast(toastStore, fetchError?.message || 'Failed to sync Garmin', 'variant-filled-error');
+            syncing = false;
+            return;
         }
 
-        const [parseError, data] = await to(response.json());
-        if (parseError) return { message: 'Error parsing response' };
+        const [parseError, payload] = await to(response.json());
+        if (parseError) {
+            makeToast(toastStore, 'Error parsing sync response', 'variant-filled-error');
+            syncing = false;
+            return;
+        }
 
         if (!response.ok) {
-            return { message: data?.message || 'Failed to fetch activities', code: data?.code };
-        }
-
-        return { data: data?.data };
-    }
-
-    async function handleFetchActivities(params: FetchActivitiesParams) {
-        activitiesLoading = true;
-        activitiesParams = params;
-
-        const result = await fetchActivities(params);
-
-        if (result.message) {
-            if (result.code === 'INVALID_TOKEN') {
-                makeToast(
-                    toastStore,
-                    'Invalid token <br> Please log in to your Garmin account',
-                    'variant-filled-warning',
-                );
-                activitiesLoading = false;
+            if (payload?.code === 'INVALID_TOKEN') {
+                syncing = false;
                 openGarminLoginModal();
                 return;
             }
-
-            if (result.code === 'GARMIN_EMAIL_NOT_CONFIGURED') {
+            if (payload?.code === 'GARMIN_EMAIL_NOT_CONFIGURED') {
                 makeToast(
                     toastStore,
                     'Garmin email not configured <br> Please set up Garmin integration in your account settings',
                     'variant-filled-warning',
                 );
-                activitiesLoading = false;
+                syncing = false;
                 return;
             }
-
-            makeToast(toastStore, result.message, 'variant-filled-error');
-            activitiesLoading = false;
+            makeToast(toastStore, payload?.message || 'Sync failed', 'variant-filled-error');
+            syncing = false;
             return;
         }
 
-        activities = result.data ?? [];
-        hasFetched = true;
-        currentPage = 1;
-        console.log('Garmin activities:', activities);
-        activitiesLoading = false;
+        await invalidate(() => true);
+        syncing = false;
     }
 
     function openGarminLoginModal() {
         const modal: ModalSettings = {
             type: 'component',
             title: 'Sign in to Garmin Connect',
-            body: 'Provide credentials to connect to your Garmin Connect account and fetch activities.',
+            body: 'Provide credentials to connect to your Garmin Connect account and refresh activities.',
             buttonTextCancel: 'Cancel',
-            buttonTextConfirm: 'Login and fetch activities',
+            buttonTextConfirm: 'Login and sync',
             component: modalComponent,
             response: handleGarminLoginResponse,
         };
@@ -192,21 +144,54 @@
     }
 
     async function handleGarminLoginResponse(loginFormData: LoginFormData | false) {
-        if (!loginFormData) {
-            activitiesLoading = false;
-            return;
-        }
-
+        if (!loginFormData) return;
         const formValidationError = validateGarminLoginFormData(loginFormData);
         if (formValidationError) {
             makeToast(toastStore, 'Invalid form data', 'variant-filled-error');
-            activitiesLoading = false;
             return;
         }
+        await runSync({ blocking: true, password: loginFormData.password });
+    }
 
-        if (activitiesParams) {
-            await handleFetchActivities({ ...activitiesParams, password: loginFormData.password });
-        }
+    function formatDistance(meters: number | null): string {
+        if (!meters) return '—';
+        return `${(meters / 1000).toFixed(2)} km`;
+    }
+    function formatDuration(seconds: number | null): string {
+        if (!seconds) return '—';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+    function formatElevation(meters: number | null): string {
+        if (meters === undefined || meters === null) return '—';
+        return `${Math.round(meters)} m`;
+    }
+    function formatHr(bpm: number | null): string {
+        if (!bpm) return '—';
+        return `${Math.round(bpm)} bpm`;
+    }
+    function formatCalories(kcal: number | null): string {
+        if (!kcal) return '—';
+        return `${Math.round(kcal)}`;
+    }
+    function formatActivityDate(iso: string): { month: string; day: string; year: string } {
+        const d = new Date(iso);
+        return {
+            month: d.toLocaleString('en-US', { month: 'short' }),
+            day: d.getDate().toString(),
+            year: d.getFullYear().toString(),
+        };
+    }
+    function formatActivityType(typeKey: string): string {
+        return typeKey.replace(/_/g, ' ').toUpperCase();
+    }
+    function formatLastSynced(iso: string | null): string {
+        if (!iso) return 'never';
+        const d = new Date(iso);
+        return d.toLocaleString();
     }
 </script>
 
@@ -218,7 +203,8 @@
             <a href="/app/running/reports" class="btn variant-soft-primary">View weekly reports →</a>
         </div>
         <h2 class="h2 text-center text-xl py-4">Garmin Activities</h2>
-        <div class="flex flex-col md:flex-row gap-4 justify-center items-center md:items-end mb-4">
+
+        <div class="flex flex-col md:flex-row gap-4 justify-center items-center md:items-end mb-2">
             <label class="label">
                 <span>Start date</span>
                 <input
@@ -226,7 +212,7 @@
                     class="input"
                     bind:value={startDate}
                     max={endDate || maxDate}
-                    disabled={activitiesLoading} />
+                    disabled={syncing} />
             </label>
             <label class="label">
                 <span>End date</span>
@@ -236,79 +222,91 @@
                     bind:value={endDate}
                     min={startDate}
                     max={maxDate}
-                    disabled={activitiesLoading} />
+                    disabled={syncing} />
             </label>
             <button
                 type="button"
                 class="btn variant-filled-primary"
-                disabled={activitiesLoading}
+                disabled={syncing}
                 on:click={() => {
-                    if (validateDates()) handleFetchActivities({ startDate, endDate });
+                    if (validateDates()) currentPage = 1;
                 }}>
-                Fetch activities
+                Apply filter
             </button>
         </div>
         {#if dateError}
             <p class="text-error-500 text-center mb-2">{dateError}</p>
         {/if}
 
-        {#if activitiesLoading}
+        <div class="flex flex-row items-center justify-center gap-3 text-sm opacity-80 mb-4">
+            <span>Last synced: {formatLastSynced(data.lastSyncedAt)}</span>
+            <button
+                type="button"
+                class="btn btn-sm variant-soft-primary"
+                disabled={syncing}
+                on:click={() => runSync({ blocking: false })}>
+                {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+        </div>
+
+        {#if syncing && data.activities.length === 0}
+            <p class="text-center mb-2">Fetching your Garmin history…</p>
             <Spinner size={10} />
-        {:else if activities?.length}
+        {:else if filteredActivities.length}
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500 mt-4">
-                {#each paginatedActivities as activity}
-                    {@const date = formatActivityDate(activity.startTimeLocal)}
+                {#each paginated as activity (activity.id)}
+                    {@const date = formatActivityDate(activity.startTime)}
                     <li
                         class="group !m-0 text-surface-500 dark:text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-200 dark:odd:bg-surface-900 even:bg-surface-300 dark:even:bg-surface-800 hover:bg-white dark:hover:bg-surface-600">
                         <a
-                            href="/app/running/activities/{activity.activityId}"
+                            href="/app/running/activities/{activity.garminActivityId}"
                             data-sveltekit-preload-data="hover"
                             class="block px-4 py-3 no-underline text-inherit">
-                        <div class="flex flex-row items-center gap-3 flex-wrap">
-                            <div class="flex flex-row items-center gap-2 w-28 shrink-0">
-                                <ActivityTypeIcon typeKey={activity.activityType.typeKey} size={22} />
-                                <div class="flex flex-col leading-tight">
-                                    <span class="font-semibold">{date.month} {date.day}</span>
-                                    <span class="text-xs opacity-70">{date.year}</span>
+                            <div class="flex flex-row items-center gap-3 flex-wrap">
+                                <div class="flex flex-row items-center gap-2 w-28 shrink-0">
+                                    <ActivityTypeIcon typeKey={activity.activityType} size={22} />
+                                    <div class="flex flex-col leading-tight">
+                                        <span class="font-semibold">{date.month} {date.day}</span>
+                                        <span class="text-xs opacity-70">{date.year}</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col leading-tight flex-1 min-w-[10rem]">
+                                    <span class="font-semibold text-surface-900 dark:text-tertiary-200">
+                                        {activity.activityName ?? '—'}
+                                    </span>
+                                    <span class="text-xs opacity-70">
+                                        {formatActivityType(activity.activityType)}
+                                    </span>
+                                </div>
+                                <div class="flex flex-col leading-tight w-24">
+                                    <span class="font-semibold">{formatDistance(activity.distanceM)}</span>
+                                    <span class="text-xs opacity-70">DISTANCE</span>
+                                </div>
+                                <div class="flex flex-col leading-tight w-20">
+                                    <span class="font-semibold">{formatDuration(activity.durationSec)}</span>
+                                    <span class="text-xs opacity-70">TIME</span>
+                                </div>
+                                <div class="flex flex-col leading-tight w-24">
+                                    <span class="font-semibold">
+                                        {formatPaceOrSpeed(activity.averageSpeed ?? undefined, activity.activityType)}
+                                    </span>
+                                    <span class="text-xs opacity-70">
+                                        {PACE_ACTIVITY_TYPES.has(activity.activityType) ? 'AVG PACE' : 'AVG SPEED'}
+                                    </span>
+                                </div>
+                                <div class="flex flex-col leading-tight w-20">
+                                    <span class="font-semibold">{formatElevation(activity.elevationGainM)}</span>
+                                    <span class="text-xs opacity-70">ELEV GAIN</span>
+                                </div>
+                                <div class="flex flex-col leading-tight w-20">
+                                    <span class="font-semibold">{formatHr(activity.averageHr)}</span>
+                                    <span class="text-xs opacity-70">AVG HR</span>
+                                </div>
+                                <div class="flex flex-col leading-tight w-20">
+                                    <span class="font-semibold">{formatCalories(activity.calories)}</span>
+                                    <span class="text-xs opacity-70">CALORIES</span>
                                 </div>
                             </div>
-                            <div class="flex flex-col leading-tight flex-1 min-w-[10rem]">
-                                <span class="font-semibold text-surface-900 dark:text-tertiary-200"
-                                    >{activity.activityName}</span>
-                                <span class="text-xs opacity-70"
-                                    >{formatActivityType(activity.activityType.typeKey)}</span>
-                            </div>
-                            <div class="flex flex-col leading-tight w-24">
-                                <span class="font-semibold">{formatDistance(activity.distance)}</span>
-                                <span class="text-xs opacity-70">DISTANCE</span>
-                            </div>
-                            <div class="flex flex-col leading-tight w-20">
-                                <span class="font-semibold">{formatDuration(activity.duration)}</span>
-                                <span class="text-xs opacity-70">TIME</span>
-                            </div>
-                            <div class="flex flex-col leading-tight w-24">
-                                <span class="font-semibold">
-                                    {formatPaceOrSpeed(activity.averageSpeed, activity.activityType.typeKey)}
-                                </span>
-                                <span class="text-xs opacity-70">
-                                    {PACE_ACTIVITY_TYPES.has(activity.activityType.typeKey)
-                                        ? 'AVG PACE'
-                                        : 'AVG SPEED'}
-                                </span>
-                            </div>
-                            <div class="flex flex-col leading-tight w-20">
-                                <span class="font-semibold">{formatElevation(activity.elevationGain)}</span>
-                                <span class="text-xs opacity-70">ELEV GAIN</span>
-                            </div>
-                            <div class="flex flex-col leading-tight w-20">
-                                <span class="font-semibold">{formatHr(activity.averageHR)}</span>
-                                <span class="text-xs opacity-70">AVG HR</span>
-                            </div>
-                            <div class="flex flex-col leading-tight w-20">
-                                <span class="font-semibold">{formatCalories(activity.calories)}</span>
-                                <span class="text-xs opacity-70">CALORIES</span>
-                            </div>
-                        </div>
                         </a>
                     </li>
                 {/each}
@@ -316,10 +314,7 @@
             <div class="flex flex-row flex-wrap justify-center items-center gap-3 mt-4">
                 <label class="flex flex-row items-center gap-2 text-sm">
                     <span>Per page:</span>
-                    <select
-                        class="select select-sm w-auto"
-                        bind:value={pageSize}
-                        on:change={() => (currentPage = 1)}>
+                    <select class="select select-sm w-auto" bind:value={pageSize} on:change={() => (currentPage = 1)}>
                         {#each PAGE_SIZE_OPTIONS as option}
                             <option value={option}>{option}</option>
                         {/each}
@@ -333,9 +328,7 @@
                         on:click={() => (currentPage = Math.max(1, currentPage - 1))}>
                         Previous
                     </button>
-                    <span class="text-sm">
-                        Page {currentPage} of {totalPages}
-                    </span>
+                    <span class="text-sm">Page {currentPage} of {totalPages}</span>
                     <button
                         type="button"
                         class="btn btn-sm variant-soft"
@@ -344,10 +337,10 @@
                         Next
                     </button>
                 {/if}
-                <span class="text-sm opacity-70">({activities.length} total)</span>
+                <span class="text-sm opacity-70">({filteredActivities.length} in range)</span>
             </div>
-        {:else if hasFetched}
-            <p class="text-center mt-4">No activities found for the selected date range</p>
+        {:else}
+            <p class="text-center mt-4">No activities in the selected date range.</p>
         {/if}
     </div>
     <div class="md:w-3/4 m-auto pb-8">
