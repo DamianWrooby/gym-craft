@@ -6,7 +6,6 @@ import type { Prisma } from '@prisma/client';
 
 const BACKFILL_DAYS = 90;
 const INCREMENTAL_WINDOW_DAYS = 7;
-const INCREMENTAL_MIN_WINDOW_DAYS = 2;
 
 export type SyncResult =
     | { ok: true; mode: 'backfill' | 'incremental' | 'skipped'; activitiesUpserted: number; lastSyncedAt: Date }
@@ -94,20 +93,16 @@ async function runIncremental(userId: string, lastSyncedAt: Date | null, passwor
     return { ok: true, mode: 'incremental', activitiesUpserted: upserted, lastSyncedAt: now };
 }
 
-function pickIncrementalStart(lastSyncedAt: Date | null, endDate: Date): Date {
-    const minStart = new Date(endDate);
-    minStart.setUTCDate(minStart.getUTCDate() - INCREMENTAL_MIN_WINDOW_DAYS);
-
+export function pickIncrementalStart(lastSyncedAt: Date | null, endDate: Date): Date {
     if (!lastSyncedAt) {
         const fallback = new Date(endDate);
         fallback.setUTCDate(fallback.getUTCDate() - INCREMENTAL_WINDOW_DAYS);
         return fallback;
     }
 
-    const guardedStart = new Date(lastSyncedAt);
-    guardedStart.setUTCDate(guardedStart.getUTCDate() - 1);
-
-    return guardedStart < minStart ? guardedStart : minStart;
+    const start = new Date(lastSyncedAt);
+    start.setUTCDate(start.getUTCDate() - 1);
+    return start;
 }
 
 async function upsertActivities(userId: string, activities: GarminActivity[]): Promise<number> {
