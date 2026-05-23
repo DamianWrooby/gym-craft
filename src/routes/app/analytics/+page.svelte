@@ -2,17 +2,12 @@
     import Seo from '$lib/components/seo/Seo.svelte';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
-    import { getModalStore, type ModalSettings, type ModalComponent } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import { makeToast } from '$lib/utils/toasts.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
-    import { to } from 'await-to-js';
     import type { Plan } from '@/models/plan/plan.model';
     import type { User } from '@/models/user/user.model';
-    import type { GarminActivity, FetchActivitiesParams } from '@/models/garmin/activity.model';
-    import { validateGarminLoginFormData } from '$lib/utils/form-validation';
-    import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
     import CtaButton from '$lib/components/cta-button/CtaButton.svelte';
 
     interface TableRow {
@@ -25,29 +20,18 @@
 
     const user: User = $page.data.user;
 
-    const modalStore = getModalStore();
-    const modalComponent: ModalComponent = { ref: GarminLoginForm };
     const toastStore = getToastStore();
 
     let workouts: Plan[];
     let tableRows: TableRow[];
     let isLoading: boolean = true;
 
-    let activities: GarminActivity[] = [];
-    let activitiesLoading: boolean = false;
-    let activitiesParams: FetchActivitiesParams | null = null;
-
     onMount(async () => {
-        clearModals();
         isLoading = true;
         workouts = await getWorkouts();
         tableRows = generateTableRows(workouts);
         isLoading = false;
     });
-
-    function clearModals() {
-        modalStore.clear();
-    }
 
     async function getWorkouts() {
         if (!user) return [];
@@ -86,102 +70,7 @@
         }
     }
 
-    // --- Garmin Activities ---
 
-    type LoginFormData = { email: string; password: string };
-
-    async function fetchActivities(
-        params: FetchActivitiesParams,
-    ): Promise<{ data?: GarminActivity[]; message?: string; code?: string }> {
-        const [error, response] = await to(
-            fetch(`/api/user/${user.id}/garmin/activities`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(params),
-            }),
-        );
-
-        if (error || !response) {
-            return { message: error?.message || 'Failed to fetch activities' };
-        }
-
-        const [parseError, data] = await to(response.json());
-        if (parseError) return { message: 'Error parsing response' };
-
-        if (!response.ok) {
-            return { message: data?.message || 'Failed to fetch activities', code: data?.code };
-        }
-
-        return { data: data?.data };
-    }
-
-    async function handleFetchActivities(params: FetchActivitiesParams) {
-        activitiesLoading = true;
-        activitiesParams = params;
-
-        const result = await fetchActivities(params);
-
-        if (result.message) {
-            if (result.code === 'INVALID_TOKEN') {
-                makeToast(
-                    toastStore,
-                    'Invalid token <br> Please log in to your Garmin account',
-                    'variant-filled-warning',
-                );
-                activitiesLoading = false;
-                openGarminLoginModal();
-                return;
-            }
-
-            if (result.code === 'GARMIN_EMAIL_NOT_CONFIGURED') {
-                makeToast(
-                    toastStore,
-                    'Garmin email not configured <br> Please set up Garmin integration in your account settings',
-                    'variant-filled-warning',
-                );
-                activitiesLoading = false;
-                return;
-            }
-
-            makeToast(toastStore, result.message, 'variant-filled-error');
-            activitiesLoading = false;
-            return;
-        }
-
-        activities = result.data || [];
-        activitiesLoading = false;
-    }
-
-    function openGarminLoginModal() {
-        const modal: ModalSettings = {
-            type: 'component',
-            title: 'Sign in to Garmin Connect',
-            body: 'Provide credentials to connect to your Garmin Connect account and fetch activities.',
-            buttonTextCancel: 'Cancel',
-            buttonTextConfirm: 'Login and fetch activities',
-            component: modalComponent,
-            response: handleGarminLoginResponse,
-        };
-        modalStore.trigger(modal);
-    }
-
-    async function handleGarminLoginResponse(loginFormData: LoginFormData | false) {
-        if (!loginFormData) {
-            activitiesLoading = false;
-            return;
-        }
-
-        const formValidationError = validateGarminLoginFormData(loginFormData);
-        if (formValidationError) {
-            makeToast(toastStore, 'Invalid form data', 'variant-filled-error');
-            activitiesLoading = false;
-            return;
-        }
-
-        if (activitiesParams) {
-            await handleFetchActivities({ ...activitiesParams, password: loginFormData.password });
-        }
-    }
 </script>
 
 <Seo title="Analytics | GymCraft™" metaDescription="Training analytics and insights." />
@@ -205,14 +94,6 @@
             <CtaButton url="/app/create-plan" text="Create new plan" />
         {:else}
             <Spinner size={10} />
-        {/if}
-    </div>
-    <div class="md:w-3/4 m-auto pb-8">
-        <h2 class="h2 text-center text-xl py-10">Garmin Activities</h2>
-        {#if activitiesLoading}
-            <Spinner size={10} />
-        {:else if activities.length}
-            <p class="text-center text-surface-500">{activities.length} activities loaded</p>
         {/if}
     </div>
     <div class="md:w-3/4 m-auto pb-8">
