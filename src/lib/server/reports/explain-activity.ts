@@ -120,4 +120,3 @@ function serializeProfile(profile: AthleteProfile) {
         vo2max: profile.vo2max != null ? Number(profile.vo2max) : null,
     };
 }
-
