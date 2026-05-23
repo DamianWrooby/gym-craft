@@ -37,11 +37,11 @@ export function computeIntensity(activities: GarminActivity[]): MetricsIntensity
     const percents: GarminActivityHrZones =
         total > 0
             ? {
-                  zone1: roundTo1(aggregate.zone1 / total * 100),
-                  zone2: roundTo1(aggregate.zone2 / total * 100),
-                  zone3: roundTo1(aggregate.zone3 / total * 100),
-                  zone4: roundTo1(aggregate.zone4 / total * 100),
-                  zone5: roundTo1(aggregate.zone5 / total * 100),
+                  zone1: roundTo1((aggregate.zone1 / total) * 100),
+                  zone2: roundTo1((aggregate.zone2 / total) * 100),
+                  zone3: roundTo1((aggregate.zone3 / total) * 100),
+                  zone4: roundTo1((aggregate.zone4 / total) * 100),
+                  zone5: roundTo1((aggregate.zone5 / total) * 100),
               }
             : { ...EMPTY_ZONES };
 

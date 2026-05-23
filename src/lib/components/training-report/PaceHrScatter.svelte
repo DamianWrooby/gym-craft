@@ -120,20 +120,8 @@
             <div class="plot relative flex-1">
                 <svg class="plot-svg" role="presentation" on:click|self={handleDismiss}>
                     {#each [0, 25, 50, 75, 100] as t}
-                        <line
-                            x1="0%"
-                            x2="100%"
-                            y1={`${t}%`}
-                            y2={`${t}%`}
-                            stroke="currentColor"
-                            stroke-opacity="0.1" />
-                        <line
-                            x1={`${t}%`}
-                            x2={`${t}%`}
-                            y1="0%"
-                            y2="100%"
-                            stroke="currentColor"
-                            stroke-opacity="0.1" />
+                        <line x1="0%" x2="100%" y1={`${t}%`} y2={`${t}%`} stroke="currentColor" stroke-opacity="0.1" />
+                        <line x1={`${t}%`} x2={`${t}%`} y1="0%" y2="100%" stroke="currentColor" stroke-opacity="0.1" />
                     {/each}
                     {#each points as p (p.activityId)}
                         <circle

@@ -2,15 +2,7 @@ import { db } from '$lib/database';
 import { currentMonthStartIso } from '$lib/utils/iso-week';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
-import type {
-    AthleteProfile,
-    Plan,
-    Prisma,
-    ReportType,
-    RunningGoal,
-    TrainingReport,
-    User,
-} from '@prisma/client';
+import type { AthleteProfile, Plan, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
 import type { NewPlan } from '../../models/plan/plan.model';
 import bcrypt from 'bcrypt';
 

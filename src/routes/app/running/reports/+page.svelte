@@ -2,12 +2,7 @@
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation';
     import { onMount } from 'svelte';
-    import {
-        getModalStore,
-        getToastStore,
-        type ModalComponent,
-        type ModalSettings,
-    } from '@skeletonlabs/skeleton';
+    import { getModalStore, getToastStore, type ModalComponent, type ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
@@ -63,11 +58,7 @@
 
     function openGenerateModal() {
         if (!hasProfile) {
-            makeToast(
-                toastStore,
-                'Please set up your athlete profile first',
-                'variant-filled-warning',
-            );
+            makeToast(toastStore, 'Please set up your athlete profile first', 'variant-filled-warning');
             goto('/app/profile');
             return;
         }
@@ -186,7 +177,11 @@
                 );
                 break;
             case 'LLM_FAILED':
-                makeToast(toastStore, 'Coach service unavailable — your slot was not consumed.', 'variant-filled-error');
+                makeToast(
+                    toastStore,
+                    'Coach service unavailable — your slot was not consumed.',
+                    'variant-filled-error',
+                );
                 break;
             case 'INVALID_PERIOD':
             case 'INVALID_BODY':
@@ -228,8 +223,8 @@
         {#if !hasProfile}
             <div class="alert variant-filled-warning mb-4">
                 <p>
-                    Set up your athlete profile before generating reports. We need basic info (age, weight, height) so the
-                    coaching context is accurate.
+                    Set up your athlete profile before generating reports. We need basic info (age, weight, height) so
+                    the coaching context is accurate.
                 </p>
                 <button class="btn variant-filled-primary mt-2" on:click={() => goto('/app/profile')}>
                     Go to profile

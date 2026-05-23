@@ -10,13 +10,10 @@ describe('splitRecommendations', () => {
     });
 
     it('splits at "## Recommended adjustments for next week"', () => {
-        const md =
-            '## Summary\nGreat week.\n\n## Recommended adjustments for next week\n- Reduce volume by 10%';
+        const md = '## Summary\nGreat week.\n\n## Recommended adjustments for next week\n- Reduce volume by 10%';
         const { review, recommendations } = splitRecommendations(md);
         expect(review).toBe('## Summary\nGreat week.');
-        expect(recommendations).toBe(
-            '## Recommended adjustments for next week\n- Reduce volume by 10%',
-        );
+        expect(recommendations).toBe('## Recommended adjustments for next week\n- Reduce volume by 10%');
     });
 
     it('matches case-insensitively and tolerates wording variations', () => {

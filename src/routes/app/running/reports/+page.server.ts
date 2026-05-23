@@ -1,11 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { to } from 'await-to-js';
-import {
-    getAthleteProfile,
-    getMonthlyWeeklyReportCount,
-    getRunningGoals,
-    getWeeklyReports,
-} from '$lib/prisma/prisma';
+import { getAthleteProfile, getMonthlyWeeklyReportCount, getRunningGoals, getWeeklyReports } from '$lib/prisma/prisma';
 
 export async function load({ locals }) {
     const userId = locals.user?.id;

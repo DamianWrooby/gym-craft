@@ -99,9 +99,7 @@
                 </div>
             {/if}
             <div class="mt-2">
-                <button type="button" class="btn btn-sm variant-soft" on:click={goToGoals}>
-                    Manage goals →
-                </button>
+                <button type="button" class="btn btn-sm variant-soft" on:click={goToGoals}> Manage goals → </button>
             </div>
         </div>
 

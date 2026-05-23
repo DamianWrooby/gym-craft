@@ -51,7 +51,11 @@ export function validateRunningGoalInput(
 
     if (b.targetDistanceM !== undefined) {
         if (b.targetDistanceM !== null) {
-            if (typeof b.targetDistanceM !== 'number' || !Number.isInteger(b.targetDistanceM) || b.targetDistanceM <= 0) {
+            if (
+                typeof b.targetDistanceM !== 'number' ||
+                !Number.isInteger(b.targetDistanceM) ||
+                b.targetDistanceM <= 0
+            ) {
                 return { error: 'targetDistanceM must be a positive integer or null' };
             }
         }

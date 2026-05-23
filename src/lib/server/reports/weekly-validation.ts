@@ -10,7 +10,9 @@ export interface WeeklyReportBody {
     overwrite?: boolean;
 }
 
-export function validateBody(body: Partial<WeeklyReportBody>):
+export function validateBody(
+    body: Partial<WeeklyReportBody>,
+):
     | { value: Required<Pick<WeeklyReportBody, 'periodStart' | 'periodEnd' | 'goalIds'>> & WeeklyReportBody }
     | { error: string; code: string } {
     if (!body || typeof body !== 'object') {

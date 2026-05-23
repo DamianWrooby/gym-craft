@@ -5,8 +5,18 @@ import { makeActivity } from './test-fixtures';
 describe('computeIntensity', () => {
     it('returns null zones when no activity carries hrZones', () => {
         const activities = [
-            makeActivity({ activityId: 1, hrZones: undefined, moderateIntensityMinutes: 10, vigorousIntensityMinutes: 2 }),
-            makeActivity({ activityId: 2, hrZones: undefined, moderateIntensityMinutes: 15, vigorousIntensityMinutes: 1 }),
+            makeActivity({
+                activityId: 1,
+                hrZones: undefined,
+                moderateIntensityMinutes: 10,
+                vigorousIntensityMinutes: 2,
+            }),
+            makeActivity({
+                activityId: 2,
+                hrZones: undefined,
+                moderateIntensityMinutes: 15,
+                vigorousIntensityMinutes: 1,
+            }),
         ];
 
         const intensity = computeIntensity(activities);
@@ -46,9 +56,7 @@ describe('computeIntensity', () => {
     });
 
     it('computes polarizationIndex as (Z1+Z2) / (Z3+Z4+Z5)', () => {
-        const activities = [
-            makeActivity({ hrZones: { zone1: 600, zone2: 600, zone3: 300, zone4: 0, zone5: 0 } }),
-        ];
+        const activities = [makeActivity({ hrZones: { zone1: 600, zone2: 600, zone3: 300, zone4: 0, zone5: 0 } })];
 
         const intensity = computeIntensity(activities);
 
@@ -57,9 +65,7 @@ describe('computeIntensity', () => {
     });
 
     it('returns null polarizationIndex when there is no high-intensity time', () => {
-        const activities = [
-            makeActivity({ hrZones: { zone1: 600, zone2: 600, zone3: 0, zone4: 0, zone5: 0 } }),
-        ];
+        const activities = [makeActivity({ hrZones: { zone1: 600, zone2: 600, zone3: 0, zone4: 0, zone5: 0 } })];
 
         const intensity = computeIntensity(activities);
 
@@ -80,9 +86,7 @@ describe('computeIntensity', () => {
     });
 
     it('rounds zone percents to one decimal', () => {
-        const activities = [
-            makeActivity({ hrZones: { zone1: 333, zone2: 333, zone3: 334, zone4: 0, zone5: 0 } }),
-        ];
+        const activities = [makeActivity({ hrZones: { zone1: 333, zone2: 333, zone3: 334, zone4: 0, zone5: 0 } })];
 
         const intensity = computeIntensity(activities);
 

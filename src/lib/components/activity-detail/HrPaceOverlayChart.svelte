@@ -63,10 +63,12 @@
 {#if samples.length === 0}
     <p class="text-sm opacity-70 italic">No time-series data available for this activity.</p>
 {:else}
-    <div class="rounded-xl border border-surface-300 dark:border-surface-700 p-3 bg-surface-100 dark:bg-surface-800 overflow-x-auto">
+    <div
+        class="rounded-xl border border-surface-300 dark:border-surface-700 p-3 bg-surface-100 dark:bg-surface-800 overflow-x-auto">
         <svg viewBox="0 0 {WIDTH} {HEIGHT}" class="w-full h-auto" aria-label="Heart rate and pace over time">
             <text x={PADDING.left} y={12} class="fill-error-500 text-xs">Heart rate (bpm)</text>
-            <text x={WIDTH - PADDING.right} y={12} class="fill-primary-500 text-xs" text-anchor="end">Pace (min/km)</text>
+            <text x={WIDTH - PADDING.right} y={12} class="fill-primary-500 text-xs" text-anchor="end"
+                >Pace (min/km)</text>
 
             <line
                 x1={PADDING.left}
@@ -75,14 +77,29 @@
                 y2={HEIGHT - PADDING.bottom}
                 class="stroke-surface-500 opacity-40" />
 
-            <text x={PADDING.left - 6} y={yScaleHr(hrRange.max)} class="fill-current text-[10px] opacity-60" text-anchor="end">{Math.round(hrRange.max)}</text>
-            <text x={PADDING.left - 6} y={yScaleHr(hrRange.min)} class="fill-current text-[10px] opacity-60" text-anchor="end">{Math.round(hrRange.min)}</text>
+            <text
+                x={PADDING.left - 6}
+                y={yScaleHr(hrRange.max)}
+                class="fill-current text-[10px] opacity-60"
+                text-anchor="end">{Math.round(hrRange.max)}</text>
+            <text
+                x={PADDING.left - 6}
+                y={yScaleHr(hrRange.min)}
+                class="fill-current text-[10px] opacity-60"
+                text-anchor="end">{Math.round(hrRange.min)}</text>
 
-            <text x={WIDTH - PADDING.right + 6} y={yScalePace(paceRange.min)} class="fill-current text-[10px] opacity-60">{formatPace(paceRange.min)}</text>
-            <text x={WIDTH - PADDING.right + 6} y={yScalePace(paceRange.max)} class="fill-current text-[10px] opacity-60">{formatPace(paceRange.max)}</text>
+            <text
+                x={WIDTH - PADDING.right + 6}
+                y={yScalePace(paceRange.min)}
+                class="fill-current text-[10px] opacity-60">{formatPace(paceRange.min)}</text>
+            <text
+                x={WIDTH - PADDING.right + 6}
+                y={yScalePace(paceRange.max)}
+                class="fill-current text-[10px] opacity-60">{formatPace(paceRange.max)}</text>
 
             <text x={PADDING.left} y={HEIGHT - 8} class="fill-current text-[10px] opacity-60">0:00</text>
-            <text x={WIDTH - PADDING.right} y={HEIGHT - 8} class="fill-current text-[10px] opacity-60" text-anchor="end">{formatTime(maxTime)}</text>
+            <text x={WIDTH - PADDING.right} y={HEIGHT - 8} class="fill-current text-[10px] opacity-60" text-anchor="end"
+                >{formatTime(maxTime)}</text>
 
             {#if speedSamples.length > 1}
                 <path d={pacePathD} class="fill-none stroke-primary-500 opacity-70" stroke-width="1.5" />

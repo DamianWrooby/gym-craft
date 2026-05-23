@@ -46,7 +46,7 @@ const locals = { user: { id: userId } } as unknown as App.Locals;
 
 const validBody = {
     periodStart: '2026-05-04', // Monday
-    periodEnd: '2026-05-10',   // Sunday
+    periodEnd: '2026-05-10', // Sunday
     goalIds: ['g1'],
     notes: 'Felt strong all week',
 };

@@ -9,15 +9,16 @@ export const load = async ({ params, locals }: { params: { activityId: string };
     const rawId = params.activityId;
     const asBigInt = parseBigIntSafe(rawId);
 
-    const activity = asBigInt != null
-        ? await db.activity.findUnique({
-              where: { userId_garminActivityId: { userId, garminActivityId: asBigInt } },
-              include: { detail: true },
-          })
-        : await db.activity.findFirst({
-              where: { id: rawId, userId },
-              include: { detail: true },
-          });
+    const activity =
+        asBigInt != null
+            ? await db.activity.findUnique({
+                  where: { userId_garminActivityId: { userId, garminActivityId: asBigInt } },
+                  include: { detail: true },
+              })
+            : await db.activity.findFirst({
+                  where: { id: rawId, userId },
+                  include: { detail: true },
+              });
 
     if (!activity) {
         throw error(404, 'Activity not found — try syncing your Garmin history first.');

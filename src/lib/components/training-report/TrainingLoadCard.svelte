@@ -86,16 +86,15 @@
 
         <StatCard label="ACWR" value={formatAcwr(loadProfile.acwr)}>
             <InfoTooltip slot="label-suffix" id="tooltip-acwr" ariaLabel="What is ACWR?">
-                Acute : Chronic Workload Ratio — acute (7d) divided by chronic (28d). The 0.8–1.3 band is the sweet
-                spot for productive adaptation. Above 1.5 is a sharp spike with elevated injury risk.
+                Acute : Chronic Workload Ratio — acute (7d) divided by chronic (28d). The 0.8–1.3 band is the sweet spot
+                for productive adaptation. Above 1.5 is a sharp spike with elevated injury risk.
             </InfoTooltip>
         </StatCard>
 
         <StatCard label="Monotony (7d)" value={formatMonotony(loadProfile.monotony)}>
             <InfoTooltip slot="label-suffix" id="tooltip-monotony" ariaLabel="What is monotony?">
                 How uniform your training intensity has been over the last 7 days (mean ÷ standard deviation of daily
-                load). Above 2.0 is concerning — too many same-effort sessions limit adaptation. Mix easy and hard
-                days.
+                load). Above 2.0 is concerning — too many same-effort sessions limit adaptation. Mix easy and hard days.
             </InfoTooltip>
         </StatCard>
 

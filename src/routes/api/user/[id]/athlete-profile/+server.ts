@@ -2,13 +2,7 @@ import { createResponse } from '$lib/utils/response';
 import { getAthleteProfile, upsertAthleteProfile } from '$lib/prisma/prisma';
 import { validateAthleteProfileInput } from '$lib/server/athlete-profile/validation';
 
-export async function GET({
-    params,
-    locals,
-}: {
-    params: { id: string };
-    locals: App.Locals;
-}): Promise<Response> {
+export async function GET({ params, locals }: { params: { id: string }; locals: App.Locals }): Promise<Response> {
     if (params.id !== locals.user?.id) {
         return createResponse(403, { message: 'Unauthorized' });
     }

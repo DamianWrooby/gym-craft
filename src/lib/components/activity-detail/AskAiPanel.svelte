@@ -70,9 +70,7 @@
         {/each}
     </div>
 
-    <form
-        class="flex flex-col sm:flex-row gap-2"
-        on:submit|preventDefault={() => ask(question)}>
+    <form class="flex flex-col sm:flex-row gap-2" on:submit|preventDefault={() => ask(question)}>
         <input
             type="text"
             class="input flex-1"
@@ -97,7 +95,8 @@
     {/if}
 
     {#if analysis}
-        <div class="mt-4 rounded-xl border border-surface-300 dark:border-surface-700 p-4 bg-surface-100 dark:bg-surface-800">
+        <div
+            class="mt-4 rounded-xl border border-surface-300 dark:border-surface-700 p-4 bg-surface-100 dark:bg-surface-800">
             <Markdown source={analysis} />
         </div>
     {/if}

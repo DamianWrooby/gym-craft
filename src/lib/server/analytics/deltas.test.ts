@@ -25,12 +25,8 @@ describe('computeDeltas', () => {
     });
 
     it('computes signed distance and duration deltas vs previous week', () => {
-        const current = buildCurrent([
-            makeActivity({ activityId: 1, distance: 10000, duration: 3000 }),
-        ]);
-        const previous = [
-            makeActivity({ activityId: 99, distance: 8000, duration: 2400 }),
-        ];
+        const current = buildCurrent([makeActivity({ activityId: 1, distance: 10000, duration: 3000 })]);
+        const previous = [makeActivity({ activityId: 99, distance: 8000, duration: 2400 })];
 
         const deltas = computeDeltas(current, previous);
 
@@ -49,9 +45,7 @@ describe('computeDeltas', () => {
     });
 
     it('computes vigorousMinutes delta', () => {
-        const current = buildCurrent([
-            makeActivity({ vigorousIntensityMinutes: 30 }),
-        ]);
+        const current = buildCurrent([makeActivity({ vigorousIntensityMinutes: 30 })]);
         const previous = [makeActivity({ activityId: 99, vigorousIntensityMinutes: 10 })];
 
         const deltas = computeDeltas(current, previous);

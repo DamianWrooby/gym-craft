@@ -96,7 +96,13 @@ describe('computeWeeklyMetrics', () => {
             }),
         ];
         const previousWeek = [
-            makeActivity({ activityId: 99, distance: 25000, duration: 7200, averageHR: 150, vigorousIntensityMinutes: 10 }),
+            makeActivity({
+                activityId: 99,
+                distance: 25000,
+                duration: 7200,
+                averageHR: 150,
+                vigorousIntensityMinutes: 10,
+            }),
         ];
 
         const bundle = computeWeeklyMetrics({

@@ -9,15 +9,41 @@
 
     type Slice = { label: string; color: string; seconds: number; percent: number };
 
-    $: slices = hrZoneSeconds && hrZonePercents
-        ? ([
-              { label: ZONE_LABELS[0], color: ZONE_COLORS[0], seconds: hrZoneSeconds.zone1, percent: hrZonePercents.zone1 },
-              { label: ZONE_LABELS[1], color: ZONE_COLORS[1], seconds: hrZoneSeconds.zone2, percent: hrZonePercents.zone2 },
-              { label: ZONE_LABELS[2], color: ZONE_COLORS[2], seconds: hrZoneSeconds.zone3, percent: hrZonePercents.zone3 },
-              { label: ZONE_LABELS[3], color: ZONE_COLORS[3], seconds: hrZoneSeconds.zone4, percent: hrZonePercents.zone4 },
-              { label: ZONE_LABELS[4], color: ZONE_COLORS[4], seconds: hrZoneSeconds.zone5, percent: hrZonePercents.zone5 },
-          ] satisfies Slice[])
-        : [];
+    $: slices =
+        hrZoneSeconds && hrZonePercents
+            ? ([
+                  {
+                      label: ZONE_LABELS[0],
+                      color: ZONE_COLORS[0],
+                      seconds: hrZoneSeconds.zone1,
+                      percent: hrZonePercents.zone1,
+                  },
+                  {
+                      label: ZONE_LABELS[1],
+                      color: ZONE_COLORS[1],
+                      seconds: hrZoneSeconds.zone2,
+                      percent: hrZonePercents.zone2,
+                  },
+                  {
+                      label: ZONE_LABELS[2],
+                      color: ZONE_COLORS[2],
+                      seconds: hrZoneSeconds.zone3,
+                      percent: hrZonePercents.zone3,
+                  },
+                  {
+                      label: ZONE_LABELS[3],
+                      color: ZONE_COLORS[3],
+                      seconds: hrZoneSeconds.zone4,
+                      percent: hrZonePercents.zone4,
+                  },
+                  {
+                      label: ZONE_LABELS[4],
+                      color: ZONE_COLORS[4],
+                      seconds: hrZoneSeconds.zone5,
+                      percent: hrZonePercents.zone5,
+                  },
+              ] satisfies Slice[])
+            : [];
 
     $: totalSeconds = slices.reduce((sum, s) => sum + s.seconds, 0);
 

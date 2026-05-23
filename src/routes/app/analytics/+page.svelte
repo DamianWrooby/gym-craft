@@ -69,8 +69,6 @@
             return [];
         }
     }
-
-
 </script>
 
 <Seo title="Analytics | GymCraft™" metaDescription="Training analytics and insights." />

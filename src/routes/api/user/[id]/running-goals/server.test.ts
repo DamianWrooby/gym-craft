@@ -159,10 +159,7 @@ describe('validateRunningGoalInput', () => {
     });
 
     it('rejects notes longer than 500 chars', () => {
-        const result = validateRunningGoalInput(
-            { ...validCreate, notes: 'x'.repeat(501) },
-            { partial: false },
-        );
+        const result = validateRunningGoalInput({ ...validCreate, notes: 'x'.repeat(501) }, { partial: false });
         expect('error' in result).toBe(true);
     });
 

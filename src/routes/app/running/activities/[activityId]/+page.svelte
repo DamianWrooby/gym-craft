@@ -47,7 +47,9 @@
     }
 </script>
 
-<Seo title="{activity.activityName ?? 'Activity'} | GymCraft™" metaDescription="Activity detail with splits and AI analysis." />
+<Seo
+    title="{activity.activityName ?? 'Activity'} | GymCraft™"
+    metaDescription="Activity detail with splits and AI analysis." />
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">

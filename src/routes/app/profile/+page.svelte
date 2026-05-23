@@ -43,7 +43,11 @@
     let editingGoalId: string | 'new' | null = null;
     let savingGoal = false;
 
-    async function saveProfile(e: CustomEvent<Partial<ProfileRow> & Pick<ProfileRow, 'birthDate' | 'sex' | 'weightKg' | 'heightCm' | 'timezone'>>) {
+    async function saveProfile(
+        e: CustomEvent<
+            Partial<ProfileRow> & Pick<ProfileRow, 'birthDate' | 'sex' | 'weightKg' | 'heightCm' | 'timezone'>
+        >,
+    ) {
         savingProfile = true;
         const [err, response] = await to(
             fetch(`/api/user/${user.id}/athlete-profile`, {
@@ -65,9 +69,7 @@
     async function saveGoal(e: CustomEvent<Partial<GoalRow>>, goalId: string | 'new') {
         savingGoal = true;
         const url =
-            goalId === 'new'
-                ? `/api/user/${user.id}/running-goals`
-                : `/api/user/${user.id}/running-goals/${goalId}`;
+            goalId === 'new' ? `/api/user/${user.id}/running-goals` : `/api/user/${user.id}/running-goals/${goalId}`;
         const method = goalId === 'new' ? 'POST' : 'PUT';
         const [err, response] = await to(
             fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(e.detail) }),
@@ -84,9 +86,7 @@
     }
 
     async function archiveGoal(goalId: string) {
-        const [err, response] = await to(
-            fetch(`/api/user/${user.id}/running-goals/${goalId}`, { method: 'DELETE' }),
-        );
+        const [err, response] = await to(fetch(`/api/user/${user.id}/running-goals/${goalId}`, { method: 'DELETE' }));
         if (err || !response?.ok) {
             makeToast(toastStore, 'Failed to archive goal', 'variant-filled-error');
             return;
@@ -108,9 +108,7 @@
         <div class="flex justify-between items-center py-4">
             <h2 class="h2 text-xl font-bold">Running goals</h2>
             {#if editingGoalId !== 'new'}
-                <button class="btn variant-filled-primary" on:click={() => (editingGoalId = 'new')}>
-                    Add goal
-                </button>
+                <button class="btn variant-filled-primary" on:click={() => (editingGoalId = 'new')}> Add goal </button>
             {/if}
         </div>
 
@@ -144,8 +142,10 @@
                                     </p>
                                     <p class="text-xs opacity-70">
                                         Priority {goal.priority}
-                                        {#if goal.targetEventDate} · {goal.targetEventDate}{/if}
-                                        {#if goal.targetDistanceM} · {(goal.targetDistanceM / 1000).toFixed(2)} km{/if}
+                                        {#if goal.targetEventDate}
+                                            · {goal.targetEventDate}{/if}
+                                        {#if goal.targetDistanceM}
+                                            · {(goal.targetDistanceM / 1000).toFixed(2)} km{/if}
                                     </p>
                                     {#if goal.notes}
                                         <p class="text-sm opacity-80 mt-1">{goal.notes}</p>

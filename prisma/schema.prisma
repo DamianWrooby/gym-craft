@@ -9,27 +9,27 @@ datasource db {
 }
 
 model User {
-    id                    String              @id @default(uuid())
-    username              String              @unique
-    email                 String              @default("") @db.VarChar(50)
-    emailVerified         Boolean             @default(false)
-    marketingAgreement    Boolean             @default(false)
-    passwordHash          String
-    userAuthToken         String              @unique
-    createdAt             DateTime            @default(now())
-    updatedAt             DateTime            @updatedAt
-    roleId                Int
-    role                  Roles               @relation(fields: [roleId], references: [id])
-    generatedPlansNumber  Int                 @default(0)
-    plans                 Plan[]
-    verificationTokens    VerificationToken[]
-    garminData            GarminData?
-    athleteProfile        AthleteProfile?
-    runningGoals          RunningGoal[]
-    trainingReports       TrainingReport[]
-    activities            Activity[]
-    garminSyncState       GarminSyncState?
-    aiUsage               AiUsage[]
+    id                   String              @id @default(uuid())
+    username             String              @unique
+    email                String              @default("") @db.VarChar(50)
+    emailVerified        Boolean             @default(false)
+    marketingAgreement   Boolean             @default(false)
+    passwordHash         String
+    userAuthToken        String              @unique
+    createdAt            DateTime            @default(now())
+    updatedAt            DateTime            @updatedAt
+    roleId               Int
+    role                 Roles               @relation(fields: [roleId], references: [id])
+    generatedPlansNumber Int                 @default(0)
+    plans                Plan[]
+    verificationTokens   VerificationToken[]
+    garminData           GarminData?
+    athleteProfile       AthleteProfile?
+    runningGoals         RunningGoal[]
+    trainingReports      TrainingReport[]
+    activities           Activity[]
+    garminSyncState      GarminSyncState?
+    aiUsage              AiUsage[]
 
     @@index([roleId])
 }
@@ -161,7 +161,7 @@ enum ReportType {
 }
 
 model Activity {
-    id                String   @id @default(uuid())
+    id                String          @id @default(uuid())
     userId            String
     garminActivityId  BigInt
     activityType      String

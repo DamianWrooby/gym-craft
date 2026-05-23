@@ -49,10 +49,7 @@
 </script>
 
 {#if deltas}
-    <div
-        class="grid grid-cols-2 md:grid-cols-4 gap-3"
-        role="group"
-        aria-label="Week-over-week stat deltas">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" role="group" aria-label="Week-over-week stat deltas">
         {#each cards as card}
             <div
                 class="rounded-xl border border-surface-300 dark:border-surface-700 p-3 bg-surface-100 dark:bg-surface-800">

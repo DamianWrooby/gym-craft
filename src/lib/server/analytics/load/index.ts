@@ -86,9 +86,7 @@ export async function computeLoadProfile(
     const previousWeekTotalLoad = computeWindowTotalLoad(dailyLoads, previousWeekAsOf, ACUTE_DAYS);
 
     const weekOverWeekLoadChangePct =
-        previousWeekTotalLoad > 0
-            ? ((weeklyTotalLoad - previousWeekTotalLoad) / previousWeekTotalLoad) * 100
-            : null;
+        previousWeekTotalLoad > 0 ? ((weeklyTotalLoad - previousWeekTotalLoad) / previousWeekTotalLoad) * 100 : null;
 
     const monotony = computeMonotony(dailyLoads, asOf, ACUTE_DAYS);
     const strain = computeStrain(weeklyTotalLoad, monotony);

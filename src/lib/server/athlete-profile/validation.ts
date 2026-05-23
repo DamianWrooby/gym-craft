@@ -5,9 +5,7 @@ import type { Sex } from '@prisma/client';
 
 const VALID_SEXES = Object.keys(SEX_LABELS) as Sex[];
 
-export function validateAthleteProfileInput(
-    body: unknown,
-): { input: AthleteProfileInput } | { error: string } {
+export function validateAthleteProfileInput(body: unknown): { input: AthleteProfileInput } | { error: string } {
     if (!body || typeof body !== 'object') return { error: 'Body must be an object' };
     const b = body as Record<string, unknown>;
 
@@ -40,7 +38,12 @@ export function validateAthleteProfileInput(
     };
 
     if (b.restingHR !== undefined && b.restingHR !== null) {
-        if (typeof b.restingHR !== 'number' || !Number.isInteger(b.restingHR) || b.restingHR <= 0 || b.restingHR > 250) {
+        if (
+            typeof b.restingHR !== 'number' ||
+            !Number.isInteger(b.restingHR) ||
+            b.restingHR <= 0 ||
+            b.restingHR > 250
+        ) {
             return { error: 'restingHR must be a positive integer ≤ 250' };
         }
         input.restingHR = b.restingHR;

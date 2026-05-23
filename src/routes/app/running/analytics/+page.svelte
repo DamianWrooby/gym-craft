@@ -207,12 +207,7 @@
         <div class="flex flex-col md:flex-row gap-4 justify-center items-center md:items-end mb-2">
             <label class="label">
                 <span>Start date</span>
-                <input
-                    type="date"
-                    class="input"
-                    bind:value={startDate}
-                    max={endDate || maxDate}
-                    disabled={syncing} />
+                <input type="date" class="input" bind:value={startDate} max={endDate || maxDate} disabled={syncing} />
             </label>
             <label class="label">
                 <span>End date</span>

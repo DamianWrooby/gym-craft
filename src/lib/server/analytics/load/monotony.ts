@@ -1,10 +1,6 @@
 import { enumerateDates } from './acwr';
 
-export function computeDailyLoadsForWindow(
-    dailyLoads: Map<string, number>,
-    asOf: Date,
-    windowDays: number,
-): number[] {
+export function computeDailyLoadsForWindow(dailyLoads: Map<string, number>, asOf: Date, windowDays: number): number[] {
     return enumerateDates(asOf, windowDays).map((date) => dailyLoads.get(date) ?? 0);
 }
 

@@ -28,8 +28,19 @@ export function computeTrimp(inputs: TrimpInputs): number {
     if (inputs.hrZoneSeconds) {
         return edwardsTrimp(inputs.hrZoneSeconds);
     }
-    if (inputs.averageHr != null && inputs.restingHr != null && inputs.maxHr != null && inputs.maxHr > inputs.restingHr) {
-        return banisterTrimp(inputs.durationSec, inputs.averageHr, inputs.restingHr, inputs.maxHr, inputs.sex ?? 'male');
+    if (
+        inputs.averageHr != null &&
+        inputs.restingHr != null &&
+        inputs.maxHr != null &&
+        inputs.maxHr > inputs.restingHr
+    ) {
+        return banisterTrimp(
+            inputs.durationSec,
+            inputs.averageHr,
+            inputs.restingHr,
+            inputs.maxHr,
+            inputs.sex ?? 'male',
+        );
     }
     return durationFallbackTrimp(inputs.durationSec);
 }

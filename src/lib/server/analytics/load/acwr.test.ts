@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildDailyLoadMap, computeAverageDailyLoad, computeWindowTotalLoad, computeAcwr, enumerateDates } from './acwr';
+import {
+    buildDailyLoadMap,
+    computeAverageDailyLoad,
+    computeWindowTotalLoad,
+    computeAcwr,
+    enumerateDates,
+} from './acwr';
 
 const asOf = new Date('2026-05-19T00:00:00Z');
 

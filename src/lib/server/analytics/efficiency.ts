@@ -10,12 +10,11 @@ export function computeEfficiency(activities: GarminActivity[]): MetricsEfficien
         activityName: activity.activityName,
         activityType: activity.activityType?.typeKey,
         distanceM: activity.distance,
-        durationSec: activity.movingDuration && activity.movingDuration > 0 ? activity.movingDuration : activity.duration,
+        durationSec:
+            activity.movingDuration && activity.movingDuration > 0 ? activity.movingDuration : activity.duration,
     }));
 
-    const validPaces = perActivity
-        .map((p) => p.avgPaceSecPerKm)
-        .filter((v): v is number => v !== null);
+    const validPaces = perActivity.map((p) => p.avgPaceSecPerKm).filter((v): v is number => v !== null);
     const validHrs = perActivity.map((p) => p.avgHR).filter((v): v is number => v !== null);
 
     return {
@@ -30,7 +29,8 @@ function paceSecPerKm(activity: GarminActivity): number | null {
     if (!distanceM || distanceM <= 0) return null;
 
     // Prefer movingDuration for pace (excludes stops); fall back to total duration.
-    const seconds = activity.movingDuration && activity.movingDuration > 0 ? activity.movingDuration : activity.duration;
+    const seconds =
+        activity.movingDuration && activity.movingDuration > 0 ? activity.movingDuration : activity.duration;
     if (!seconds || seconds <= 0) return null;
 
     return roundTo1((seconds / distanceM) * 1000);

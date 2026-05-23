@@ -41,4 +41,3 @@ export async function POST({
     const goal = await createRunningGoal(params.id, validation.input as RunningGoalCreateInput);
     return createResponse(201, { data: goal });
 }
-

@@ -65,7 +65,7 @@ export function buildReportPrompt(params: BuildPromptParams): ReportPrompt {
     };
 
     const user = [
-        'Here is this week\'s training data. Generate the weekly review per the system instructions.',
+        "Here is this week's training data. Generate the weekly review per the system instructions.",
         '',
         '```json',
         JSON.stringify(userPayload, null, 2),
@@ -99,4 +99,3 @@ function serializeGoal(goal: RunningGoal) {
         notes: goal.notes,
     };
 }
-

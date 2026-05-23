@@ -190,12 +190,8 @@
                             class="fill-current opacity-60"
                             font-size={axisFont}>{d.label}</text>
                         {#if d.km > 0}
-                            <text
-                                x={x + w / 2}
-                                y={y - 4}
-                                text-anchor="middle"
-                                class="fill-current"
-                                font-size={axisFont}>{d.km.toFixed(1)}</text>
+                            <text x={x + w / 2} y={y - 4} text-anchor="middle" class="fill-current" font-size={axisFont}
+                                >{d.km.toFixed(1)}</text>
                         {/if}
                     {/each}
                 </svg>
