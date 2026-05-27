@@ -1,8 +1,14 @@
 import type { Activity, AthleteProfile } from '@prisma/client';
 import type { MetricsLoadProfile } from '$lib/server/analytics/types';
-import type { ActivityDetailPayload } from '$lib/server/garmin/fetch-activity-detail';
+import type { ActivityDetailPayload, ActivitySample } from '$lib/server/garmin/fetch-activity-detail';
 import { ageFromBirthDate } from '$lib/utils/age';
 import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
+
+// Stored samples can be up to ~1000 points; the LLM can't usefully reason over that many
+// raw datapoints and it blows up token cost + payload size. Downsample uniformly for prompting.
+const SAMPLES_FOR_LLM_MAX = 120;
+
+type LlmSample = Pick<ActivitySample, 'timestampSec' | 'heartRate' | 'speed'>;
 
 export interface ExplainActivityParams {
     question: string;
@@ -80,8 +86,7 @@ export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt
             trimpLoad: activity.trimpLoad,
         },
         splits: detail?.splits ?? [],
-        samples: detail?.samples ?? [],
-        sampleCount: detail?.samples?.length ?? 0,
+        samples: downsampleSamplesForLLM(detail?.samples ?? []),
         recentActivitiesLast14d: recentActivities.map((a) => ({
             startTime: a.startTime.toISOString(),
             activityType: a.activityType,
@@ -99,13 +104,33 @@ export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt
         '',
         'Activity + context data (JSON):',
         '```json',
-        JSON.stringify(userPayload, null, 2),
+        JSON.stringify(userPayload),
         '```',
         '',
         'Answer per the system instructions.',
     ].join('\n');
 
     return { system: SYSTEM_PROMPT, user };
+}
+
+function downsampleSamplesForLLM(samples: ActivitySample[]): LlmSample[] {
+    if (samples.length === 0) return [];
+    if (samples.length <= SAMPLES_FOR_LLM_MAX) return samples.map(toLlmSample);
+
+    const step = samples.length / SAMPLES_FOR_LLM_MAX;
+    const result: LlmSample[] = [];
+    for (let i = 0; i < SAMPLES_FOR_LLM_MAX; i++) {
+        result.push(toLlmSample(samples[Math.floor(i * step)]));
+    }
+    return result;
+}
+
+function toLlmSample(sample: ActivitySample): LlmSample {
+    return {
+        timestampSec: sample.timestampSec,
+        heartRate: sample.heartRate,
+        speed: sample.speed,
+    };
 }
 
 function serializeProfile(profile: AthleteProfile) {
