@@ -1,7 +1,6 @@
 import { to } from 'await-to-js';
-import { appConfig } from '@/constants/app.constants';
-import { isProduction } from '$lib/utils/environment';
 import { getGarminEmail } from '$lib/prisma/prisma';
+import { garminApiUrl, garminApiHeaders } from './config';
 
 export interface ActivitySplit {
     splitIndex: number;
@@ -67,13 +66,12 @@ export async function fetchActivityDetail(params: FetchActivityDetailParams): Pr
     };
     if (password) body.password = password;
 
-    const baseUrl = isProduction() ? appConfig.internalGarminApiUrlPROD : appConfig.internalGarminApiUrlDEV;
-    const url = `${baseUrl}/activity/detail`;
+    const url = `${garminApiUrl}/activity/detail`;
 
     const [fetchError, pyResponse] = await to(
         fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: garminApiHeaders(),
             body: JSON.stringify(body),
         }),
     );

@@ -16,9 +16,6 @@
     import { sanitizeObject } from '$lib/utils/sanitize';
     import { workoutProperties } from '@/constants/workout.constants';
     import { validateGarminLoginFormData, isValidEmailFormat } from '$lib/utils/form-validation';
-    import { appConfig } from '@/constants/app.constants';
-    import { isProduction } from '$lib/utils/environment';
-
     const modalStore = getModalStore();
     const modalComponent: ModalComponent = { ref: GarminLoginForm };
 
@@ -126,8 +123,7 @@
 
     async function sendWorkoutToGarmin(password?: string, emailToSave?: string) {
         const workout = sanitizeObject(workoutToSend, workoutProperties);
-        const baseUrl = isProduction() ? appConfig.internalGarminApiUrlPROD : appConfig.internalGarminApiUrlDEV;
-        const apiUrl = `${baseUrl}/upload-workout`;
+        const apiUrl = `/api/user/${userId}/garmin/upload-workout`;
 
         const [error, response] = await to(
             fetch(apiUrl, {

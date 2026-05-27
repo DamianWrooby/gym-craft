@@ -1,8 +1,7 @@
 import { to } from 'await-to-js';
-import { appConfig } from '@/constants/app.constants';
-import { isProduction } from '$lib/utils/environment';
 import { getGarminEmail } from '$lib/prisma/prisma';
 import { mapGarminActivities } from './activity-mapper';
+import { garminApiUrl, garminApiHeaders } from './config';
 import type { GarminActivity, GarminActivityRaw } from '@/models/garmin/activity.model';
 
 export interface FetchGarminActivitiesParams {
@@ -42,13 +41,12 @@ export async function fetchGarminActivities(params: FetchGarminActivitiesParams)
     if (endDate) requestBody.endDate = endDate;
     if (activityType) requestBody.activityType = activityType;
 
-    const baseUrl = isProduction() ? appConfig.internalGarminApiUrlPROD : appConfig.internalGarminApiUrlDEV;
-    const url = `${baseUrl}/activities`;
+    const url = `${garminApiUrl}/activities`;
 
     const [fetchError, pyResponse] = await to(
         fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: garminApiHeaders(),
             body: JSON.stringify(requestBody),
         }),
     );

@@ -1,8 +1,7 @@
 import { getGarminEmail } from '$lib/prisma/prisma';
 import { to } from 'await-to-js';
 import { createResponse } from '$lib/utils/response';
-import { appConfig } from '@/constants/app.constants';
-import { isProduction } from '$lib/utils/environment';
+import { garminApiUrl, garminApiKeyHeader } from '$lib/server/garmin/config';
 
 export async function POST({
     request,
@@ -32,9 +31,8 @@ export async function POST({
     if (password) formData.append('password', password);
     formData.append('file', new Blob([JSON.stringify(workout)], { type: 'application/json' }), 'workout.json');
 
-    const baseUrl = isProduction() ? appConfig.internalGarminApiUrlPROD : appConfig.internalGarminApiUrlDEV;
-    const url = `${baseUrl}/upload-workout`;
-    const [fetchError, pyResponse] = await to(fetch(url, { method: 'POST', body: formData }));
+    const url = `${garminApiUrl}/upload-workout`;
+    const [fetchError, pyResponse] = await to(fetch(url, { method: 'POST', headers: garminApiKeyHeader(), body: formData }));
 
     if (fetchError || !pyResponse) {
         return createResponse(502, { message: fetchError?.message || 'Failed to reach Garmin service' });
