@@ -227,7 +227,7 @@
     .chart-wrapper {
         width: 100%;
         position: relative;
-        overflow: hidden;
+        overflow: visible;
     }
     .y-axis-title {
         writing-mode: vertical-rl;
