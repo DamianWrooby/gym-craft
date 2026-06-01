@@ -1,0 +1,158 @@
+import { createResponse } from '$lib/utils/response';
+import { db } from '$lib/database';
+import {
+    fetchActivityDetail,
+    type ActivityDetailPayload,
+    type ActivitySample,
+    type ActivitySplit,
+} from '$lib/server/garmin/fetch-activity-detail';
+import { buildExplainPrompt } from '$lib/server/reports/explain-activity';
+import { callExplainRunProxy } from '$lib/server/reports/call-proxy';
+import { computeLoadProfile } from '$lib/server/analytics/load';
+import { EXPLAIN_QUESTION_MAX_LENGTH, EXPLAIN_RUN_DAILY_LIMIT } from '@/constants/training-report.constants';
+import { toIsoDate } from '$lib/utils/iso-week';
+import type { Prisma } from '@prisma/client';
+import type { TrimpSex } from '$lib/server/analytics/load/trimp';
+
+const RECENT_WINDOW_DAYS = 14;
+
+export async function POST({
+    request,
+    params,
+    locals,
+}: {
+    request: Request;
+    params: { id: string; activityId: string };
+    locals: App.Locals;
+}): Promise<Response> {
+    const userId = params.id;
+    const activityId = params.activityId;
+
+    if (userId !== locals.user?.id) {
+        return createResponse(403, { message: 'Unauthorized' });
+    }
+
+    const body = await request.json().catch(() => null);
+    const question = typeof body?.question === 'string' ? body.question.trim() : '';
+    if (!question) {
+        return createResponse(400, { code: 'QUESTION_REQUIRED', message: 'Question is required' });
+    }
+    if (question.length > EXPLAIN_QUESTION_MAX_LENGTH) {
+        return createResponse(400, {
+            code: 'QUESTION_TOO_LONG',
+            message: `Question must be ${EXPLAIN_QUESTION_MAX_LENGTH} characters or fewer`,
+        });
+    }
+    const password = typeof body?.password === 'string' ? body.password : undefined;
+
+    const today = toIsoDate(new Date());
+    const usageKey = { userId_kind_day: { userId, kind: 'explain_run', day: today } };
+
+    const [usage, activity] = await Promise.all([
+        db.aiUsage.findUnique({ where: usageKey }),
+        db.activity.findFirst({
+            where: { id: activityId, userId },
+            include: { detail: true },
+        }),
+    ]);
+
+    if ((usage?.count ?? 0) >= EXPLAIN_RUN_DAILY_LIMIT) {
+        return createResponse(429, {
+            code: 'EXPLAIN_LIMIT_REACHED',
+            message: `Daily limit of ${EXPLAIN_RUN_DAILY_LIMIT} explanations reached. Try again tomorrow.`,
+        });
+    }
+    if (!activity) {
+        return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: 'Activity not found' });
+    }
+
+    let detailPayload: ActivityDetailPayload | null = activity.detail
+        ? {
+              activityId: Number(activity.garminActivityId),
+              activityName: activity.activityName,
+              activityType: activity.activityType,
+              startTimeGMT: activity.startTime.toISOString(),
+              duration: activity.durationSec,
+              distance: activity.distanceM,
+              splits: activity.detail.splits as unknown as ActivitySplit[],
+              samples: activity.detail.samples as unknown as ActivitySample[],
+          }
+        : null;
+
+    if (!activity.detail) {
+        const fetched = await fetchActivityDetail({ userId, garminActivityId: activity.garminActivityId, password });
+        if (!fetched.ok) {
+            return createResponse(fetched.status, { code: fetched.code, message: fetched.message });
+        }
+        detailPayload = fetched.detail;
+        await db.activityDetail.upsert({
+            where: { activityId: activity.id },
+            create: {
+                activityId: activity.id,
+                splits: fetched.detail.splits as unknown as Prisma.InputJsonValue,
+                samples: fetched.detail.samples as unknown as Prisma.InputJsonValue,
+            },
+            update: {
+                splits: fetched.detail.splits as unknown as Prisma.InputJsonValue,
+                samples: fetched.detail.samples as unknown as Prisma.InputJsonValue,
+            },
+        });
+    }
+
+    const recentWindowStart = new Date();
+    recentWindowStart.setUTCDate(recentWindowStart.getUTCDate() - RECENT_WINDOW_DAYS);
+    const [recentActivities, profile] = await Promise.all([
+        db.activity.findMany({
+            where: { userId, startTime: { gte: recentWindowStart, lt: activity.startTime } },
+            orderBy: { startTime: 'desc' },
+            select: {
+                startTime: true,
+                activityType: true,
+                durationSec: true,
+                distanceM: true,
+                averageHr: true,
+                trimpLoad: true,
+            },
+        }),
+        db.athleteProfile.findUnique({ where: { userId } }),
+    ]);
+
+    let loadProfile = null;
+    if (profile) {
+        try {
+            loadProfile = await computeLoadProfile(userId, activity.startTime, {
+                restingHR: profile.restingHR,
+                maxHR: profile.maxHR,
+                sex: mapSex(profile.sex),
+            });
+        } catch (err) {
+            console.warn(`[explain-run] load profile failed for user ${userId}: ${(err as Error).message}`);
+        }
+    }
+
+    const prompt = buildExplainPrompt({
+        question,
+        activity,
+        detail: detailPayload,
+        recentActivities,
+        loadProfile,
+        profile,
+    });
+
+    const proxy = await callExplainRunProxy(prompt);
+    if (!proxy.ok || !proxy.analysis) {
+        return createResponse(502, { code: 'LLM_FAILED', message: proxy.error ?? 'AI proxy failed' });
+    }
+
+    await db.aiUsage.upsert({
+        where: usageKey,
+        create: { userId, kind: 'explain_run', day: today, count: 1 },
+        update: { count: { increment: 1 } },
+    });
+
+    return createResponse(200, { data: { analysis: proxy.analysis } });
+}
+
+function mapSex(sex: 'MALE' | 'FEMALE' | 'OTHER'): TrimpSex {
+    return sex === 'FEMALE' ? 'female' : 'male';
+}

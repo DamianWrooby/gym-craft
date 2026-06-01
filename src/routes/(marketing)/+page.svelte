@@ -208,8 +208,8 @@
             <span class="text-secondary-500 dark:text-secondary-400">
                 <a href="https://connect.garmin.com/" target="_blank" rel="noopener noreferrer">Garmin Connect™</a>
             </span>
-            account. With just a click, send your personalized routines directly to your Garmin device and stay on track
-            wherever you train.
+            account. With just a click, send your personalized routines directly to your Garmin device and stay on track wherever
+            you train.
         </p>
         <ul class="list-disc list-inside text-left text-base md:text-lg font-light mb-8 mx-auto max-w-xl">
             <li>Connect your Garmin account securely</li>
