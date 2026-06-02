@@ -1,14 +1,25 @@
 <script lang="ts">
     import { BarChart2Icon, ArrowRightIcon, RefreshCwIcon, CheckCircleIcon } from 'svelte-feather-icons';
     import { page } from '$app/stores';
+    import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
+    import type { ModalComponent, ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
+    import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
+    import { makeToast } from '$lib/utils/toasts';
+    import { validateGarminLoginFormData } from '$lib/utils/form-validation';
 
     export let data: {
         garminConnected: boolean;
         syncState: { backfillComplete: boolean; lastSyncedAt: string | null; oldestActivityAt: string | null } | null;
     };
+
+    const modalStore = getModalStore();
+    const toastStore = getToastStore();
+    const modalComponent: ModalComponent = { ref: GarminLoginForm };
+
+    type LoginFormData = { email: string; password: string };
 
     let syncing = false;
     let syncError: string | null = null;
@@ -28,7 +39,7 @@
         return `${diffDay}d ago`;
     }
 
-    async function runSync() {
+    async function runSync(password?: string) {
         syncing = true;
         syncError = null;
         syncMessage = null;
@@ -36,10 +47,19 @@
             const res = await fetch(`/api/user/${$page.data.user?.id ?? ''}/garmin/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
+                body: JSON.stringify(password ? { password } : {}),
             });
             const payload = await res.json();
             if (!res.ok) {
+                if (isInvalidTokenError(payload)) {
+                    makeToast(
+                        toastStore,
+                        'Invalid token <br> Please log in to your Garmin account',
+                        'variant-filled-warning',
+                    );
+                    openGarminLoginModal();
+                    return;
+                }
                 syncError = payload?.message ?? 'Sync failed';
             } else {
                 syncMessage = `Imported ${payload?.data?.activitiesUpserted ?? 0} activities (${payload?.data?.mode ?? 'sync'}).`;
@@ -51,6 +71,35 @@
         } finally {
             syncing = false;
         }
+    }
+
+    function isInvalidTokenError(payload: { code?: string; message?: string }): boolean {
+        return payload?.code === 'INVALID_TOKEN' || !!payload?.message?.includes('No valid token found');
+    }
+
+    function openGarminLoginModal() {
+        const modal: ModalSettings = {
+            type: 'component',
+            title: 'Sign in to Garmin Connect',
+            body: 'Provide credentials to connect to your Garmin Connect account and sync your activities.',
+            buttonTextCancel: 'Cancel',
+            buttonTextConfirm: 'Login and sync',
+            component: modalComponent,
+            response: handleGarminLogin,
+        };
+        modalStore.trigger(modal);
+    }
+
+    function handleGarminLogin(loginFormData: LoginFormData | false) {
+        if (!loginFormData) return;
+
+        const formValidationError = validateGarminLoginFormData(loginFormData);
+        if (formValidationError) {
+            makeToast(toastStore, 'Form validation error', 'variant-filled-error');
+            return;
+        }
+
+        runSync(loginFormData.password);
     }
 </script>
 
@@ -78,7 +127,7 @@
                             once and takes a few seconds.
                         </p>
                     </div>
-                    <button class="btn variant-filled-warning" on:click={runSync} disabled={syncing}>
+                    <button class="btn variant-filled-warning" on:click={() => runSync()} disabled={syncing}>
                         <RefreshCwIcon size="16" class={syncing ? 'animate-spin' : ''} />
                         <span>{syncing ? 'Importing…' : 'Import now'}</span>
                     </button>
@@ -89,7 +138,7 @@
                     <span class="flex-1">
                         Synced{lastSyncedLabel ? ` ${lastSyncedLabel}` : ''}. Training history ready.
                     </span>
-                    <button class="btn btn-sm variant-ghost-surface" on:click={runSync} disabled={syncing}>
+                    <button class="btn btn-sm variant-ghost-surface" on:click={() => runSync()} disabled={syncing}>
                         <RefreshCwIcon size="14" class={syncing ? 'animate-spin' : ''} />
                         <span>{syncing ? 'Syncing…' : 'Refresh'}</span>
                     </button>
