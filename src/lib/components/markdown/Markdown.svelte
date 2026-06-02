@@ -46,6 +46,7 @@
 </script>
 
 <div class="markdown prose dark:prose-invert max-w-none">
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized via DOMPurify in renderMarkdown() -->
     {@html safeHtml}
 </div>
 
