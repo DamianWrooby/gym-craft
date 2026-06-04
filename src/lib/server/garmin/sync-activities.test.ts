@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickIncrementalStart } from './sync-activities';
+import { pickIncrementalStart } from '$lib/garmin/sync-window';
 
 describe('pickIncrementalStart', () => {
     it('returns endDate - 7 days when lastSyncedAt is null', () => {

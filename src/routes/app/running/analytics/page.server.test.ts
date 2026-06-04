@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
     db: {
         activity: { findMany: vi.fn() },
         garminSyncState: { findUnique: vi.fn() },
+        garminData: { findUnique: vi.fn() },
     },
 }));
 
@@ -67,6 +68,7 @@ describe('load /app/running/analytics', () => {
             backfillComplete: true,
             updatedAt: new Date(),
         });
+        mocks.db.garminData.findUnique.mockResolvedValueOnce({ email: 'athlete@example.com' });
 
         const result = await load({ locals });
 
@@ -79,6 +81,7 @@ describe('load /app/running/analytics', () => {
         expect(result.activities[0].garminActivityId).toBe('111');
         expect(result.lastSyncedAt).toBe('2026-05-21T11:00:00.000Z');
         expect(result.needsInitialSync).toBe(false);
+        expect(result.garminEmail).toBe('athlete@example.com');
     });
 
     it('returns needsInitialSync=true when there is no sync state row', async () => {

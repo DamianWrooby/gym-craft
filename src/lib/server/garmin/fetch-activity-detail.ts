@@ -1,5 +1,6 @@
 import { to } from 'await-to-js';
 import { getGarminEmail } from '$lib/prisma/prisma';
+import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
 import { garminApiUrl, garminApiHeaders } from './config';
 
 export interface ActivitySplit {
@@ -97,7 +98,7 @@ export async function fetchActivityDetail(params: FetchActivityDetailParams): Pr
 
     if (!pyResponse.ok) {
         const message: string = data?.message || 'Garmin service error';
-        const code: FetchActivityDetailErrorCode = message.includes('No valid token found')
+        const code: FetchActivityDetailErrorCode = isInvalidTokenMessage(message)
             ? 'INVALID_TOKEN'
             : 'GARMIN_SERVICE_ERROR';
         return { ok: false, status: pyResponse.status, code, message };

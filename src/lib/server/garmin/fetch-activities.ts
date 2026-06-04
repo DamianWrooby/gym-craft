@@ -1,6 +1,7 @@
 import { to } from 'await-to-js';
 import { getGarminEmail } from '$lib/prisma/prisma';
 import { mapGarminActivities } from './activity-mapper';
+import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
 import { garminApiUrl, garminApiHeaders } from './config';
 import type { GarminActivity, GarminActivityRaw } from '@/models/garmin/activity.model';
 
@@ -72,7 +73,7 @@ export async function fetchGarminActivities(params: FetchGarminActivitiesParams)
 
     if (!pyResponse.ok) {
         const message: string = data?.message || 'Garmin service error';
-        const code: FetchGarminActivitiesErrorCode = message.includes('No valid token found')
+        const code: FetchGarminActivitiesErrorCode = isInvalidTokenMessage(message)
             ? 'INVALID_TOKEN'
             : 'GARMIN_SERVICE_ERROR';
         return { ok: false, status: pyResponse.status, code, message };
