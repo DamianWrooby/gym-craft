@@ -112,7 +112,7 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">
-        <button type="button" on:click={() => goto('/app/running/analytics')} aria-label="Back to activities">
+        <button type="button" on:click={() => goto('/app/running/analytics/activities')} aria-label="Back to activities">
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
     </div>
