@@ -58,7 +58,7 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">
-        <button type="button" on:click={() => goto('/app/running/reports')} aria-label="Back to reports">
+        <button type="button" on:click={() => goto('/app/running/analytics/reports')} aria-label="Back to reports">
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
         <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString('en-US')}</p>
