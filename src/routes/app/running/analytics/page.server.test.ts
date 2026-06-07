@@ -75,10 +75,42 @@ describe('load /app/running/analytics (dashboard)', () => {
         });
         mocks.db.garminData.findUnique.mockResolvedValueOnce({ email: 'athlete@example.com' });
         mocks.getWeeklyReports.mockResolvedValueOnce([
-            { id: 'r-1', periodStart: '2026-06-01', periodEnd: '2026-06-07', summary: 'A', createdAt: new Date(), userId, type: 'WEEKLY' },
-            { id: 'r-2', periodStart: '2026-05-25', periodEnd: '2026-05-31', summary: 'B', createdAt: new Date(), userId, type: 'WEEKLY' },
-            { id: 'r-3', periodStart: '2026-05-18', periodEnd: '2026-05-24', summary: 'C', createdAt: new Date(), userId, type: 'WEEKLY' },
-            { id: 'r-4', periodStart: '2026-05-11', periodEnd: '2026-05-17', summary: 'D', createdAt: new Date(), userId, type: 'WEEKLY' },
+            {
+                id: 'r-1',
+                periodStart: '2026-06-01',
+                periodEnd: '2026-06-07',
+                summary: 'A',
+                createdAt: new Date(),
+                userId,
+                type: 'WEEKLY',
+            },
+            {
+                id: 'r-2',
+                periodStart: '2026-05-25',
+                periodEnd: '2026-05-31',
+                summary: 'B',
+                createdAt: new Date(),
+                userId,
+                type: 'WEEKLY',
+            },
+            {
+                id: 'r-3',
+                periodStart: '2026-05-18',
+                periodEnd: '2026-05-24',
+                summary: 'C',
+                createdAt: new Date(),
+                userId,
+                type: 'WEEKLY',
+            },
+            {
+                id: 'r-4',
+                periodStart: '2026-05-11',
+                periodEnd: '2026-05-17',
+                summary: 'D',
+                createdAt: new Date(),
+                userId,
+                type: 'WEEKLY',
+            },
         ]);
 
         const result = await load({ locals });

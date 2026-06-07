@@ -196,7 +196,6 @@
 
         generating = false;
     }
-
 </script>
 
 <Card width="3/4">

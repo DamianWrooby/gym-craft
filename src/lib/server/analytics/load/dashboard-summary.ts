@@ -1,11 +1,5 @@
 import { toIsoDate } from '$lib/utils/iso-week';
-import {
-    buildDailyLoadMap,
-    computeAcwr,
-    computeAverageDailyLoad,
-    enumerateDates,
-    type DailyLoadEntry,
-} from './acwr';
+import { buildDailyLoadMap, computeAcwr, computeAverageDailyLoad, enumerateDates, type DailyLoadEntry } from './acwr';
 import { computeMonotony } from './monotony';
 import { interpretAcwr, interpretMonotony, type AcwrStatus } from './interpret';
 

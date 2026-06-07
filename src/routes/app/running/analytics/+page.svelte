@@ -150,7 +150,8 @@
             </div>
             <div class="card variant-soft-surface p-4 flex flex-col gap-1">
                 <span class="text-xs uppercase opacity-60">7-day distance</span>
-                <span class="text-lg font-bold">{summary.hasActivities ? formatKm(summary.sevenDayDistanceM) : '—'}</span>
+                <span class="text-lg font-bold"
+                    >{summary.hasActivities ? formatKm(summary.sevenDayDistanceM) : '—'}</span>
                 <span class="text-xs opacity-70">last 7 days</span>
             </div>
             <div class="card variant-soft-surface p-4 flex flex-col gap-1">
