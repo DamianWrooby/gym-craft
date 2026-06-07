@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
     db: {
         activity: { findMany: vi.fn() },
         garminSyncState: { findUnique: vi.fn() },
-        garminData: { findUnique: vi.fn() },
     },
 }));
 
@@ -21,7 +20,7 @@ afterEach(() => {
     vi.clearAllMocks();
 });
 
-describe('load /app/running/analytics', () => {
+describe('load /app/running/analytics/activities', () => {
     it('redirects to /app/login when there is no session user', async () => {
         const noLocals = { user: undefined } as unknown as App.Locals;
         await expect(load({ locals: noLocals })).rejects.toMatchObject({ status: 302 });
@@ -68,7 +67,6 @@ describe('load /app/running/analytics', () => {
             backfillComplete: true,
             updatedAt: new Date(),
         });
-        mocks.db.garminData.findUnique.mockResolvedValueOnce({ email: 'athlete@example.com' });
 
         const result = await load({ locals });
 
@@ -80,11 +78,9 @@ describe('load /app/running/analytics', () => {
         expect(result.activities[0].id).toBe('a-1');
         expect(result.activities[0].garminActivityId).toBe('111');
         expect(result.lastSyncedAt).toBe('2026-05-21T11:00:00.000Z');
-        expect(result.needsInitialSync).toBe(false);
-        expect(result.garminEmail).toBe('athlete@example.com');
     });
 
-    it('returns needsInitialSync=true when there is no sync state row', async () => {
+    it('returns a null lastSyncedAt when there is no sync state row', async () => {
         mocks.db.activity.findMany.mockResolvedValueOnce([]);
         mocks.db.garminSyncState.findUnique.mockResolvedValueOnce(null);
 
@@ -92,20 +88,5 @@ describe('load /app/running/analytics', () => {
 
         expect(result.activities).toEqual([]);
         expect(result.lastSyncedAt).toBeNull();
-        expect(result.needsInitialSync).toBe(true);
-    });
-
-    it('returns needsInitialSync=true when backfill is incomplete', async () => {
-        mocks.db.activity.findMany.mockResolvedValueOnce([]);
-        mocks.db.garminSyncState.findUnique.mockResolvedValueOnce({
-            userId,
-            lastSyncedAt: null,
-            oldestActivityAt: null,
-            backfillComplete: false,
-            updatedAt: new Date(),
-        });
-
-        const result = await load({ locals });
-        expect(result.needsInitialSync).toBe(true);
     });
 });
