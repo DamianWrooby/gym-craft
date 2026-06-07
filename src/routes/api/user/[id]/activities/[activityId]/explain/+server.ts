@@ -1,17 +1,11 @@
 import { createResponse } from '$lib/utils/response';
 import { db } from '$lib/database';
-import {
-    fetchActivityDetail,
-    type ActivityDetailPayload,
-    type ActivitySample,
-    type ActivitySplit,
-} from '$lib/server/garmin/fetch-activity-detail';
+import { ensureActivityDetail } from '$lib/server/garmin/ensure-activity-detail';
 import { buildExplainPrompt } from '$lib/server/reports/explain-activity';
 import { callExplainRunProxy } from '$lib/server/reports/call-proxy';
 import { computeLoadProfile } from '$lib/server/analytics/load';
 import { EXPLAIN_QUESTION_MAX_LENGTH, EXPLAIN_RUN_DAILY_LIMIT } from '@/constants/training-report.constants';
 import { toIsoDate } from '$lib/utils/iso-week';
-import type { Prisma } from '@prisma/client';
 import type { TrimpSex } from '$lib/server/analytics/load/trimp';
 
 const RECENT_WINDOW_DAYS = 14;
@@ -66,38 +60,11 @@ export async function POST({
         return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: 'Activity not found' });
     }
 
-    let detailPayload: ActivityDetailPayload | null = activity.detail
-        ? {
-              activityId: Number(activity.garminActivityId),
-              activityName: activity.activityName,
-              activityType: activity.activityType,
-              startTimeGMT: activity.startTime.toISOString(),
-              duration: activity.durationSec,
-              distance: activity.distanceM,
-              splits: activity.detail.splits as unknown as ActivitySplit[],
-              samples: activity.detail.samples as unknown as ActivitySample[],
-          }
-        : null;
-
-    if (!activity.detail) {
-        const fetched = await fetchActivityDetail({ userId, garminActivityId: activity.garminActivityId, password });
-        if (!fetched.ok) {
-            return createResponse(fetched.status, { code: fetched.code, message: fetched.message });
-        }
-        detailPayload = fetched.detail;
-        await db.activityDetail.upsert({
-            where: { activityId: activity.id },
-            create: {
-                activityId: activity.id,
-                splits: fetched.detail.splits as unknown as Prisma.InputJsonValue,
-                samples: fetched.detail.samples as unknown as Prisma.InputJsonValue,
-            },
-            update: {
-                splits: fetched.detail.splits as unknown as Prisma.InputJsonValue,
-                samples: fetched.detail.samples as unknown as Prisma.InputJsonValue,
-            },
-        });
+    const ensured = await ensureActivityDetail(userId, activity, password);
+    if (!ensured.ok) {
+        return createResponse(ensured.status, { code: ensured.code, message: ensured.message });
     }
+    const detailPayload = ensured.detail;
 
     const recentWindowStart = new Date();
     recentWindowStart.setUTCDate(recentWindowStart.getUTCDate() - RECENT_WINDOW_DAYS);

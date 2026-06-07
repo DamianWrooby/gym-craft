@@ -1,6 +1,8 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
+    import { onMount } from 'svelte';
+    import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
     import { ArrowLeftIcon } from 'svelte-feather-icons';
     import Card from '@components/card/Card.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
@@ -10,12 +12,69 @@
     import AskAiPanel from '$lib/components/activity-detail/AskAiPanel.svelte';
     import StatCard from '$lib/components/stat-card/StatCard.svelte';
     import { formatPaceOrSpeed } from '$lib/utils/pace';
+    import { makeToast } from '$lib/utils/toasts.js';
+    import { validateGarminLoginFormData } from '$lib/utils/form-validation';
+    import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
     import type { User } from '@/models/user/user.model';
 
     export let data;
 
     const user: User = $page.data.user;
     const activity = data.activity;
+    const modalStore = getModalStore();
+    const toastStore = getToastStore();
+
+    let detail = activity.detail;
+    let detailLoading = false;
+    let detailError: string | null = null;
+
+    async function loadDetail(password?: string) {
+        if (detailLoading) return;
+        detailLoading = true;
+        detailError = null;
+        try {
+            const res = await fetch(`/api/user/${user.id}/activities/${activity.id}/detail`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(password ? { password } : {}),
+            });
+            const payload = await res.json();
+            if (!res.ok) {
+                if (payload?.code === 'INVALID_TOKEN') {
+                    openGarminLoginModal();
+                    return;
+                }
+                detailError = payload?.message ?? 'Could not load activity details.';
+                return;
+            }
+            detail = payload?.data?.detail ?? null;
+        } catch (err) {
+            detailError = err instanceof Error ? err.message : 'Could not load activity details.';
+        } finally {
+            detailLoading = false;
+        }
+    }
+
+    function openGarminLoginModal() {
+        triggerGarminLoginModal(modalStore, {
+            body: "Your Garmin session expired. Sign in again to load this activity's splits and chart.",
+            confirmText: 'Login and load',
+            response: handleGarminLoginResponse,
+        });
+    }
+
+    async function handleGarminLoginResponse(loginFormData: GarminLoginResponse) {
+        if (!loginFormData) return;
+        if (validateGarminLoginFormData(loginFormData)) {
+            makeToast(toastStore, 'Invalid form data', 'variant-filled-error');
+            return;
+        }
+        await loadDetail(loginFormData.password);
+    }
+
+    onMount(() => {
+        if (!detail) void loadDetail();
+    });
 
     function formatDate(iso: string): string {
         return new Date(iso).toLocaleString('en-US', {
@@ -73,22 +132,33 @@
         <StatCard label="Avg HR" value={activity.averageHr != null ? `${activity.averageHr} bpm` : '—'} />
     </section>
 
-    {#if activity.detail}
+    {#if detail}
         <section class="mb-10">
             <h2 class="h3 font-semibold mb-3">HR & pace over time</h2>
-            <HrPaceOverlayChart samples={activity.detail.samples} />
+            <HrPaceOverlayChart samples={detail.samples} />
         </section>
 
         <section class="mb-10">
             <h2 class="h3 font-semibold mb-3">Splits</h2>
-            <SplitsTable splits={activity.detail.splits} activityType={activity.activityType} />
+            <SplitsTable splits={detail.splits} activityType={activity.activityType} />
+        </section>
+    {:else if detailLoading}
+        <section class="mb-10" aria-busy="true" aria-label="Loading activity details">
+            <div class="placeholder animate-pulse mb-6" style="height: 16rem;" />
+            <div class="space-y-2">
+                {#each [0, 1, 2, 3] as row (row)}
+                    <div class="placeholder animate-pulse" style="height: 2.5rem;" />
+                {/each}
+            </div>
         </section>
     {:else}
         <aside class="card variant-soft-surface p-4 mb-10">
-            <p class="text-sm opacity-80">
-                Detailed splits and time-series for this activity haven't been fetched yet. Ask the coach below and
-                we'll pull them on demand.
+            <p class="text-sm opacity-80 mb-3">
+                {detailError ?? "Detailed splits and time-series for this activity haven't been loaded yet."}
             </p>
+            <button type="button" class="btn btn-sm variant-soft-primary" on:click={() => loadDetail()}>
+                Load details
+            </button>
         </aside>
     {/if}
 
