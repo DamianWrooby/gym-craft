@@ -7,6 +7,8 @@
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
     import GenerateReportModal from '$lib/components/training-report/GenerateReportModal.svelte';
+    import { ArrowLeftIcon } from 'svelte-feather-icons';
+    import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
     import { makeToast } from '$lib/utils/toasts';
     import { to } from 'await-to-js';
     import { WEEKLY_REPORT_MONTHLY_LIMIT } from '@/constants/training-report.constants';
@@ -109,7 +111,7 @@
             buttonTextConfirm: 'Overwrite',
             response: async (confirmed: boolean) => {
                 if (!confirmed) {
-                    goto(`/app/running/reports/${existingId}`);
+                    goto(`/app/running/analytics/reports/${existingId}`);
                     return;
                 }
                 if (pendingRequest) {
@@ -150,7 +152,7 @@
             makeToast(toastStore, 'Weekly report ready', 'variant-filled-success');
             generating = false;
             pendingRequest = null;
-            goto(`/app/running/reports/${data.data.id}`);
+            goto(`/app/running/analytics/reports/${data.data.id}`);
             return;
         }
 
@@ -194,24 +196,14 @@
 
         generating = false;
     }
-
-    function formatPeriod(start: string, end: string): string {
-        const fmt = (s: string) =>
-            new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                timeZone: 'UTC',
-            });
-        return `${fmt(start)} – ${fmt(end)}`;
-    }
-
-    function summaryPreview(text: string): string {
-        const stripped = text.replace(/[#*_`>-]/g, '').trim();
-        return stripped.length > 140 ? `${stripped.slice(0, 140)}…` : stripped;
-    }
 </script>
 
 <Card width="3/4">
+    <div class="flex justify-between items-center pb-2">
+        <button type="button" on:click={() => goto('/app/running/analytics')} aria-label="Back to analytics">
+            <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
+        </button>
+    </div>
     <div class="md:w-3/4 m-auto pb-8">
         <div class="flex flex-row justify-between items-center py-6">
             <h2 class="h2 text-xl font-bold">Weekly reports</h2>
@@ -255,16 +247,16 @@
                         <button
                             type="button"
                             class="w-full text-left rounded-xl border border-surface-300 dark:border-surface-700 p-4 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
-                            on:click={() => goto(`/app/running/reports/${report.id}`)}>
+                            on:click={() => goto(`/app/running/analytics/reports/${report.id}`)}>
                             <div class="flex justify-between items-baseline">
                                 <h3 class="font-semibold">
-                                    Week of {formatPeriod(report.periodStart, report.periodEnd)}
+                                    Week of {formatReportPeriod(report.periodStart, report.periodEnd)}
                                 </h3>
                                 <span class="text-xs opacity-60">
                                     {new Date(report.createdAt).toLocaleDateString()}
                                 </span>
                             </div>
-                            <p class="text-sm opacity-80 mt-1">{summaryPreview(report.summary)}</p>
+                            <p class="text-sm opacity-80 mt-1">{reportSummaryPreview(report.summary)}</p>
                         </button>
                     </li>
                 {/each}

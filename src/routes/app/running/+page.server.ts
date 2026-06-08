@@ -6,7 +6,7 @@ export const load = async ({ locals }: { locals: App.Locals }) => {
     if (!userId) throw redirect(302, '/app/login');
 
     const [garminData, syncState] = await Promise.all([
-        db.garminData.findUnique({ where: { userId }, select: { id: true } }),
+        db.garminData.findUnique({ where: { userId }, select: { id: true, email: true } }),
         db.garminSyncState.findUnique({
             where: { userId },
             select: { backfillComplete: true, lastSyncedAt: true, oldestActivityAt: true },
@@ -15,6 +15,7 @@ export const load = async ({ locals }: { locals: App.Locals }) => {
 
     return {
         garminConnected: garminData != null,
+        garminEmail: garminData?.email ?? null,
         syncState: syncState
             ? {
                   backfillComplete: syncState.backfillComplete,

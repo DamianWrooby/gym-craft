@@ -2,24 +2,22 @@
     import { BarChart2Icon, ArrowRightIcon, RefreshCwIcon, CheckCircleIcon } from 'svelte-feather-icons';
     import { page } from '$app/stores';
     import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
-    import type { ModalComponent, ModalSettings } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
-    import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
     import { makeToast } from '$lib/utils/toasts';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
+    import { runProxySync } from '$lib/garmin/run-proxy-sync';
+    import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
 
     export let data: {
         garminConnected: boolean;
+        garminEmail: string | null;
         syncState: { backfillComplete: boolean; lastSyncedAt: string | null; oldestActivityAt: string | null } | null;
     };
 
     const modalStore = getModalStore();
     const toastStore = getToastStore();
-    const modalComponent: ModalComponent = { ref: GarminLoginForm };
-
-    type LoginFormData = { email: string; password: string };
 
     let syncing = false;
     let syncError: string | null = null;
@@ -44,28 +42,37 @@
         syncError = null;
         syncMessage = null;
         try {
-            const res = await fetch(`/api/user/${$page.data.user?.id ?? ''}/garmin/sync`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(password ? { password } : {}),
+            const result = await runProxySync({
+                userId: $page.data.user?.id ?? '',
+                garminEmail: data.garminEmail,
+                syncState: data.syncState,
+                password,
             });
-            const payload = await res.json();
-            if (!res.ok) {
-                if (isInvalidTokenError(payload)) {
-                    makeToast(
-                        toastStore,
-                        'Invalid token <br> Please log in to your Garmin account',
-                        'variant-filled-warning',
-                    );
-                    openGarminLoginModal();
-                    return;
-                }
-                syncError = payload?.message ?? 'Sync failed';
-            } else {
-                syncMessage = `Imported ${payload?.data?.activitiesUpserted ?? 0} activities (${payload?.data?.mode ?? 'sync'}).`;
+
+            if (result.ok) {
+                syncMessage = `Imported ${result.summary.activitiesUpserted} activities (${result.summary.mode}).`;
                 await new Promise((r) => setTimeout(r, 600));
                 location.reload();
+                return;
             }
+
+            if (result.code === 'INVALID_TOKEN') {
+                makeToast(
+                    toastStore,
+                    'Invalid token <br> Please log in to your Garmin account',
+                    'variant-filled-warning',
+                );
+                openGarminLoginModal();
+                return;
+            }
+
+            if (result.code === 'STALE_STATE') {
+                // Sync state changed since the page loaded — reload to pick up fresh state and retry.
+                location.reload();
+                return;
+            }
+
+            syncError = result.message;
         } catch (err) {
             syncError = err instanceof Error ? err.message : 'Sync failed';
         } finally {
@@ -73,24 +80,14 @@
         }
     }
 
-    function isInvalidTokenError(payload: { code?: string; message?: string }): boolean {
-        return payload?.code === 'INVALID_TOKEN' || !!payload?.message?.includes('No valid token found');
-    }
-
     function openGarminLoginModal() {
-        const modal: ModalSettings = {
-            type: 'component',
-            title: 'Sign in to Garmin Connect',
+        triggerGarminLoginModal(modalStore, {
             body: 'Provide credentials to connect to your Garmin Connect account and sync your activities.',
-            buttonTextCancel: 'Cancel',
-            buttonTextConfirm: 'Login and sync',
-            component: modalComponent,
             response: handleGarminLogin,
-        };
-        modalStore.trigger(modal);
+        });
     }
 
-    function handleGarminLogin(loginFormData: LoginFormData | false) {
+    function handleGarminLogin(loginFormData: GarminLoginResponse) {
         if (!loginFormData) return;
 
         const formValidationError = validateGarminLoginFormData(loginFormData);

@@ -1,11 +1,9 @@
 import { db } from '$lib/database';
 import { fetchGarminActivities } from './fetch-activities';
 import { toIsoDate } from '$lib/utils/iso-week';
+import { BACKFILL_DAYS, pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 import type { Prisma } from '@prisma/client';
-
-const BACKFILL_DAYS = 90;
-const INCREMENTAL_WINDOW_DAYS = 7;
 
 export type SyncResult =
     | { ok: true; mode: 'backfill' | 'incremental' | 'skipped'; activitiesUpserted: number; lastSyncedAt: Date }
@@ -46,26 +44,7 @@ async function runBackfill(userId: string, password?: string): Promise<SyncResul
         return { ok: false, status: result.status, code: result.code, message: result.message };
     }
 
-    const upserted = await upsertActivities(userId, result.activities);
-    const oldestActivityAt = findOldestStartTime(result.activities);
-    const now = new Date();
-
-    await db.garminSyncState.upsert({
-        where: { userId },
-        create: {
-            userId,
-            lastSyncedAt: now,
-            oldestActivityAt: oldestActivityAt ?? startDate,
-            backfillComplete: true,
-        },
-        update: {
-            lastSyncedAt: now,
-            oldestActivityAt: oldestActivityAt ?? startDate,
-            backfillComplete: true,
-        },
-    });
-
-    return { ok: true, mode: 'backfill', activitiesUpserted: upserted, lastSyncedAt: now };
+    return persistActivities(userId, result.activities, 'backfill');
 }
 
 async function runIncremental(userId: string, lastSyncedAt: Date | null, password?: string): Promise<SyncResult> {
@@ -82,8 +61,38 @@ async function runIncremental(userId: string, lastSyncedAt: Date | null, passwor
         return { ok: false, status: result.status, code: result.code, message: result.message };
     }
 
-    const upserted = await upsertActivities(userId, result.activities);
+    return persistActivities(userId, result.activities, 'incremental');
+}
+
+/**
+ * Persist already-fetched activities and advance the sync state. Shared by the server-side
+ * fetch path (`runBackfill`/`runIncremental`, used by the weekly-report endpoint) and the
+ * proxy-driven path where the browser fetched the activities and posts them to be saved.
+ *
+ * Backfill upserts the sync state (marking it complete + recording the oldest activity);
+ * incremental only advances `lastSyncedAt` (the state row is guaranteed to exist by then).
+ */
+export async function persistActivities(
+    userId: string,
+    activities: GarminActivity[],
+    mode: SyncMode,
+): Promise<SyncResult> {
+    const upserted = await upsertActivities(userId, activities);
     const now = new Date();
+
+    if (mode === 'backfill') {
+        const fallbackOldest = new Date(now);
+        fallbackOldest.setUTCDate(fallbackOldest.getUTCDate() - BACKFILL_DAYS);
+        const oldestActivityAt = findOldestStartTime(activities) ?? fallbackOldest;
+
+        await db.garminSyncState.upsert({
+            where: { userId },
+            create: { userId, lastSyncedAt: now, oldestActivityAt, backfillComplete: true },
+            update: { lastSyncedAt: now, oldestActivityAt, backfillComplete: true },
+        });
+
+        return { ok: true, mode: 'backfill', activitiesUpserted: upserted, lastSyncedAt: now };
+    }
 
     await db.garminSyncState.update({
         where: { userId },
@@ -91,18 +100,6 @@ async function runIncremental(userId: string, lastSyncedAt: Date | null, passwor
     });
 
     return { ok: true, mode: 'incremental', activitiesUpserted: upserted, lastSyncedAt: now };
-}
-
-export function pickIncrementalStart(lastSyncedAt: Date | null, endDate: Date): Date {
-    if (!lastSyncedAt) {
-        const fallback = new Date(endDate);
-        fallback.setUTCDate(fallback.getUTCDate() - INCREMENTAL_WINDOW_DAYS);
-        return fallback;
-    }
-
-    const start = new Date(lastSyncedAt);
-    start.setUTCDate(start.getUTCDate() - 1);
-    return start;
 }
 
 async function upsertActivities(userId: string, activities: GarminActivity[]): Promise<number> {
