@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
@@ -15,6 +15,7 @@
     import { makeToast } from '$lib/utils/toasts.js';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
+    import { resolveBackTarget } from '$lib/utils/back-target';
     import type { User } from '@/models/user/user.model';
 
     export let data;
@@ -23,6 +24,11 @@
     const activity = data.activity;
     const modalStore = getModalStore();
     const toastStore = getToastStore();
+
+    let backTarget = '/app/running/analytics/activities';
+    afterNavigate(({ from }) => {
+        backTarget = resolveBackTarget(from?.url.pathname, '/app/running/analytics/activities');
+    });
 
     let detail = activity.detail;
     let detailLoading = false;
@@ -112,10 +118,7 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">
-        <button
-            type="button"
-            on:click={() => goto('/app/running/analytics/activities')}
-            aria-label="Back to activities">
+        <button type="button" on:click={() => goto(backTarget)} aria-label="Go back">
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
     </div>

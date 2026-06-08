@@ -1,7 +1,8 @@
 <script lang="ts">
     import { page } from '$app/stores';
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { ArrowLeftIcon } from 'svelte-feather-icons';
+    import { resolveBackTarget } from '$lib/utils/back-target';
     import Card from '@components/card/Card.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
     import Markdown from '$lib/components/markdown/Markdown.svelte';
@@ -42,6 +43,11 @@
         createdAt: string;
     };
 
+    let backTarget = '/app/running/analytics/reports';
+    afterNavigate(({ from }) => {
+        backTarget = resolveBackTarget(from?.url.pathname, '/app/running/analytics/reports');
+    });
+
     function formatPeriod(start: string, end: string): string {
         const fmt = (s: string) =>
             new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', {
@@ -58,7 +64,7 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">
-        <button type="button" on:click={() => goto('/app/running/analytics/reports')} aria-label="Back to reports">
+        <button type="button" on:click={() => goto(backTarget)} aria-label="Go back">
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
         <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString('en-US')}</p>
