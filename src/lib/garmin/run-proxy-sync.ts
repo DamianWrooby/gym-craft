@@ -66,6 +66,11 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
     const { mode, startDate, endDate } = resolveSyncWindow(syncState);
     const proxyUrl = isProduction() ? appConfig.garminActivitiesApiUrlPROD : appConfig.garminActivitiesApiUrlDEV;
 
+    // Temporary diagnostics for the prod 429 investigation: timestamped so repeated calls
+    // (e.g. an analytics-page mount loop) are visible in devtools.
+    const t0 = Date.now();
+    console.info('[garmin-sync] start', { mode, startDate, endDate, hasPassword: !!password });
+
     const proxy = await postJson(proxyUrl, {
         username: garminEmail,
         startDate,
@@ -73,10 +78,17 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
         ...(password ? { password } : {}),
     });
     if ('error' in proxy) {
+        console.warn('[garmin-sync] proxy unreachable', { error: proxy.error, ms: Date.now() - t0 });
         return { ok: false, code: 'PROXY_ERROR', message: proxy.error };
     }
     if (!proxy.ok) {
         const message = typeof proxy.payload.message === 'string' ? proxy.payload.message : undefined;
+        console.warn('[garmin-sync] proxy error', {
+            status: proxy.status,
+            code: proxy.payload.code,
+            message,
+            ms: Date.now() - t0,
+        });
         if (proxy.payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
             return { ok: false, code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin token' };
         }
@@ -84,6 +96,7 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
     }
 
     const activities = Array.isArray(proxy.payload.data) ? proxy.payload.data : [];
+    console.info('[garmin-sync] proxy ok', { count: activities.length, ms: Date.now() - t0 });
 
     const persist = await postJson(`/api/user/${userId}/garmin/sync`, { activities, mode });
     if ('error' in persist) {
