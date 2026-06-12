@@ -9,7 +9,6 @@
     import ActivityRow from '$lib/components/activity-list/ActivityRow.svelte';
     import { makeToast } from '$lib/utils/toasts';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
-    import { isSyncStale } from '$lib/utils/sync-staleness';
     import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
@@ -39,14 +38,17 @@
 
     onMount(async () => {
         modalStore.clear();
-        if (data.needsInitialSync) {
-            await runSync({ blocking: true });
-        } else if (isSyncStale(data.lastSyncedAt)) {
-            void runSync({ blocking: false });
-        }
+        // TEMP (429 investigation): automatic sync on mount is disabled so each Garmin
+        // request is an explicit user action via the "Sync now" button. Restore the block
+        // below once the upstream rate-limiting is understood.
+        // if (data.needsInitialSync) {
+        //     await runSync({ blocking: true, notify: true });
+        // } else if (isSyncStale(data.lastSyncedAt)) {
+        //     void runSync({ blocking: false });
+        // }
     });
 
-    async function runSync(opts: { blocking: boolean; password?: string }) {
+    async function runSync(opts: { blocking: boolean; notify?: boolean; password?: string }) {
         if (syncing) return;
         syncing = true;
         try {
@@ -58,6 +60,16 @@
             });
 
             if (result.ok) {
+                if (opts.notify) {
+                    const { activitiesUpserted, mode } = result.summary;
+                    makeToast(
+                        toastStore,
+                        activitiesUpserted > 0
+                            ? `Imported ${activitiesUpserted} ${activitiesUpserted === 1 ? 'activity' : 'activities'} (${mode}).`
+                            : 'Already up to date — no new activities.',
+                        'variant-filled-success',
+                    );
+                }
                 await invalidate(() => true);
                 return;
             }
@@ -96,7 +108,7 @@
             makeToast(toastStore, 'Invalid form data', 'variant-filled-error');
             return;
         }
-        await runSync({ blocking: true, password: loginFormData.password });
+        await runSync({ blocking: true, notify: true, password: loginFormData.password });
     }
 
     function formatRelative(iso: string | null): string {
@@ -128,7 +140,7 @@
                     type="button"
                     class="btn btn-sm variant-soft-primary"
                     disabled={syncing}
-                    on:click={() => runSync({ blocking: false })}>
+                    on:click={() => runSync({ blocking: false, notify: true })}>
                     <RefreshCwIcon size="14" class={syncing ? 'animate-spin' : ''} />
                     <span>{syncing ? 'Syncing…' : 'Sync now'}</span>
                 </button>
