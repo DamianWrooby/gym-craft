@@ -9,6 +9,7 @@
     import ActivityRow from '$lib/components/activity-list/ActivityRow.svelte';
     import { makeToast } from '$lib/utils/toasts';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
+    import { isSyncStale } from '$lib/utils/sync-staleness';
     import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
@@ -38,14 +39,11 @@
 
     onMount(async () => {
         modalStore.clear();
-        // TEMP (429 investigation): automatic sync on mount is disabled so each Garmin
-        // request is an explicit user action via the "Sync now" button. Restore the block
-        // below once the upstream rate-limiting is understood.
-        // if (data.needsInitialSync) {
-        //     await runSync({ blocking: true, notify: true });
-        // } else if (isSyncStale(data.lastSyncedAt)) {
-        //     void runSync({ blocking: false });
-        // }
+        if (data.needsInitialSync) {
+            await runSync({ blocking: true, notify: true });
+        } else if (isSyncStale(data.lastSyncedAt)) {
+            void runSync({ blocking: false });
+        }
     });
 
     async function runSync(opts: { blocking: boolean; notify?: boolean; password?: string }) {
