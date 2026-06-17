@@ -13,6 +13,9 @@ export enum appConfig {
     explainRunApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/explain-run',
     garminActivitiesApiUrlDEV = 'http://localhost:3000/api/garmin-activities',
     garminActivitiesApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/garmin-activities',
+    // Hit directly from the browser to wake the (free-tier, spin-down-prone) Garmin microservice
+    // before syncing — Render only wakes it for residential IPs, not the proxy's datacenter IP.
+    garminServiceWakeUrlPROD = 'https://gymcraft-curl-cffi.onrender.com/health',
     plansApiUrl = '/api/plans',
     generalPlanLimitApiUrl = '/api/general-plan-limit',
     administratorEmail = 'dwroblewski89@gmail.com',

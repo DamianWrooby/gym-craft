@@ -28,6 +28,37 @@ export interface RunProxySyncArgs {
     password?: string;
 }
 
+const GARMIN_WAKE_BUDGET_MS = 120_000;
+const GARMIN_WAKE_INTERVAL_MS = 3_000;
+
+/**
+ * Render spins the free Garmin microservice down after ~15 min idle, and its Cloudflare edge
+ * answers requests from the proxy's datacenter IP with a 429 instead of waking it — but a request
+ * from the browser (a residential IP) does trigger the wake. So we wake it here, from the client,
+ * before asking the proxy to use it.
+ *
+ * A resolved fetch (even a 401) means the request reached gunicorn → the instance is up. A
+ * rejected fetch means the edge 429'd it (no CORS header, so the browser blocks the response) →
+ * still asleep, keep waiting. Best-effort: on timeout we proceed anyway and let the proxy surface
+ * any error rather than blocking the sync indefinitely.
+ */
+async function wakeGarminService(): Promise<void> {
+    const url = appConfig.garminServiceWakeUrlPROD;
+    const deadline = Date.now() + GARMIN_WAKE_BUDGET_MS;
+    let attempt = 0;
+    while (Date.now() < deadline) {
+        attempt += 1;
+        const [err, res] = await to(fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store' }));
+        if (!err && res && res.status !== 429) {
+            console.info('[garmin-wake] service awake', { attempt, status: res.status });
+            return;
+        }
+        console.info('[garmin-wake] waiting for service to wake…', { attempt });
+        await new Promise((resolve) => setTimeout(resolve, GARMIN_WAKE_INTERVAL_MS));
+    }
+    console.warn('[garmin-wake] budget exhausted; proceeding anyway');
+}
+
 type PostJsonResult = { ok: boolean; status: number; payload: Record<string, unknown> } | { error: string };
 
 async function postJson(url: string, body: unknown): Promise<PostJsonResult> {
@@ -65,6 +96,12 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
 
     const { mode, startDate, endDate } = resolveSyncWindow(syncState);
     const proxyUrl = isProduction() ? appConfig.garminActivitiesApiUrlPROD : appConfig.garminActivitiesApiUrlDEV;
+
+    // Wake the spun-down microservice from the browser before the proxy tries to use it. In dev
+    // the Flask service runs locally and is always up, so this is prod-only.
+    if (isProduction()) {
+        await wakeGarminService();
+    }
 
     // Temporary diagnostics for the prod 429 investigation: timestamped so repeated calls
     // (e.g. an analytics-page mount loop) are visible in devtools.
