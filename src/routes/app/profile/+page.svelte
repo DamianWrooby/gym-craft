@@ -7,6 +7,7 @@
     import AthleteProfileForm from '$lib/components/athlete-profile/AthleteProfileForm.svelte';
     import RunningGoalForm from '$lib/components/running-goal/RunningGoalForm.svelte';
     import { makeToast } from '$lib/utils/toasts';
+    import { formatGoalTime } from '$lib/utils/running-goal-format';
     import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
     import { to } from 'await-to-js';
     import type { User } from '@/models/user/user.model';
@@ -146,6 +147,8 @@
                                             · {goal.targetEventDate}{/if}
                                         {#if goal.targetDistanceM}
                                             · {(goal.targetDistanceM / 1000).toFixed(2)} km{/if}
+                                        {#if goal.targetTimeSec}
+                                            · {formatGoalTime(goal.targetTimeSec)}{/if}
                                     </p>
                                     {#if goal.notes}
                                         <p class="text-sm opacity-80 mt-1">{goal.notes}</p>

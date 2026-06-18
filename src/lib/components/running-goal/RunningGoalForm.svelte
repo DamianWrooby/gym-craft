@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from 'svelte';
     import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
+    import { metersToKm, kmToMeters, secondsToHms, hmsToSeconds } from '$lib/utils/running-goal-format';
     import type { GoalType } from '@prisma/client';
 
     export let goal: {
@@ -23,8 +24,13 @@
     let goalType: GoalType = goal.goalType ?? 'RACE';
     let targetEventName = goal.targetEventName ?? '';
     let targetEventDate = goal.targetEventDate ?? '';
-    let targetDistanceM: number | null = goal.targetDistanceM ?? null;
-    let targetTimeSec: number | null = goal.targetTimeSec ?? null;
+    // Runner-friendly inputs: distance in km, time split into HH / MM / SS.
+    // Converted back to meters / seconds in `formValues` for the API.
+    let targetDistanceKm: number | null = metersToKm(goal.targetDistanceM);
+    const initialHms = secondsToHms(goal.targetTimeSec);
+    let timeHours: number | null = goal.targetTimeSec ? initialHms.hours : null;
+    let timeMinutes: number | null = goal.targetTimeSec ? initialHms.minutes : null;
+    let timeSeconds: number | null = goal.targetTimeSec ? initialHms.seconds : null;
     let priority: number = goal.priority ?? 1;
     let notes = goal.notes ?? '';
 
@@ -32,8 +38,8 @@
         goalType,
         targetEventName: targetEventName.trim() || null,
         targetEventDate: targetEventDate || null,
-        targetDistanceM: targetDistanceM ?? null,
-        targetTimeSec: targetTimeSec ?? null,
+        targetDistanceM: kmToMeters(targetDistanceKm),
+        targetTimeSec: hmsToSeconds(timeHours, timeMinutes, timeSeconds),
         priority,
         notes: notes.trim() || null,
     };
@@ -67,13 +73,40 @@
             <input type="date" class="input" bind:value={targetEventDate} />
         </label>
         <label class="label">
-            <span>Target distance (m)</span>
-            <input type="number" class="input" min="0" step="1" bind:value={targetDistanceM} />
+            <span>Target distance (km)</span>
+            <input type="number" class="input" min="0" step="0.01" placeholder="42.2" bind:value={targetDistanceKm} />
         </label>
-        <label class="label">
-            <span>Target time (sec)</span>
-            <input type="number" class="input" min="0" step="1" bind:value={targetTimeSec} />
-        </label>
+        <div class="label">
+            <span>Target time (hh:mm:ss)</span>
+            <div class="grid grid-cols-3 gap-2">
+                <input
+                    type="number"
+                    class="input text-center"
+                    min="0"
+                    step="1"
+                    placeholder="hh"
+                    aria-label="Target hours"
+                    bind:value={timeHours} />
+                <input
+                    type="number"
+                    class="input text-center"
+                    min="0"
+                    max="59"
+                    step="1"
+                    placeholder="mm"
+                    aria-label="Target minutes"
+                    bind:value={timeMinutes} />
+                <input
+                    type="number"
+                    class="input text-center"
+                    min="0"
+                    max="59"
+                    step="1"
+                    placeholder="ss"
+                    aria-label="Target seconds"
+                    bind:value={timeSeconds} />
+            </div>
+        </div>
         <label class="label md:col-span-2">
             <span>Notes</span>
             <textarea class="textarea" rows="2" maxlength="500" bind:value={notes}></textarea>
