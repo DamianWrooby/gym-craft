@@ -1,6 +1,7 @@
 <script lang="ts">
     import { BarChart2Icon, ArrowRightIcon, RefreshCwIcon, CheckCircleIcon } from 'svelte-feather-icons';
     import { page } from '$app/stores';
+    import { invalidateAll } from '$app/navigation';
     import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
@@ -55,8 +56,7 @@
 
             if (result.ok) {
                 syncMessage = `Imported ${result.summary.activitiesUpserted} activities (${result.summary.mode}).`;
-                await new Promise((r) => setTimeout(r, 600));
-                location.reload();
+                await invalidateAll();
                 return;
             }
 
