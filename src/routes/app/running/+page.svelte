@@ -1,6 +1,7 @@
 <script lang="ts">
     import { BarChart2Icon, ArrowRightIcon, RefreshCwIcon, CheckCircleIcon } from 'svelte-feather-icons';
     import { page } from '$app/stores';
+    import { invalidateAll } from '$app/navigation';
     import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
@@ -37,7 +38,7 @@
         return `${diffDay}d ago`;
     }
 
-    async function runSync(password?: string) {
+    async function runSync(password?: string, retriedOnStale = false) {
         syncing = true;
         syncError = null;
         syncMessage = null;
@@ -51,8 +52,7 @@
 
             if (result.ok) {
                 syncMessage = `Imported ${result.summary.activitiesUpserted} activities (${result.summary.mode}).`;
-                await new Promise((r) => setTimeout(r, 600));
-                location.reload();
+                await invalidateAll();
                 return;
             }
 
@@ -66,9 +66,10 @@
                 return;
             }
 
-            if (result.code === 'STALE_STATE') {
-                // Sync state changed since the page loaded — reload to pick up fresh state and retry.
-                location.reload();
+            if (result.code === 'STALE_STATE' && !retriedOnStale) {
+                // Sync state changed since the page loaded — refresh state and retry once with it.
+                await invalidateAll();
+                await runSync(password, true);
                 return;
             }
 
