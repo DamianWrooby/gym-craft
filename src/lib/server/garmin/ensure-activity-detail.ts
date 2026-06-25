@@ -36,7 +36,6 @@ export type EnsureActivityDetailResult =
 export async function ensureActivityDetail(
     userId: string,
     activity: ActivityWithDetail,
-    password?: string,
 ): Promise<EnsureActivityDetailResult> {
     if (activity.detail) {
         return {
@@ -48,7 +47,7 @@ export async function ensureActivityDetail(
         };
     }
 
-    const fetched = await fetchActivityDetail({ userId, garminActivityId: activity.garminActivityId, password });
+    const fetched = await fetchActivityDetail({ userId, garminActivityId: activity.garminActivityId });
     if (!fetched.ok) {
         return { ok: false, status: fetched.status, code: fetched.code, message: fetched.message };
     }

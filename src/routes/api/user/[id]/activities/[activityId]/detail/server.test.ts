@@ -34,13 +34,9 @@ const payload = {
     samples,
 };
 
-function makePost(body: unknown = {}, id: string = userId, actId: string = activityId) {
-    const request = new Request(`http://localhost/api/user/${id}/activities/${actId}/detail`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
-    return POST({ request, params: { id, activityId: actId }, locals });
+function makePost(_body: unknown = {}, id: string = userId, actId: string = activityId) {
+    // The endpoint identifies the user via the stored session token (no request body needed).
+    return POST({ params: { id, activityId: actId }, locals });
 }
 
 afterEach(() => {
@@ -72,11 +68,11 @@ describe('POST /api/user/[id]/activities/[activityId]/detail', () => {
         expect(json.data.detail).toEqual({ splits, samples });
     });
 
-    it('forwards the password to ensureActivityDetail for re-auth', async () => {
+    it('calls ensureActivityDetail with no credentials (identity is the stored session token)', async () => {
         mocks.findFirst.mockResolvedValue(activityRow);
         mocks.ensureActivityDetail.mockResolvedValue({ ok: true, detail: payload });
-        await makePost({ password: 'secret' });
-        expect(mocks.ensureActivityDetail).toHaveBeenCalledWith(userId, activityRow, 'secret');
+        await makePost();
+        expect(mocks.ensureActivityDetail).toHaveBeenCalledWith(userId, activityRow);
     });
 
     it('surfaces INVALID_TOKEN from the fetch with its status and code', async () => {

@@ -19,6 +19,7 @@ export interface DashboardPageData {
     lastSyncedAt: string | null;
     needsInitialSync: boolean;
     garminEmail: string | null;
+    garminSessionToken: string | null;
 }
 
 export const load = async ({ locals }: { locals: App.Locals }): Promise<DashboardPageData> => {
@@ -28,7 +29,7 @@ export const load = async ({ locals }: { locals: App.Locals }): Promise<Dashboar
     const [rows, syncState, garminData, reports] = await Promise.all([
         db.activity.findMany({ where: { userId }, orderBy: { startTime: 'desc' } }),
         db.garminSyncState.findUnique({ where: { userId } }),
-        db.garminData.findUnique({ where: { userId }, select: { email: true } }),
+        db.garminData.findUnique({ where: { userId }, select: { email: true, sessionToken: true } }),
         getWeeklyReports(userId),
     ]);
 
@@ -51,5 +52,6 @@ export const load = async ({ locals }: { locals: App.Locals }): Promise<Dashboar
         lastSyncedAt: syncState?.lastSyncedAt ? syncState.lastSyncedAt.toISOString() : null,
         needsInitialSync: !syncState?.backfillComplete,
         garminEmail: garminData?.email ?? null,
+        garminSessionToken: garminData?.sessionToken ?? null,
     };
 };

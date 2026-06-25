@@ -1,7 +1,7 @@
 import { to } from 'await-to-js';
-import { getGarminEmail } from '$lib/prisma/prisma';
+import { getGarminSessionToken } from '$lib/prisma/prisma';
 import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
-import { garminApiUrl, garminApiHeaders } from './config';
+import { garminApiUrl, garminBearerHeaders } from './config';
 
 export interface ActivitySplit {
     splitIndex: number;
@@ -45,34 +45,31 @@ export type FetchActivityDetailResult =
 export interface FetchActivityDetailParams {
     userId: string;
     garminActivityId: bigint | number;
-    password?: string;
 }
 
 export async function fetchActivityDetail(params: FetchActivityDetailParams): Promise<FetchActivityDetailResult> {
-    const { userId, garminActivityId, password } = params;
+    const { userId, garminActivityId } = params;
 
-    const [emailError, email] = await to(getGarminEmail(userId));
-    if (emailError || !email) {
+    const [tokenError, sessionToken] = await to(getGarminSessionToken(userId));
+    if (tokenError || !sessionToken) {
         return {
             ok: false,
-            status: 400,
-            code: 'GARMIN_EMAIL_NOT_CONFIGURED',
-            message: 'Garmin email not configured',
+            status: 401,
+            code: 'INVALID_TOKEN',
+            message: 'No valid token found',
         };
     }
 
     const body: Record<string, unknown> = {
-        username: String(email),
         activityId: typeof garminActivityId === 'bigint' ? Number(garminActivityId) : garminActivityId,
     };
-    if (password) body.password = password;
 
     const url = `${garminApiUrl}/activity/detail`;
 
     const [fetchError, pyResponse] = await to(
         fetch(url, {
             method: 'POST',
-            headers: garminApiHeaders(),
+            headers: garminBearerHeaders(sessionToken),
             body: JSON.stringify(body),
         }),
     );
@@ -98,9 +95,8 @@ export async function fetchActivityDetail(params: FetchActivityDetailParams): Pr
 
     if (!pyResponse.ok) {
         const message: string = data?.message || 'Garmin service error';
-        const code: FetchActivityDetailErrorCode = isInvalidTokenMessage(message)
-            ? 'INVALID_TOKEN'
-            : 'GARMIN_SERVICE_ERROR';
+        const code: FetchActivityDetailErrorCode =
+            pyResponse.status === 401 || isInvalidTokenMessage(message) ? 'INVALID_TOKEN' : 'GARMIN_SERVICE_ERROR';
         return { ok: false, status: pyResponse.status, code, message };
     }
 

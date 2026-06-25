@@ -78,12 +78,11 @@ describe('ensureActivityDetail', () => {
     it('fetches, upserts, and returns the assembled payload when none is cached', async () => {
         mocks.fetchActivityDetail.mockResolvedValue({ ok: true, detail: fetchedDetail });
 
-        const result = await ensureActivityDetail(userId, freshActivity, 'secret');
+        const result = await ensureActivityDetail(userId, freshActivity);
 
         expect(mocks.fetchActivityDetail).toHaveBeenCalledWith({
             userId,
             garminActivityId: 456n,
-            password: 'secret',
         });
         expect(mocks.upsert).toHaveBeenCalledTimes(1);
         const upsertArg = mocks.upsert.mock.calls[0][0];

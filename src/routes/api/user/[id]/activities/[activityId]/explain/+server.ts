@@ -37,7 +37,6 @@ export async function POST({
             message: `Question must be ${EXPLAIN_QUESTION_MAX_LENGTH} characters or fewer`,
         });
     }
-    const password = typeof body?.password === 'string' ? body.password : undefined;
 
     const today = toIsoDate(new Date());
     const usageKey = { userId_kind_day: { userId, kind: 'explain_run', day: today } };
@@ -60,7 +59,7 @@ export async function POST({
         return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: 'Activity not found' });
     }
 
-    const ensured = await ensureActivityDetail(userId, activity, password);
+    const ensured = await ensureActivityDetail(userId, activity);
     if (!ensured.ok) {
         return createResponse(ensured.status, { code: ensured.code, message: ensured.message });
     }

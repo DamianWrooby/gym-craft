@@ -8,11 +8,13 @@
     import { makeToast } from '$lib/utils/toasts';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
+    import { authenticateGarmin } from '$lib/garmin/authenticate';
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
 
     export let data: {
         garminConnected: boolean;
         garminEmail: string | null;
+        garminSessionToken: string | null;
         syncState: { backfillComplete: boolean; lastSyncedAt: string | null; oldestActivityAt: string | null } | null;
     };
 
@@ -22,6 +24,8 @@
     let syncing = false;
     let syncError: string | null = null;
     let syncMessage: string | null = null;
+    // The Garmin session token; refreshed in-place when the user re-authenticates via the modal.
+    let sessionToken: string | null = data.garminSessionToken;
 
     $: backfillNeeded = data.garminConnected && (!data.syncState || !data.syncState.backfillComplete);
     $: lastSyncedLabel = data.syncState?.lastSyncedAt ? formatRelative(data.syncState.lastSyncedAt) : null;
@@ -37,7 +41,7 @@
         return `${diffDay}d ago`;
     }
 
-    async function runSync(password?: string) {
+    async function runSync(retriedOnStale = false) {
         syncing = true;
         syncError = null;
         syncMessage = null;
@@ -45,8 +49,8 @@
             const result = await runProxySync({
                 userId: $page.data.user?.id ?? '',
                 garminEmail: data.garminEmail,
+                sessionToken,
                 syncState: data.syncState,
-                password,
             });
 
             if (result.ok) {
@@ -66,9 +70,10 @@
                 return;
             }
 
-            if (result.code === 'STALE_STATE') {
-                // Sync state changed since the page loaded — reload to pick up fresh state and retry.
-                location.reload();
+            if (result.code === 'STALE_STATE' && !retriedOnStale) {
+                // Sync state changed since the page loaded — refresh state and retry once with it.
+                await invalidateAll();
+                await runSync(true);
                 return;
             }
 
@@ -87,7 +92,7 @@
         });
     }
 
-    function handleGarminLogin(loginFormData: GarminLoginResponse) {
+    async function handleGarminLogin(loginFormData: GarminLoginResponse) {
         if (!loginFormData) return;
 
         const formValidationError = validateGarminLoginFormData(loginFormData);
@@ -96,7 +101,16 @@
             return;
         }
 
-        runSync(loginFormData.password);
+        // Exchange the password for a session token, then retry the sync with it.
+        syncing = true;
+        const auth = await authenticateGarmin($page.data.user?.id ?? '', loginFormData.password);
+        syncing = false;
+        if (!auth.ok) {
+            makeToast(toastStore, auth.message || 'Garmin login failed', 'variant-filled-error');
+            return;
+        }
+        sessionToken = auth.sessionToken;
+        await runSync();
     }
 </script>
 

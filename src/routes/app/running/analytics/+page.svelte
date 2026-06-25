@@ -12,6 +12,7 @@
     import { isSyncStale } from '$lib/utils/sync-staleness';
     import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
+    import { authenticateGarmin } from '$lib/garmin/authenticate';
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
     import type { User } from '@/models/user/user.model';
     import type { DashboardPageData } from './+page.server';
@@ -23,6 +24,8 @@
     const toastStore = getToastStore();
 
     let syncing = false;
+    // Garmin session token; refreshed in-place when the user re-authenticates via the modal.
+    let sessionToken: string | null = data.garminSessionToken;
 
     const STATUS_LABEL: Record<string, string> = {
         undertraining: 'Undertraining',
@@ -46,15 +49,15 @@
         }
     });
 
-    async function runSync(opts: { blocking: boolean; notify?: boolean; password?: string }) {
+    async function runSync(opts: { blocking: boolean; notify?: boolean }) {
         if (syncing) return;
         syncing = true;
         try {
             const result = await runProxySync({
                 userId: user.id,
                 garminEmail: data.garminEmail,
+                sessionToken,
                 syncState: { backfillComplete: !data.needsInitialSync, lastSyncedAt: data.lastSyncedAt },
-                password: opts.password,
             });
 
             if (result.ok) {
@@ -106,7 +109,16 @@
             makeToast(toastStore, 'Invalid form data', 'variant-filled-error');
             return;
         }
-        await runSync({ blocking: true, notify: true, password: loginFormData.password });
+        // Exchange the password for a session token, then retry the sync with it.
+        syncing = true;
+        const auth = await authenticateGarmin(user.id, loginFormData.password);
+        syncing = false;
+        if (!auth.ok) {
+            makeToast(toastStore, auth.message || 'Garmin login failed', 'variant-filled-error');
+            return;
+        }
+        sessionToken = auth.sessionToken;
+        await runSync({ blocking: true, notify: true });
     }
 
     function formatRelative(iso: string | null): string {

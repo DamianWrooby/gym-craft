@@ -25,7 +25,8 @@ export interface RunProxySyncArgs {
     userId: string;
     garminEmail: string | null;
     syncState: SyncStateSnapshot | null;
-    password?: string;
+    /** Opaque Garmin session token (Bearer). When absent, the caller must prompt for a login. */
+    sessionToken: string | null;
 }
 
 const GARMIN_WAKE_BUDGET_MS = 120_000;
@@ -61,9 +62,13 @@ async function wakeGarminService(): Promise<void> {
 
 type PostJsonResult = { ok: boolean; status: number; payload: Record<string, unknown> } | { error: string };
 
-async function postJson(url: string, body: unknown): Promise<PostJsonResult> {
+async function postJson(url: string, body: unknown, headers: Record<string, string> = {}): Promise<PostJsonResult> {
     const [fetchError, response] = await to(
-        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify(body),
+        }),
     );
     if (fetchError || !response) {
         return { error: fetchError?.message ?? 'Request failed' };
@@ -88,10 +93,14 @@ async function postJson(url: string, body: unknown): Promise<PostJsonResult> {
  * On `STALE_STATE` the caller should reload fresh sync state and retry once.
  */
 export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySyncResult> {
-    const { userId, garminEmail, syncState, password } = args;
+    const { userId, garminEmail, syncState, sessionToken } = args;
 
     if (!garminEmail) {
         return { ok: false, code: 'GARMIN_EMAIL_NOT_CONFIGURED', message: 'Garmin email not configured' };
+    }
+    // No session yet (never signed in, or it was cleared) — the caller must prompt for a Garmin login.
+    if (!sessionToken) {
+        return { ok: false, code: 'INVALID_TOKEN', message: 'Garmin session required' };
     }
 
     const { mode, startDate, endDate } = resolveSyncWindow(syncState);
@@ -103,19 +112,15 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
         await wakeGarminService();
     }
 
-    const proxy = await postJson(proxyUrl, {
-        username: garminEmail,
-        startDate,
-        endDate,
-        ...(password ? { password } : {}),
-    });
+    // The Bearer token is the identity; the proxy forwards it to the microservice. No credentials.
+    const proxy = await postJson(proxyUrl, { startDate, endDate }, { Authorization: `Bearer ${sessionToken}` });
     if ('error' in proxy) {
         return { ok: false, code: 'PROXY_ERROR', message: proxy.error };
     }
     if (!proxy.ok) {
         const message = typeof proxy.payload.message === 'string' ? proxy.payload.message : undefined;
-        if (proxy.payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
-            return { ok: false, code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin token' };
+        if (proxy.status === 401 || proxy.payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
+            return { ok: false, code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
         }
         return { ok: false, code: 'PROXY_ERROR', message: message ?? 'Garmin service error' };
     }

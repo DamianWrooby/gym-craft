@@ -9,27 +9,27 @@ export type SyncResult =
     | { ok: true; mode: 'backfill' | 'incremental' | 'skipped'; activitiesUpserted: number; lastSyncedAt: Date }
     | { ok: false; status: number; code: string; message: string };
 
-export async function syncUserActivities(userId: string, password?: string): Promise<SyncResult> {
+export async function syncUserActivities(userId: string): Promise<SyncResult> {
     const state = await db.garminSyncState.findUnique({ where: { userId } });
     if (!state || !state.backfillComplete) {
-        return runBackfill(userId, password);
+        return runBackfill(userId);
     }
-    return runIncremental(userId, state.lastSyncedAt, password);
+    return runIncremental(userId, state.lastSyncedAt);
 }
 
-export async function backfillUser(userId: string, password?: string): Promise<SyncResult> {
-    return runBackfill(userId, password);
+export async function backfillUser(userId: string): Promise<SyncResult> {
+    return runBackfill(userId);
 }
 
-export async function incrementalSync(userId: string, password?: string): Promise<SyncResult> {
+export async function incrementalSync(userId: string): Promise<SyncResult> {
     const state = await db.garminSyncState.findUnique({ where: { userId } });
     if (!state || !state.backfillComplete) {
-        return runBackfill(userId, password);
+        return runBackfill(userId);
     }
-    return runIncremental(userId, state.lastSyncedAt, password);
+    return runIncremental(userId, state.lastSyncedAt);
 }
 
-async function runBackfill(userId: string, password?: string): Promise<SyncResult> {
+async function runBackfill(userId: string): Promise<SyncResult> {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setUTCDate(startDate.getUTCDate() - BACKFILL_DAYS);
@@ -38,7 +38,6 @@ async function runBackfill(userId: string, password?: string): Promise<SyncResul
         userId,
         startDate: toIsoDate(startDate),
         endDate: toIsoDate(endDate),
-        password,
     });
     if (!result.ok) {
         return { ok: false, status: result.status, code: result.code, message: result.message };
@@ -47,7 +46,7 @@ async function runBackfill(userId: string, password?: string): Promise<SyncResul
     return persistActivities(userId, result.activities, 'backfill');
 }
 
-async function runIncremental(userId: string, lastSyncedAt: Date | null, password?: string): Promise<SyncResult> {
+async function runIncremental(userId: string, lastSyncedAt: Date | null): Promise<SyncResult> {
     const endDate = new Date();
     const startDate = pickIncrementalStart(lastSyncedAt, endDate);
 
@@ -55,7 +54,6 @@ async function runIncremental(userId: string, lastSyncedAt: Date | null, passwor
         userId,
         startDate: toIsoDate(startDate),
         endDate: toIsoDate(endDate),
-        password,
     });
     if (!result.ok) {
         return { ok: false, status: result.status, code: result.code, message: result.message };
