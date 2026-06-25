@@ -129,7 +129,7 @@ describe('POST /api/user/[id]/garmin/sync', () => {
         expect(payload.code).toBe('PERSIST_FAILED');
     });
 
-    it('falls back to server-side sync when no activities are supplied', async () => {
+    it('falls back to server-side sync (using the stored token) when no activities are supplied', async () => {
         mocks.syncUserActivities.mockResolvedValue({
             ok: true,
             mode: 'incremental',
@@ -137,11 +137,11 @@ describe('POST /api/user/[id]/garmin/sync', () => {
             lastSyncedAt: new Date('2026-06-02T12:00:00Z'),
         });
 
-        const res = await makePost({ password: 'secret' });
+        const res = await makePost({});
         const payload = await res.json();
 
         expect(res.status).toBe(200);
-        expect(mocks.syncUserActivities).toHaveBeenCalledWith(userId, 'secret');
+        expect(mocks.syncUserActivities).toHaveBeenCalledWith(userId);
         expect(mocks.persistActivities).not.toHaveBeenCalled();
         expect(payload.data.activitiesUpserted).toBe(2);
     });

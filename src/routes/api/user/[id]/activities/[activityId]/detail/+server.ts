@@ -3,11 +3,9 @@ import { db } from '$lib/database';
 import { ensureActivityDetail } from '$lib/server/garmin/ensure-activity-detail';
 
 export async function POST({
-    request,
     params,
     locals,
 }: {
-    request: Request;
     params: { id: string; activityId: string };
     locals: App.Locals;
 }): Promise<Response> {
@@ -17,9 +15,6 @@ export async function POST({
     if (userId !== locals.user?.id) {
         return createResponse(403, { message: 'Unauthorized' });
     }
-
-    const body = await request.json().catch(() => null);
-    const password = typeof body?.password === 'string' ? body.password : undefined;
 
     const activity = await db.activity.findFirst({
         where: { id: activityId, userId },
@@ -39,7 +34,7 @@ export async function POST({
         return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: 'Activity not found' });
     }
 
-    const result = await ensureActivityDetail(userId, activity, password);
+    const result = await ensureActivityDetail(userId, activity);
     if (!result.ok) {
         return createResponse(result.status, { code: result.code, message: result.message });
     }

@@ -31,10 +31,9 @@ export async function POST({
         return persistFromClient(userId, body);
     }
 
-    // Backward-compatible fallback: perform the slow server-side fetch + persist. Kept so any
-    // caller that still posts only `{ password }` (or nothing) keeps working.
-    const password = typeof body?.password === 'string' ? body.password : undefined;
-    const result = await syncUserActivities(userId, password);
+    // Fallback: perform the slow server-side fetch + persist using the user's stored session
+    // token (identity is the token now, not a password in the body).
+    const result = await syncUserActivities(userId);
 
     if (!result.ok) {
         return createResponse(result.status, { code: result.code, message: result.message });

@@ -1,8 +1,8 @@
 import { to } from 'await-to-js';
-import { getGarminEmail } from '$lib/prisma/prisma';
+import { getGarminSessionToken } from '$lib/prisma/prisma';
 import { mapGarminActivities } from './activity-mapper';
 import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
-import { garminApiUrl, garminApiHeaders } from './config';
+import { garminApiUrl, garminBearerHeaders } from './config';
 import type { GarminActivity, GarminActivityRaw } from '@/models/garmin/activity.model';
 
 export interface FetchGarminActivitiesParams {
@@ -10,7 +10,6 @@ export interface FetchGarminActivitiesParams {
     startDate: string;
     endDate?: string;
     activityType?: string;
-    password?: string;
 }
 
 export type FetchGarminActivitiesResult =
@@ -25,20 +24,19 @@ export type FetchGarminActivitiesErrorCode =
     | 'GARMIN_SERVICE_ERROR';
 
 export async function fetchGarminActivities(params: FetchGarminActivitiesParams): Promise<FetchGarminActivitiesResult> {
-    const { userId, startDate, endDate, activityType, password } = params;
+    const { userId, startDate, endDate, activityType } = params;
 
-    const [emailError, email] = await to(getGarminEmail(userId));
-    if (emailError || !email) {
+    const [tokenError, sessionToken] = await to(getGarminSessionToken(userId));
+    if (tokenError || !sessionToken) {
         return {
             ok: false,
-            status: 400,
-            code: 'GARMIN_EMAIL_NOT_CONFIGURED',
-            message: 'Garmin email not configured',
+            status: 401,
+            code: 'INVALID_TOKEN',
+            message: 'No valid token found',
         };
     }
 
-    const requestBody: Record<string, string> = { username: String(email), startDate };
-    if (password) requestBody.password = password;
+    const requestBody: Record<string, string> = { startDate };
     if (endDate) requestBody.endDate = endDate;
     if (activityType) requestBody.activityType = activityType;
 
@@ -47,7 +45,7 @@ export async function fetchGarminActivities(params: FetchGarminActivitiesParams)
     const [fetchError, pyResponse] = await to(
         fetch(url, {
             method: 'POST',
-            headers: garminApiHeaders(),
+            headers: garminBearerHeaders(sessionToken),
             body: JSON.stringify(requestBody),
         }),
     );
@@ -73,9 +71,8 @@ export async function fetchGarminActivities(params: FetchGarminActivitiesParams)
 
     if (!pyResponse.ok) {
         const message: string = data?.message || 'Garmin service error';
-        const code: FetchGarminActivitiesErrorCode = isInvalidTokenMessage(message)
-            ? 'INVALID_TOKEN'
-            : 'GARMIN_SERVICE_ERROR';
+        const code: FetchGarminActivitiesErrorCode =
+            pyResponse.status === 401 || isInvalidTokenMessage(message) ? 'INVALID_TOKEN' : 'GARMIN_SERVICE_ERROR';
         return { ok: false, status: pyResponse.status, code, message };
     }
 

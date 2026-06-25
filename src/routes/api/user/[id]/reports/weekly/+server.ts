@@ -42,7 +42,7 @@ export async function POST({
     if ('error' in bodyValidation) {
         return createResponse(400, { code: bodyValidation.code, message: bodyValidation.error });
     }
-    const { periodStart, periodEnd, goalIds, notes, password, overwrite } = bodyValidation.value;
+    const { periodStart, periodEnd, goalIds, notes, overwrite } = bodyValidation.value;
 
     const [profile, count, existing, goals] = await Promise.all([
         getAthleteProfile(userId),
@@ -82,7 +82,7 @@ export async function POST({
         });
     }
 
-    const syncResult = await syncUserActivities(userId, password);
+    const syncResult = await syncUserActivities(userId);
     if (!syncResult.ok) {
         console.warn(`[weekly-report] activity sync failed for user ${userId}: ${syncResult.code}`);
     }
@@ -90,8 +90,8 @@ export async function POST({
     const prevStart = addDays(periodStart, -7);
     const prevEnd = addDays(periodStart, -1);
     const [currentWeek, previousWeek] = await Promise.all([
-        fetchGarminActivities({ userId, startDate: periodStart, endDate: periodEnd, password }),
-        fetchGarminActivities({ userId, startDate: prevStart, endDate: prevEnd, password }),
+        fetchGarminActivities({ userId, startDate: periodStart, endDate: periodEnd }),
+        fetchGarminActivities({ userId, startDate: prevStart, endDate: prevEnd }),
     ]);
     if (!currentWeek.ok) {
         return createResponse(currentWeek.status, { code: currentWeek.code, message: currentWeek.message });

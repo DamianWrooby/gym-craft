@@ -1,7 +1,7 @@
-import { getGarminEmail } from '$lib/prisma/prisma';
+import { getGarminSessionToken } from '$lib/prisma/prisma';
 import { to } from 'await-to-js';
 import { createResponse } from '$lib/utils/response';
-import { garminApiUrl, garminApiKeyHeader } from '$lib/server/garmin/config';
+import { garminApiUrl, garminBearerKeyHeaders } from '$lib/server/garmin/config';
 
 export async function POST({
     request,
@@ -19,20 +19,22 @@ export async function POST({
     }
 
     const body = await request.json();
-    const { workout, password } = body;
+    const { workout } = body;
 
     if (!workout) return createResponse(400, { message: 'workout is required' });
 
-    const [emailError, email] = await to(getGarminEmail(userId));
-    if (emailError || !email) return createResponse(400, { message: 'Garmin email not configured' });
+    const [tokenError, sessionToken] = await to(getGarminSessionToken(userId));
+    if (tokenError || !sessionToken) {
+        return createResponse(401, { code: 'INVALID_TOKEN', message: 'No valid token found' });
+    }
 
     const formData = new FormData();
-    formData.append('username', String(email));
-    if (password) formData.append('password', password);
     formData.append('file', new Blob([JSON.stringify(workout)], { type: 'application/json' }), 'workout.json');
 
     const url = `${garminApiUrl}/upload-workout`;
-    const [fetchError, pyResponse] = await to(fetch(url, { method: 'POST', headers: garminApiKeyHeader(), body: formData }));
+    const [fetchError, pyResponse] = await to(
+        fetch(url, { method: 'POST', headers: garminBearerKeyHeaders(sessionToken), body: formData }),
+    );
 
     if (fetchError || !pyResponse) {
         return createResponse(502, { message: fetchError?.message || 'Failed to reach Garmin service' });

@@ -260,6 +260,31 @@ export async function saveGarminEmail(userId: string, garminEmail: string): Prom
     return true;
 }
 
+/** Returns the user's stored Garmin session token (Bearer), or null if not yet authenticated. */
+export async function getGarminSessionToken(userId: string): Promise<string | null> {
+    const row = await db.garminData.findUnique({
+        where: { userId },
+        select: { sessionToken: true },
+    });
+    return row?.sessionToken ?? null;
+}
+
+/** Persists the Garmin session token issued by the microservice's /authenticate. */
+export async function saveGarminSessionToken(userId: string, sessionToken: string): Promise<void> {
+    await db.garminData.update({
+        where: { userId },
+        data: { sessionToken },
+    });
+}
+
+/** Clears the stored Garmin session token (e.g. after the microservice reports it expired). */
+export async function clearGarminSessionToken(userId: string): Promise<void> {
+    await db.garminData.updateMany({
+        where: { userId },
+        data: { sessionToken: null },
+    });
+}
+
 export async function getAthleteProfile(userId: string): Promise<AthleteProfile | null> {
     const key = athleteProfileKey(userId);
     const cached = cache.get<AthleteProfile | null>(key);

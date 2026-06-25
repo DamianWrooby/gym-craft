@@ -83,10 +83,14 @@ model VerificationToken {
 }
 
 model GarminData {
-    id     String @id @default(uuid())
-    userId String @unique
-    email  String @default("") @db.VarChar(50)
-    User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id           String  @id @default(uuid())
+    userId       String  @unique
+    email        String  @default("") @db.VarChar(50)
+    // Opaque Garmin session token issued by the curl_cffi microservice's /authenticate.
+    // Exchanged once for the user's Garmin password; sent as a Bearer token on all subsequent
+    // Garmin calls so the email is no longer the identity. Nullable until the user first signs in.
+    sessionToken String?
+    User         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
 }
