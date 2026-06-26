@@ -34,7 +34,7 @@ const payload = {
     samples,
 };
 
-function makePost(_body: unknown = {}, id: string = userId, actId: string = activityId) {
+function makePost(id: string = userId, actId: string = activityId) {
     // The endpoint identifies the user via the stored session token (no request body needed).
     return POST({ params: { id, activityId: actId }, locals });
 }
@@ -45,7 +45,7 @@ afterEach(() => {
 
 describe('POST /api/user/[id]/activities/[activityId]/detail', () => {
     it('returns 403 when the path user does not match the session user', async () => {
-        const res = await makePost({}, 'someone-else');
+        const res = await makePost('someone-else');
         expect(res.status).toBe(403);
         expect(mocks.findFirst).not.toHaveBeenCalled();
     });
