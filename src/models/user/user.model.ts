@@ -1,3 +1,5 @@
+import type { SubscriptionTier } from '@/constants/subscription.constants';
+
 export interface User {
     id: string;
     name: string;
@@ -7,4 +9,5 @@ export interface User {
     role: string;
     generatedPlansNumber: number;
     plansLeft: number;
+    subscriptionTier: SubscriptionTier;
 }
