@@ -18,10 +18,10 @@ export async function POST({ request, locals }: { request: Request; locals: App.
 
     const body = await request.json().catch(() => null);
     const plan = body?.plan as PlanKey | undefined;
-    const selected = plan ? PLANS[plan] : undefined;
-    if (!selected) {
+    if (!plan || !PLANS[plan]) {
         return createResponse(400, { code: 'INVALID_PLAN', message: 'Unknown plan' });
     }
+    const selected = PLANS[plan];
 
     const userId = locals.user.id;
     const dbUser = await db.user.findUnique({

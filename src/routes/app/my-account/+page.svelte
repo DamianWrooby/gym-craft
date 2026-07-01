@@ -7,6 +7,7 @@
     import { makeToast } from '$lib/utils/toasts.js';
     import Card from '@components/card/Card.svelte';
     import { goto } from '$app/navigation';
+    import BillingPanel from '$lib/components/billing/BillingPanel.svelte';
 
     const user: User = $page.data.user;
     const formData = { password: '' };
@@ -53,6 +54,7 @@
     <p>Name: <span class="text-secondary-400 font-bold">{user.name}</span></p>
     <p>Generated plans number: {user.generatedPlansNumber}</p>
     <p>Plans left: {user.plansLeft}</p>
+    <BillingPanel tier={user.subscriptionTier} />
     <div class="flex justify-center mt-8">
         <a href="/app/profile" class="btn variant-soft-primary">
             <span>Edit athlete profile &amp; running goals</span>
