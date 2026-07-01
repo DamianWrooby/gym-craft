@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { db } from '$lib/database';
+import { resolveTier } from '$lib/server/subscription/tier';
 import type { RequestEvent } from '@sveltejs/kit';
 
 function hashSessionToken(token: string): string {
@@ -23,6 +24,9 @@ export async function updateUser(event: RequestEvent) {
             emailVerified: true,
             marketingAgreement: true,
             email: true,
+            subscriptionStatus: true,
+            currentPeriodEnd: true,
+            lifetimeSupporter: true,
         },
     });
 
@@ -35,6 +39,11 @@ export async function updateUser(event: RequestEvent) {
 
     if (user) {
         const { id, username, role, generatedPlansNumber, emailVerified, marketingAgreement, email } = user;
+        const subscriptionTier = resolveTier({
+            lifetimeSupporter: user.lifetimeSupporter,
+            subscriptionStatus: user.subscriptionStatus,
+            currentPeriodEnd: user.currentPeriodEnd,
+        });
         if (event.locals) {
             event.locals.user = {
                 id,
@@ -45,6 +54,7 @@ export async function updateUser(event: RequestEvent) {
                 emailVerified,
                 marketingAgreement,
                 email,
+                subscriptionTier,
             };
         }
     }
