@@ -1,0 +1,21 @@
+import { describe, expect, it } from 'vitest';
+import { TIER_LIMITS, getLimit } from './subscription.constants';
+
+describe('TIER_LIMITS', () => {
+    it('encodes the agreed FREE caps', () => {
+        expect(TIER_LIMITS.FREE.weeklyReportsPerMonth).toBe(2);
+        expect(TIER_LIMITS.FREE.explainRunsPerDay).toBe(1);
+    });
+
+    it('encodes the agreed SUPPORTER caps', () => {
+        expect(TIER_LIMITS.SUPPORTER.weeklyReportsPerMonth).toBe(15);
+        expect(TIER_LIMITS.SUPPORTER.explainRunsPerDay).toBe(5);
+    });
+});
+
+describe('getLimit', () => {
+    it('returns the cap for a tier + kind', () => {
+        expect(getLimit('FREE', 'weeklyReportsPerMonth')).toBe(2);
+        expect(getLimit('SUPPORTER', 'explainRunsPerDay')).toBe(5);
+    });
+});
