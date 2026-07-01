@@ -4,7 +4,8 @@ import { ensureActivityDetail } from '$lib/server/garmin/ensure-activity-detail'
 import { buildExplainPrompt } from '$lib/server/reports/explain-activity';
 import { callExplainRunProxy } from '$lib/server/reports/call-proxy';
 import { computeLoadProfile } from '$lib/server/analytics/load';
-import { EXPLAIN_QUESTION_MAX_LENGTH, EXPLAIN_RUN_DAILY_LIMIT } from '@/constants/training-report.constants';
+import { EXPLAIN_QUESTION_MAX_LENGTH } from '@/constants/training-report.constants';
+import { getLimit } from '@/constants/subscription.constants';
 import { toIsoDate } from '$lib/utils/iso-week';
 import type { TrimpSex } from '$lib/server/analytics/load/trimp';
 
@@ -49,10 +50,11 @@ export async function POST({
         }),
     ]);
 
-    if ((usage?.count ?? 0) >= EXPLAIN_RUN_DAILY_LIMIT) {
+    const explainLimit = getLimit(locals.user.subscriptionTier, 'explainRunsPerDay');
+    if ((usage?.count ?? 0) >= explainLimit) {
         return createResponse(429, {
             code: 'EXPLAIN_LIMIT_REACHED',
-            message: `Daily limit of ${EXPLAIN_RUN_DAILY_LIMIT} explanations reached. Try again tomorrow.`,
+            message: `Daily limit of ${explainLimit} explanations reached. Try again tomorrow.`,
         });
     }
     if (!activity) {
