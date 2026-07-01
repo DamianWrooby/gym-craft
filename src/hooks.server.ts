@@ -10,6 +10,7 @@ const publicPaths = new Set([
     '/verification-mail-sent',
     '/privacy-policy',
     '/terms-of-use',
+    '/api/stripe/webhook',
 ]);
 
 const LOGIN_PAGE_PATH = '/app/login';
