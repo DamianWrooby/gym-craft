@@ -6,7 +6,9 @@ const past = new Date(Date.now() - 86_400_000);
 
 describe('resolveTier', () => {
     it('returns FREE for a brand-new user', () => {
-        expect(resolveTier({ lifetimeSupporter: false, subscriptionStatus: null, currentPeriodEnd: null })).toBe('FREE');
+        expect(resolveTier({ lifetimeSupporter: false, subscriptionStatus: null, currentPeriodEnd: null })).toBe(
+            'FREE',
+        );
     });
 
     it('returns SUPPORTER for a lifetime supporter regardless of period', () => {
@@ -28,8 +30,8 @@ describe('resolveTier', () => {
     });
 
     it('returns FREE for a canceled subscription', () => {
-        expect(resolveTier({ lifetimeSupporter: false, subscriptionStatus: 'canceled', currentPeriodEnd: future })).toBe(
-            'FREE',
-        );
+        expect(
+            resolveTier({ lifetimeSupporter: false, subscriptionStatus: 'canceled', currentPeriodEnd: future }),
+        ).toBe('FREE');
     });
 });
