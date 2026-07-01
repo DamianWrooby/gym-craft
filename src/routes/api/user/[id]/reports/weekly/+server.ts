@@ -16,7 +16,7 @@ import { callWeeklyReportProxy } from '$lib/server/reports/call-proxy';
 import { validateBody, validateDates } from '$lib/server/reports/weekly-validation';
 import { addDays } from '$lib/utils/iso-week';
 import { partitionRunningActivities } from '$lib/utils/activity-type';
-import { WEEKLY_REPORT_MONTHLY_LIMIT } from '@/constants/training-report.constants';
+import { getLimit } from '@/constants/subscription.constants';
 import type { AthleteProfile, Prisma, RunningGoal } from '@prisma/client';
 import type { MetricsBundle } from '$lib/server/analytics/types';
 
@@ -60,7 +60,8 @@ export async function POST({
         return createResponse(400, { code: 'INVALID_PERIOD', message: dateValidation.error });
     }
 
-    if (count >= WEEKLY_REPORT_MONTHLY_LIMIT) {
+    const reportLimit = getLimit(locals.user.subscriptionTier, 'weeklyReportsPerMonth');
+    if (count >= reportLimit) {
         return createResponse(403, {
             code: 'REPORT_LIMIT_REACHED',
             message: 'Monthly report generation limit reached',

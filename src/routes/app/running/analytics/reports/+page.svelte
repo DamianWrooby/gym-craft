@@ -11,7 +11,7 @@
     import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
     import { makeToast } from '$lib/utils/toasts';
     import { to } from 'await-to-js';
-    import { WEEKLY_REPORT_MONTHLY_LIMIT } from '@/constants/training-report.constants';
+    import { TIER_LIMITS } from '@/constants/subscription.constants';
     import type { User } from '@/models/user/user.model';
     import type { GoalType } from '@prisma/client';
 
@@ -45,7 +45,8 @@
     const hasProfile: boolean = $page.data.hasProfile;
     const goals: RunningGoalSummary[] = $page.data.goals;
 
-    $: slotsRemaining = WEEKLY_REPORT_MONTHLY_LIMIT - monthlyReportCount;
+    $: reportLimit = TIER_LIMITS[user.subscriptionTier].weeklyReportsPerMonth;
+    $: slotsRemaining = reportLimit - monthlyReportCount;
     $: canGenerate = hasProfile && slotsRemaining > 0;
 
     const modalStore = getModalStore();
@@ -67,7 +68,7 @@
         if (slotsRemaining <= 0) {
             makeToast(
                 toastStore,
-                `You've used all ${WEEKLY_REPORT_MONTHLY_LIMIT} report generations this month.`,
+                `You've used all ${reportLimit} report generations this month.`,
                 'variant-filled-warning',
             );
             return;
@@ -174,7 +175,7 @@
             case 'REPORT_LIMIT_REACHED':
                 makeToast(
                     toastStore,
-                    `You've used all ${WEEKLY_REPORT_MONTHLY_LIMIT} report generations this month.`,
+                    `You've used all ${reportLimit} report generations this month.`,
                     'variant-filled-warning',
                 );
                 break;
@@ -208,7 +209,7 @@
         <div class="flex flex-row justify-between items-center py-6">
             <h2 class="h2 text-xl font-bold">Weekly reports</h2>
             <span class="text-sm opacity-70">
-                {monthlyReportCount}/{WEEKLY_REPORT_MONTHLY_LIMIT} used this month
+                {monthlyReportCount}/{reportLimit} used this month
             </span>
         </div>
 

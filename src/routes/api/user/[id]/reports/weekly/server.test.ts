@@ -42,7 +42,7 @@ import { POST } from './+server';
 import { validateBody, validateDates } from '$lib/server/reports/weekly-validation';
 
 const userId = 'user-1';
-const locals = { user: { id: userId } } as unknown as App.Locals;
+const locals = { user: { id: userId, subscriptionTier: 'FREE' } } as unknown as App.Locals;
 
 const validBody = {
     periodStart: '2026-05-04', // Monday
@@ -189,7 +189,7 @@ describe('POST /api/user/[id]/reports/weekly — auth and gating', () => {
     });
 
     it('returns 403 when pre-flight count already meets the monthly limit', async () => {
-        mocks.getMonthlyWeeklyReportCount.mockResolvedValueOnce(4);
+        mocks.getMonthlyWeeklyReportCount.mockResolvedValueOnce(2);
         const response = await POST({ request: makeRequest(validBody), params: { id: userId }, locals });
         expect(response.status).toBe(403);
         expect(mocks.fetchGarminActivities).not.toHaveBeenCalled();
