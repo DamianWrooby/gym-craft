@@ -21,6 +21,12 @@ model User {
     roleId               Int
     role                 Roles               @relation(fields: [roleId], references: [id])
     generatedPlansNumber Int                 @default(0)
+    subscriptionTier     SubscriptionTier    @default(FREE)
+    stripeCustomerId     String?             @unique
+    stripeSubscriptionId String?
+    subscriptionStatus   String?
+    currentPeriodEnd     DateTime?
+    lifetimeSupporter    Boolean             @default(false)
     plans                Plan[]
     verificationTokens   VerificationToken[]
     garminData           GarminData?
@@ -57,6 +63,11 @@ enum Role {
     ADMIN
     MODERATOR
     USER
+}
+
+enum SubscriptionTier {
+    FREE
+    SUPPORTER
 }
 
 model Configuration {
