@@ -1,7 +1,9 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { afterNavigate, goto } from '$app/navigation';
-    import { ArrowLeftIcon } from 'svelte-feather-icons';
+    import { ArrowLeftIcon, DownloadIcon } from 'svelte-feather-icons';
+    import { getToastStore } from '@skeletonlabs/skeleton';
+    import { makeToast } from '$lib/utils/toasts';
     import { resolveBackTarget } from '$lib/utils/back-target';
     import Card from '@components/card/Card.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
@@ -48,6 +50,19 @@
         backTarget = resolveBackTarget(from?.url.pathname, '/app/running/analytics/reports');
     });
 
+    const toastStore = getToastStore();
+    const user = $page.data.user;
+    $: isSupporter = user.subscriptionTier === 'SUPPORTER';
+    $: exportUrl = `/api/user/${user.id}/reports/weekly/${report.id}/export`;
+
+    function exportBlocked() {
+        makeToast(
+            toastStore,
+            'Report export is a Supporter feature — upgrade from your account page.',
+            'variant-filled-warning',
+        );
+    }
+
     function formatPeriod(start: string, end: string): string {
         const fmt = (s: string) =>
             new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', {
@@ -67,7 +82,24 @@
         <button type="button" on:click={() => goto(backTarget)} aria-label="Go back">
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
-        <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString('en-US')}</p>
+        <div class="flex items-center gap-3">
+            {#if isSupporter}
+                <a href={exportUrl} download class="btn btn-sm variant-soft-primary" aria-label="Export report">
+                    <DownloadIcon size="16" />
+                    <span>Export .md</span>
+                </a>
+            {:else}
+                <button
+                    type="button"
+                    class="btn btn-sm variant-soft-surface opacity-60"
+                    on:click={exportBlocked}
+                    aria-label="Export report (Supporter feature)">
+                    <DownloadIcon size="16" />
+                    <span>Export .md</span>
+                </button>
+            {/if}
+            <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString('en-US')}</p>
+        </div>
     </div>
 
     <header class="mb-10">
