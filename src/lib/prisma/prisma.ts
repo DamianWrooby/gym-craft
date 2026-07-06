@@ -408,6 +408,25 @@ export async function getMonthlyWeeklyReportCount(userId: string): Promise<numbe
     return row?.count ?? 0;
 }
 
+export async function getMonthlyGymPlanCount(userId: string): Promise<number> {
+    // NOT cached — mirrors getMonthlyWeeklyReportCount; pre-flight hint only.
+    const monthKey = currentMonthStartIso();
+    const row = await db.aiUsage.findUnique({
+        where: { userId_kind_day: { userId, kind: 'gym_plan', day: monthKey } },
+        select: { count: true },
+    });
+    return row?.count ?? 0;
+}
+
+export async function incrementMonthlyGymPlanCount(userId: string): Promise<void> {
+    const monthKey = currentMonthStartIso();
+    await db.aiUsage.upsert({
+        where: { userId_kind_day: { userId, kind: 'gym_plan', day: monthKey } },
+        create: { userId, kind: 'gym_plan', day: monthKey, count: 1 },
+        update: { count: { increment: 1 } },
+    });
+}
+
 export interface PersistTrainingReportInput {
     userId: string;
     type: ReportType;
