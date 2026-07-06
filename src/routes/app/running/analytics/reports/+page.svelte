@@ -9,7 +9,7 @@
     import GenerateReportModal from '$lib/components/training-report/GenerateReportModal.svelte';
     import { ArrowLeftIcon } from 'svelte-feather-icons';
     import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
-    import { makeToast } from '$lib/utils/toasts';
+    import { makeToast, makeUpgradeToast } from '$lib/utils/toasts';
     import { to } from 'await-to-js';
     import { TIER_LIMITS } from '@/constants/subscription.constants';
     import type { User } from '@/models/user/user.model';
@@ -59,6 +59,15 @@
         modalStore.clear();
     });
 
+    function notifyReportLimitReached() {
+        const message = `You've used all ${reportLimit} report generations this month.`;
+        if (user.subscriptionTier === 'FREE') {
+            makeUpgradeToast(toastStore, message);
+        } else {
+            makeToast(toastStore, message, 'variant-filled-warning');
+        }
+    }
+
     function openGenerateModal() {
         if (!hasProfile) {
             makeToast(toastStore, 'Please set up your athlete profile first', 'variant-filled-warning');
@@ -66,11 +75,7 @@
             return;
         }
         if (slotsRemaining <= 0) {
-            makeToast(
-                toastStore,
-                `You've used all ${reportLimit} report generations this month.`,
-                'variant-filled-warning',
-            );
+            notifyReportLimitReached();
             return;
         }
 
@@ -173,11 +178,7 @@
                 openGarminLoginModal();
                 return;
             case 'REPORT_LIMIT_REACHED':
-                makeToast(
-                    toastStore,
-                    `You've used all ${reportLimit} report generations this month.`,
-                    'variant-filled-warning',
-                );
+                notifyReportLimitReached();
                 break;
             case 'LLM_FAILED':
                 makeToast(
