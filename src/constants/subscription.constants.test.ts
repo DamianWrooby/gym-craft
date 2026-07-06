@@ -5,11 +5,17 @@ describe('TIER_LIMITS', () => {
     it('encodes the agreed FREE caps', () => {
         expect(TIER_LIMITS.FREE.weeklyReportsPerMonth).toBe(2);
         expect(TIER_LIMITS.FREE.explainRunsPerDay).toBe(1);
+        expect(TIER_LIMITS.FREE.gymPlansPerMonth).toBeNull();
+        expect(TIER_LIMITS.FREE.garminBackfillDays).toBe(60);
+        expect(TIER_LIMITS.FREE.aiModel).toBe('gpt-5.4-mini');
     });
 
     it('encodes the agreed SUPPORTER caps', () => {
         expect(TIER_LIMITS.SUPPORTER.weeklyReportsPerMonth).toBe(15);
         expect(TIER_LIMITS.SUPPORTER.explainRunsPerDay).toBe(5);
+        expect(TIER_LIMITS.SUPPORTER.gymPlansPerMonth).toBe(5);
+        expect(TIER_LIMITS.SUPPORTER.garminBackfillDays).toBe(120);
+        expect(TIER_LIMITS.SUPPORTER.aiModel).toBe('gpt-5.4');
     });
 });
 
