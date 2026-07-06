@@ -1,20 +1,30 @@
 export type SubscriptionTier = 'FREE' | 'SUPPORTER';
 
-// Phase 1 caps only. Phase 2 will extend TierLimits with gymPlansPerMonth,
-// garminBackfillDays, model, and reportExport. Keep this the single source of truth.
+// Single source of truth for tier gating.
+// gymPlansPerMonth: null means the legacy lifetime cap applies
+// (Configuration generalPlanLimit − User.generatedPlansNumber).
 export interface TierLimits {
     weeklyReportsPerMonth: number;
     explainRunsPerDay: number;
+    gymPlansPerMonth: number | null;
+    garminBackfillDays: number;
+    aiModel: string;
 }
 
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     FREE: {
         weeklyReportsPerMonth: 2,
         explainRunsPerDay: 1,
+        gymPlansPerMonth: null,
+        garminBackfillDays: 60,
+        aiModel: 'gpt-5.4-mini',
     },
     SUPPORTER: {
         weeklyReportsPerMonth: 15,
         explainRunsPerDay: 5,
+        gymPlansPerMonth: 5,
+        garminBackfillDays: 120,
+        aiModel: 'gpt-5.4',
     },
 };
 
