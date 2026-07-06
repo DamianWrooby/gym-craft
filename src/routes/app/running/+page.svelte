@@ -29,6 +29,7 @@
     // The Garmin session token; refreshed in-place when the user re-authenticates via the modal.
     let sessionToken: string | null = data.garminSessionToken;
 
+    $: backfillDays = TIER_LIMITS[($page.data.user?.subscriptionTier as SubscriptionTier) ?? 'FREE'].garminBackfillDays;
     $: backfillNeeded = data.garminConnected && (!data.syncState || !data.syncState.backfillComplete);
     $: lastSyncedLabel = data.syncState?.lastSyncedAt ? formatRelative(data.syncState.lastSyncedAt) : null;
 
@@ -53,9 +54,7 @@
                 garminEmail: data.garminEmail,
                 sessionToken,
                 syncState: data.syncState,
-                backfillDays:
-                    TIER_LIMITS[($page.data.user?.subscriptionTier as SubscriptionTier) ?? 'FREE']
-                        .garminBackfillDays,
+                backfillDays,
             });
 
             if (result.ok) {
@@ -138,8 +137,8 @@
                     <div class="flex-1">
                         <p class="font-semibold">Import your Garmin history</p>
                         <p class="text-sm opacity-80">
-                            We'll fetch your last 90 days of activities so training-load analytics can work. This runs
-                            once and takes a few seconds.
+                            We'll fetch your last {backfillDays} days of activities so training-load analytics can work. This
+                            runs once and takes a few seconds.
                         </p>
                     </div>
                     <button class="btn variant-filled-warning" on:click={() => runSync()} disabled={syncing}>

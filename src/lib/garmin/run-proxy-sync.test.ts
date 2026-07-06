@@ -40,7 +40,9 @@ describe('runProxySync', () => {
     it('sends the session token as a Bearer header to the proxy (no credentials)', async () => {
         fetchMock
             .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 1 }] }))
-            .mockResolvedValueOnce(jsonResponse(200, { data: { mode: 'backfill', activitiesUpserted: 1, lastSyncedAt: 'x' } }));
+            .mockResolvedValueOnce(
+                jsonResponse(200, { data: { mode: 'backfill', activitiesUpserted: 1, lastSyncedAt: 'x' } }),
+            );
 
         await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 60 });
 
