@@ -27,6 +27,8 @@ export interface RunProxySyncArgs {
     syncState: SyncStateSnapshot | null;
     /** Opaque Garmin session token (Bearer). When absent, the caller must prompt for a login. */
     sessionToken: string | null;
+    /** Tier-based backfill window (TIER_LIMITS[tier].garminBackfillDays). */
+    backfillDays: number;
 }
 
 const GARMIN_WAKE_BUDGET_MS = 120_000;
@@ -93,7 +95,7 @@ async function postJson(url: string, body: unknown, headers: Record<string, stri
  * On `STALE_STATE` the caller should reload fresh sync state and retry once.
  */
 export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySyncResult> {
-    const { userId, garminEmail, syncState, sessionToken } = args;
+    const { userId, garminEmail, syncState, sessionToken, backfillDays } = args;
 
     if (!garminEmail) {
         return { ok: false, code: 'GARMIN_EMAIL_NOT_CONFIGURED', message: 'Garmin email not configured' };
@@ -103,7 +105,7 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
         return { ok: false, code: 'INVALID_TOKEN', message: 'Garmin session required' };
     }
 
-    const { mode, startDate, endDate } = resolveSyncWindow(syncState);
+    const { mode, startDate, endDate } = resolveSyncWindow(syncState, backfillDays);
     const proxyUrl = isProduction() ? appConfig.garminActivitiesApiUrlPROD : appConfig.garminActivitiesApiUrlDEV;
 
     // Wake the spun-down microservice from the browser before the proxy tries to use it. In dev

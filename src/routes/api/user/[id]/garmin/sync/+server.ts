@@ -2,6 +2,7 @@ import { createResponse } from '$lib/utils/response';
 import { db } from '$lib/database';
 import { syncUserActivities, persistActivities } from '$lib/server/garmin/sync-activities';
 import { mapGarminActivities } from '$lib/server/garmin/activity-mapper';
+import { getLimit } from '@/constants/subscription.constants';
 import type { SyncMode } from '$lib/garmin/sync-window';
 import type { GarminActivityRaw } from '@/models/garmin/activity.model';
 
@@ -27,13 +28,15 @@ export async function POST({
 
     // Proxy-driven path: the browser already fetched activities via the AI proxy and posts
     // them here for a fast map + upsert (bypasses Netlify's 30s timeout on the slow fetch).
+    const backfillDays = getLimit(locals.user.subscriptionTier, 'garminBackfillDays');
+
     if (body && Array.isArray(body.activities)) {
-        return persistFromClient(userId, body);
+        return persistFromClient(userId, body, backfillDays);
     }
 
     // Fallback: perform the slow server-side fetch + persist using the user's stored session
     // token (identity is the token now, not a password in the body).
-    const result = await syncUserActivities(userId);
+    const result = await syncUserActivities(userId, backfillDays);
 
     if (!result.ok) {
         return createResponse(result.status, { code: result.code, message: result.message });
@@ -48,7 +51,11 @@ export async function POST({
     });
 }
 
-async function persistFromClient(userId: string, body: { activities: unknown; mode?: unknown }): Promise<Response> {
+async function persistFromClient(
+    userId: string,
+    body: { activities: unknown; mode?: unknown },
+    backfillDays: number,
+): Promise<Response> {
     const activities = body.activities as unknown[];
 
     if (activities.length > MAX_SYNC_ACTIVITIES) {
@@ -70,7 +77,7 @@ async function persistFromClient(userId: string, body: { activities: unknown; mo
 
     try {
         const mapped = mapGarminActivities(activities as GarminActivityRaw[]);
-        const result = await persistActivities(userId, mapped, serverMode);
+        const result = await persistActivities(userId, mapped, serverMode, backfillDays);
 
         if (!result.ok) {
             return createResponse(result.status, { code: result.code, message: result.message });

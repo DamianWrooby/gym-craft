@@ -9,6 +9,7 @@
     import { makeToast } from '$lib/utils/toasts';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
+    import { TIER_LIMITS, type SubscriptionTier } from '@/constants/subscription.constants';
     import { authenticateGarmin } from '$lib/garmin/authenticate';
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
 
@@ -52,6 +53,9 @@
                 garminEmail: data.garminEmail,
                 sessionToken,
                 syncState: data.syncState,
+                backfillDays:
+                    TIER_LIMITS[($page.data.user?.subscriptionTier as SubscriptionTier) ?? 'FREE']
+                        .garminBackfillDays,
             });
 
             if (result.ok) {

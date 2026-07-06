@@ -1,7 +1,7 @@
 import { db } from '$lib/database';
 import { fetchGarminActivities } from './fetch-activities';
 import { toIsoDate } from '$lib/utils/iso-week';
-import { BACKFILL_DAYS, pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
+import { pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 import type { Prisma } from '@prisma/client';
 
@@ -9,30 +9,30 @@ export type SyncResult =
     | { ok: true; mode: 'backfill' | 'incremental' | 'skipped'; activitiesUpserted: number; lastSyncedAt: Date }
     | { ok: false; status: number; code: string; message: string };
 
-export async function syncUserActivities(userId: string): Promise<SyncResult> {
+export async function syncUserActivities(userId: string, backfillDays: number): Promise<SyncResult> {
     const state = await db.garminSyncState.findUnique({ where: { userId } });
     if (!state || !state.backfillComplete) {
-        return runBackfill(userId);
+        return runBackfill(userId, backfillDays);
     }
     return runIncremental(userId, state.lastSyncedAt);
 }
 
-export async function backfillUser(userId: string): Promise<SyncResult> {
-    return runBackfill(userId);
+export async function backfillUser(userId: string, backfillDays: number): Promise<SyncResult> {
+    return runBackfill(userId, backfillDays);
 }
 
-export async function incrementalSync(userId: string): Promise<SyncResult> {
+export async function incrementalSync(userId: string, backfillDays: number): Promise<SyncResult> {
     const state = await db.garminSyncState.findUnique({ where: { userId } });
     if (!state || !state.backfillComplete) {
-        return runBackfill(userId);
+        return runBackfill(userId, backfillDays);
     }
     return runIncremental(userId, state.lastSyncedAt);
 }
 
-async function runBackfill(userId: string): Promise<SyncResult> {
+async function runBackfill(userId: string, backfillDays: number): Promise<SyncResult> {
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setUTCDate(startDate.getUTCDate() - BACKFILL_DAYS);
+    startDate.setUTCDate(startDate.getUTCDate() - backfillDays);
 
     const result = await fetchGarminActivities({
         userId,
@@ -43,7 +43,7 @@ async function runBackfill(userId: string): Promise<SyncResult> {
         return { ok: false, status: result.status, code: result.code, message: result.message };
     }
 
-    return persistActivities(userId, result.activities, 'backfill');
+    return persistActivities(userId, result.activities, 'backfill', backfillDays);
 }
 
 async function runIncremental(userId: string, lastSyncedAt: Date | null): Promise<SyncResult> {
@@ -59,7 +59,7 @@ async function runIncremental(userId: string, lastSyncedAt: Date | null): Promis
         return { ok: false, status: result.status, code: result.code, message: result.message };
     }
 
-    return persistActivities(userId, result.activities, 'incremental');
+    return persistActivities(userId, result.activities, 'incremental', 0);
 }
 
 /**
@@ -74,13 +74,14 @@ export async function persistActivities(
     userId: string,
     activities: GarminActivity[],
     mode: SyncMode,
+    backfillDays: number,
 ): Promise<SyncResult> {
     const upserted = await upsertActivities(userId, activities);
     const now = new Date();
 
     if (mode === 'backfill') {
         const fallbackOldest = new Date(now);
-        fallbackOldest.setUTCDate(fallbackOldest.getUTCDate() - BACKFILL_DAYS);
+        fallbackOldest.setUTCDate(fallbackOldest.getUTCDate() - backfillDays);
         const oldestActivityAt = findOldestStartTime(activities) ?? fallbackOldest;
 
         await db.garminSyncState.upsert({

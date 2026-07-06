@@ -26,13 +26,13 @@ afterEach(() => {
 
 describe('runProxySync', () => {
     it('short-circuits when no Garmin email is configured', async () => {
-        const result = await runProxySync({ userId, garminEmail: null, sessionToken, syncState });
+        const result = await runProxySync({ userId, garminEmail: null, sessionToken, syncState, backfillDays: 60 });
         expect(result).toEqual({ ok: false, code: 'GARMIN_EMAIL_NOT_CONFIGURED', message: expect.any(String) });
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('short-circuits with INVALID_TOKEN when there is no session token', async () => {
-        const result = await runProxySync({ userId, garminEmail, sessionToken: null, syncState });
+        const result = await runProxySync({ userId, garminEmail, sessionToken: null, syncState, backfillDays: 60 });
         expect(result).toEqual({ ok: false, code: 'INVALID_TOKEN', message: expect.any(String) });
         expect(fetchMock).not.toHaveBeenCalled();
     });
@@ -42,7 +42,7 @@ describe('runProxySync', () => {
             .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 1 }] }))
             .mockResolvedValueOnce(jsonResponse(200, { data: { mode: 'backfill', activitiesUpserted: 1, lastSyncedAt: 'x' } }));
 
-        await runProxySync({ userId, garminEmail, sessionToken, syncState });
+        await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 60 });
 
         const proxyInit = fetchMock.mock.calls[0][1];
         expect(proxyInit.headers.Authorization).toBe(`Bearer ${sessionToken}`);
@@ -60,7 +60,7 @@ describe('runProxySync', () => {
             )
             .mockResolvedValueOnce(jsonResponse(200, { data: summary }));
 
-        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState });
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 60 });
 
         expect(result).toEqual({ ok: true, summary });
         // First call hits the proxy, second hits the SvelteKit persist endpoint with the activities + mode.
@@ -73,7 +73,7 @@ describe('runProxySync', () => {
     it('surfaces INVALID_TOKEN from the proxy without persisting', async () => {
         fetchMock.mockResolvedValueOnce(jsonResponse(500, { code: 'INVALID_TOKEN', message: 'No valid token found' }));
 
-        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState });
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 60 });
 
         expect(result).toEqual({ ok: false, code: 'INVALID_TOKEN', message: expect.any(String) });
         expect(fetchMock).toHaveBeenCalledTimes(1); // never reached the persist call
@@ -86,7 +86,7 @@ describe('runProxySync', () => {
                 jsonResponse(200, { data: { mode: 'backfill', activitiesUpserted: 0, lastSyncedAt: 'x' } }),
             );
 
-        await runProxySync({ userId, garminEmail, sessionToken, syncState });
+        await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 60 });
 
         const persistBody = JSON.parse(fetchMock.mock.calls[1][1].body);
         expect(persistBody.activities).toEqual([]);
@@ -97,7 +97,7 @@ describe('runProxySync', () => {
             .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 1 }] }))
             .mockResolvedValueOnce(jsonResponse(409, { code: 'STALE_STATE', message: 'Sync state changed' }));
 
-        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState });
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 60 });
 
         expect(result).toEqual({ ok: false, code: 'STALE_STATE', message: expect.any(String) });
     });
