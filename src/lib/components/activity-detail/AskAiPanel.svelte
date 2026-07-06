@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from '$app/stores';
     import { SendIcon, ZapIcon } from 'svelte-feather-icons';
     import Markdown from '$lib/components/markdown/Markdown.svelte';
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
@@ -18,6 +19,7 @@
     let loading = false;
     let analysis: string | null = null;
     let error: string | null = null;
+    let showUpgradeHint = false;
 
     async function ask(text: string) {
         const trimmed = text.trim();
@@ -30,6 +32,7 @@
         loading = true;
         error = null;
         analysis = null;
+        showUpgradeHint = false;
 
         try {
             const res = await fetch(`/api/user/${userId}/activities/${activityDbId}/explain`, {
@@ -40,6 +43,8 @@
             const payload = await res.json();
             if (!res.ok) {
                 error = payload?.message ?? 'Failed to generate explanation.';
+                showUpgradeHint =
+                    payload?.code === 'EXPLAIN_LIMIT_REACHED' && $page.data.user?.subscriptionTier === 'FREE';
             } else {
                 analysis = payload?.data?.analysis ?? null;
                 question = trimmed;
@@ -92,6 +97,9 @@
 
     {#if error}
         <p class="text-error-500 text-sm mt-3">{error}</p>
+        {#if showUpgradeHint}
+            <a href="/app/my-account" class="anchor text-sm"> Upgrade to Supporter for 5 explanations per day → </a>
+        {/if}
     {/if}
 
     {#if analysis}

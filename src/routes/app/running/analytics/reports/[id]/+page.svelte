@@ -3,7 +3,7 @@
     import { afterNavigate, goto } from '$app/navigation';
     import { ArrowLeftIcon, DownloadIcon } from 'svelte-feather-icons';
     import { getToastStore } from '@skeletonlabs/skeleton';
-    import { makeToast } from '$lib/utils/toasts';
+    import { makeUpgradeToast } from '$lib/utils/toasts';
     import { resolveBackTarget } from '$lib/utils/back-target';
     import Card from '@components/card/Card.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
@@ -56,11 +56,7 @@
     $: exportUrl = `/api/user/${user.id}/reports/weekly/${report.id}/export`;
 
     function exportBlocked() {
-        makeToast(
-            toastStore,
-            'Report export is a Supporter feature — upgrade from your account page.',
-            'variant-filled-warning',
-        );
+        makeUpgradeToast(toastStore, 'Report export is a Supporter feature.');
     }
 
     function formatPeriod(start: string, end: string): string {

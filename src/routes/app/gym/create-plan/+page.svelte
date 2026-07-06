@@ -5,7 +5,7 @@
     import { to } from 'await-to-js';
     import SurveyForm from '@components/survey/SurveyForm.svelte';
     import Loader from '@components/loading/loader/Loader.svelte';
-    import { makeToast } from '$lib/utils/toasts';
+    import { makeToast, makeUpgradeToast } from '$lib/utils/toasts';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { appConfig } from '@/constants/app.constants';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
@@ -72,7 +72,12 @@
     };
 
     const planLimitHandler = () => {
-        makeToast(toastStore, 'You have reached the limit of generated plans.', 'variant-filled-warning');
+        const message = 'You have reached the limit of generated plans.';
+        if (user.subscriptionTier === 'FREE') {
+            makeUpgradeToast(toastStore, message);
+        } else {
+            makeToast(toastStore, message, 'variant-filled-warning');
+        }
         loadingState.set(false);
         goto('/app');
     };

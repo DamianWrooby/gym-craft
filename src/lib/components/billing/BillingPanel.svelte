@@ -57,7 +57,8 @@
         </button>
     {:else}
         <p class="mb-3 text-sm opacity-80">
-            Support GymCraft and unlock higher limits: 15 weekly reports/month and 5 run explanations/day.
+            Support GymCraft and unlock the full toolkit: 15 weekly reports &amp; 5 AI gym plans per month, 5 run
+            explanations per day, a smarter AI coach model, 120-day Garmin import, report export, and a Supporter badge.
         </p>
         <div class="flex flex-wrap gap-3">
             <button

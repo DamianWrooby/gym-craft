@@ -1,20 +1,42 @@
 <script lang="ts">
     import { page } from '$app/stores';
+    import { onMount } from 'svelte';
     import { slide } from 'svelte/transition';
     import type { User } from '@/models/user/user.model';
     import DeleteAccountForm from '$lib/components/delete-account-form/DeleteAccountForm.svelte';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
     import Card from '@components/card/Card.svelte';
-    import { goto } from '$app/navigation';
+    import { goto, invalidateAll } from '$app/navigation';
     import BillingPanel from '$lib/components/billing/BillingPanel.svelte';
     import SupporterBadge from '$lib/components/billing/SupporterBadge.svelte';
 
-    const user: User = $page.data.user;
+    // Reactive: the tier flips without a manual reload after the post-checkout invalidateAll.
+    $: user = $page.data.user as User;
     const formData = { password: '' };
     const toastStore = getToastStore();
     let deleteAccountFormOpened = false;
     let isDeletionProcessed = false;
+
+    onMount(() => {
+        const checkout = $page.url.searchParams.get('checkout');
+        if (!checkout) return;
+
+        if (checkout === 'success') {
+            makeToast(
+                toastStore,
+                'Thank you for supporting GymCraft! 🎉 <br> Your Supporter perks are activating — this can take a few seconds.',
+                'variant-filled-success',
+            );
+            // Stripe redirects back before the webhook lands; refresh page data shortly so the tier flips.
+            setTimeout(() => invalidateAll(), 2500);
+        } else if (checkout === 'cancel') {
+            makeToast(toastStore, 'Checkout canceled — you have not been charged.', 'variant-filled-surface');
+        }
+
+        // Strip the query param so a page refresh does not repeat the toast.
+        goto('/app/my-account', { replaceState: true, noScroll: true });
+    });
 
     const openDeleteAccountPanel = () => {
         deleteAccountFormOpened = true;
