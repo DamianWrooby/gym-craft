@@ -8,6 +8,7 @@
     import Card from '@components/card/Card.svelte';
     import { goto } from '$app/navigation';
     import BillingPanel from '$lib/components/billing/BillingPanel.svelte';
+    import SupporterBadge from '$lib/components/billing/SupporterBadge.svelte';
 
     const user: User = $page.data.user;
     const formData = { password: '' };
@@ -51,7 +52,12 @@
 
 <Card>
     <h2 class="h2 text-center text-xl py-10">Manage your account</h2>
-    <p>Name: <span class="text-secondary-400 font-bold">{user.name}</span></p>
+    <p>
+        Name: <span class="text-secondary-400 font-bold">{user.name}</span>
+        {#if user.subscriptionTier === 'SUPPORTER'}
+            <SupporterBadge />
+        {/if}
+    </p>
     <p>Generated plans number: {user.generatedPlansNumber}</p>
     <p>Plans left: {user.plansLeft}</p>
     <BillingPanel tier={user.subscriptionTier} />
