@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { db } from '$lib/database';
 import { resolveTier } from '$lib/server/subscription/tier';
+import { TIER_LIMITS } from '@/constants/subscription.constants';
+import { currentMonthStartIso } from '$lib/utils/iso-week';
 import type { RequestEvent } from '@sveltejs/kit';
 
 function hashSessionToken(token: string): string {
@@ -35,8 +37,6 @@ export async function updateUser(event: RequestEvent) {
         select: { value: true },
     });
 
-    const plansLeft = configuration && user ? +configuration.value - user.generatedPlansNumber : 0;
-
     if (user) {
         const { id, username, role, generatedPlansNumber, emailVerified, marketingAgreement, email } = user;
         const subscriptionTier = resolveTier({
@@ -44,6 +44,18 @@ export async function updateUser(event: RequestEvent) {
             subscriptionStatus: user.subscriptionStatus,
             currentPeriodEnd: user.currentPeriodEnd,
         });
+
+        // FREE: lifetime allowance (Configuration limit − generated plans).
+        // SUPPORTER: monthly allowance tracked via AiUsage kind='gym_plan'.
+        let plansLeft = configuration ? +configuration.value - user.generatedPlansNumber : 0;
+        if (subscriptionTier === 'SUPPORTER') {
+            const monthKey = currentMonthStartIso();
+            const usage = await db.aiUsage.findUnique({
+                where: { userId_kind_day: { userId: user.id, kind: 'gym_plan', day: monthKey } },
+                select: { count: true },
+            });
+            plansLeft = Math.max(0, (TIER_LIMITS.SUPPORTER.gymPlansPerMonth ?? 0) - (usage?.count ?? 0));
+        }
         if (event.locals) {
             event.locals.user = {
                 id,
