@@ -18,7 +18,7 @@ vi.mock('$lib/server/garmin/sync-activities', () => ({
 import { POST } from './+server';
 
 const userId = 'user-1';
-const locals = { user: { id: userId } } as unknown as App.Locals;
+const locals = { user: { id: userId, subscriptionTier: 'FREE' } } as unknown as App.Locals;
 
 function makePost(body: unknown, id: string = userId) {
     const request = new Request(`http://localhost/api/user/${id}/garmin/sync`, {
@@ -67,7 +67,7 @@ describe('POST /api/user/[id]/garmin/sync', () => {
 
         expect(res.status).toBe(200);
         expect(payload.data.mode).toBe('backfill');
-        expect(mocks.persistActivities).toHaveBeenCalledWith(userId, expect.any(Array), 'backfill');
+        expect(mocks.persistActivities).toHaveBeenCalledWith(userId, expect.any(Array), 'backfill', 60);
         expect(mocks.syncUserActivities).not.toHaveBeenCalled();
     });
 
@@ -85,7 +85,7 @@ describe('POST /api/user/[id]/garmin/sync', () => {
 
         expect(res.status).toBe(200);
         expect(payload.data.mode).toBe('incremental');
-        expect(mocks.persistActivities).toHaveBeenCalledWith(userId, expect.any(Array), 'incremental');
+        expect(mocks.persistActivities).toHaveBeenCalledWith(userId, expect.any(Array), 'incremental', 60);
     });
 
     it('returns 409 STALE_STATE when the client mode disagrees with the server', async () => {
@@ -141,7 +141,7 @@ describe('POST /api/user/[id]/garmin/sync', () => {
         const payload = await res.json();
 
         expect(res.status).toBe(200);
-        expect(mocks.syncUserActivities).toHaveBeenCalledWith(userId);
+        expect(mocks.syncUserActivities).toHaveBeenCalledWith(userId, 60);
         expect(mocks.persistActivities).not.toHaveBeenCalled();
         expect(payload.data.activitiesUpserted).toBe(2);
     });

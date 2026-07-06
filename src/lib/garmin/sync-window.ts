@@ -1,6 +1,5 @@
 import { toIsoDate } from '$lib/utils/iso-week';
 
-export const BACKFILL_DAYS = 90;
 export const INCREMENTAL_WINDOW_DAYS = 7;
 
 export type SyncMode = 'backfill' | 'incremental';
@@ -40,12 +39,16 @@ export function pickIncrementalStart(lastSyncedAt: Date | null, endDate: Date): 
  * sync state loaded into the page. Mirrors the backfill/incremental decision in
  * `syncUserActivities`. The server re-derives the authoritative mode on persist.
  */
-export function resolveSyncWindow(syncState: SyncStateSnapshot | null, now: Date = new Date()): SyncWindow {
+export function resolveSyncWindow(
+    syncState: SyncStateSnapshot | null,
+    backfillDays: number,
+    now: Date = new Date(),
+): SyncWindow {
     const endDate = now;
 
     if (!syncState || !syncState.backfillComplete) {
         const start = new Date(endDate);
-        start.setUTCDate(start.getUTCDate() - BACKFILL_DAYS);
+        start.setUTCDate(start.getUTCDate() - backfillDays);
         return { mode: 'backfill', startDate: toIsoDate(start), endDate: toIsoDate(endDate) };
     }
 

@@ -12,6 +12,7 @@
     import { isSyncStale } from '$lib/utils/sync-staleness';
     import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
+    import { TIER_LIMITS } from '@/constants/subscription.constants';
     import { authenticateGarmin } from '$lib/garmin/authenticate';
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
     import type { User } from '@/models/user/user.model';
@@ -58,6 +59,7 @@
                 garminEmail: data.garminEmail,
                 sessionToken,
                 syncState: { backfillComplete: !data.needsInitialSync, lastSyncedAt: data.lastSyncedAt },
+                backfillDays: TIER_LIMITS[user.subscriptionTier].garminBackfillDays,
             });
 
             if (result.ok) {

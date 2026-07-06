@@ -83,7 +83,7 @@ export async function POST({
         });
     }
 
-    const syncResult = await syncUserActivities(userId);
+    const syncResult = await syncUserActivities(userId, getLimit(locals.user.subscriptionTier, 'garminBackfillDays'));
     if (!syncResult.ok) {
         console.warn(`[weekly-report] activity sync failed for user ${userId}: ${syncResult.code}`);
     }
