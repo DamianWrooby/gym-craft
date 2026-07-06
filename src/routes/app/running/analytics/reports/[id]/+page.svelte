@@ -4,6 +4,7 @@
     import { ArrowLeftIcon, DownloadIcon } from 'svelte-feather-icons';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeUpgradeToast } from '$lib/utils/toasts';
+    import { downloadReportPdf } from '$lib/utils/report-pdf';
     import { resolveBackTarget } from '$lib/utils/back-target';
     import Card from '@components/card/Card.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
@@ -59,6 +60,10 @@
         makeUpgradeToast(toastStore, 'Report export is a Supporter feature.');
     }
 
+    function exportPdf() {
+        downloadReportPdf(report);
+    }
+
     function formatPeriod(start: string, end: string): string {
         const fmt = (s: string) =>
             new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', {
@@ -80,10 +85,22 @@
         </button>
         <div class="flex items-center gap-3">
             {#if isSupporter}
-                <a href={exportUrl} download class="btn btn-sm variant-soft-primary" aria-label="Export report">
+                <a
+                    href={exportUrl}
+                    download
+                    class="btn btn-sm variant-soft-primary"
+                    aria-label="Export report as Markdown">
                     <DownloadIcon size="16" />
                     <span>Export .md</span>
                 </a>
+                <button
+                    type="button"
+                    class="btn btn-sm variant-soft-primary"
+                    on:click={exportPdf}
+                    aria-label="Export report as PDF">
+                    <DownloadIcon size="16" />
+                    <span>Export .pdf</span>
+                </button>
             {:else}
                 <button
                     type="button"
@@ -91,7 +108,7 @@
                     on:click={exportBlocked}
                     aria-label="Export report (Supporter feature)">
                     <DownloadIcon size="16" />
-                    <span>Export .md</span>
+                    <span>Export</span>
                 </button>
             {/if}
             <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString('en-US')}</p>
