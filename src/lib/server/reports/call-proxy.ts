@@ -18,9 +18,9 @@ export interface CallExplainProxyResult {
 
 const PROXY_TIMEOUT_MS = 60_000;
 
-export async function callWeeklyReportProxy(prompt: ReportPrompt): Promise<CallProxyResult> {
+export async function callWeeklyReportProxy(prompt: ReportPrompt, model?: string): Promise<CallProxyResult> {
     const url = isProduction() ? appConfig.weeklyReportApiUrlPROD : appConfig.weeklyReportApiUrlDEV;
-    const result = await postPrompt(url, prompt);
+    const result = await postPrompt(url, prompt, model);
     if (!result.ok) return { ok: false, error: result.error };
 
     const summary = typeof result.data?.summary === 'string' ? result.data.summary.trim() : null;
@@ -28,9 +28,9 @@ export async function callWeeklyReportProxy(prompt: ReportPrompt): Promise<CallP
     return { ok: true, summary };
 }
 
-export async function callExplainRunProxy(prompt: ExplainPrompt): Promise<CallExplainProxyResult> {
+export async function callExplainRunProxy(prompt: ExplainPrompt, model?: string): Promise<CallExplainProxyResult> {
     const url = isProduction() ? appConfig.explainRunApiUrlPROD : appConfig.explainRunApiUrlDEV;
-    const result = await postPrompt(url, prompt);
+    const result = await postPrompt(url, prompt, model);
     if (!result.ok) return { ok: false, error: result.error };
 
     const analysis = typeof result.data?.analysis === 'string' ? result.data.analysis.trim() : null;
@@ -41,6 +41,7 @@ export async function callExplainRunProxy(prompt: ExplainPrompt): Promise<CallEx
 async function postPrompt(
     url: string,
     prompt: { system: string; user: string },
+    model?: string,
 ): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; error: string }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
@@ -49,7 +50,7 @@ async function postPrompt(
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ system: prompt.system, user: prompt.user }),
+            body: JSON.stringify({ system: prompt.system, user: prompt.user, ...(model ? { model } : {}) }),
             signal: controller.signal,
         }),
     );

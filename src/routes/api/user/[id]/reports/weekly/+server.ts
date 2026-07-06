@@ -144,7 +144,7 @@ export async function POST({
     }
 
     const prompt = buildReportPrompt({ metrics, profile, goals, notes });
-    const proxy = await callWeeklyReportProxy(prompt);
+    const proxy = await callWeeklyReportProxy(prompt, getLimit(locals.user.subscriptionTier, 'aiModel'));
     if (!proxy.ok || !proxy.summary) {
         return createResponse(502, { code: 'LLM_FAILED', message: proxy.error ?? 'LLM proxy failed' });
     }
