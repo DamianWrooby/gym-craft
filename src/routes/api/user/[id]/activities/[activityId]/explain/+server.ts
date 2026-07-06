@@ -107,7 +107,7 @@ export async function POST({
         profile,
     });
 
-    const proxy = await callExplainRunProxy(prompt);
+    const proxy = await callExplainRunProxy(prompt, getLimit(locals.user.subscriptionTier, 'aiModel'));
     if (!proxy.ok || !proxy.analysis) {
         return createResponse(502, { code: 'LLM_FAILED', message: proxy.error ?? 'AI proxy failed' });
     }

@@ -142,6 +142,12 @@ describe('POST /api/user/[id]/reports/weekly — auth and gating', () => {
         expect(mocks.fetchGarminActivities).not.toHaveBeenCalled();
     });
 
+    it('passes the tier AI model to the report proxy', async () => {
+        const response = await POST({ request: makeRequest(validBody), params: { id: userId }, locals });
+        expect(response.status).toBe(200);
+        expect(mocks.callWeeklyReportProxy).toHaveBeenCalledWith(expect.anything(), 'gpt-5.4-mini');
+    });
+
     it('returns 412 when athlete profile is missing', async () => {
         mocks.getAthleteProfile.mockResolvedValueOnce(null);
         const response = await POST({ request: makeRequest(validBody), params: { id: userId }, locals });
