@@ -98,7 +98,7 @@ export const faqItems = [
     },
     {
         title: 'What AI model is used to generate the plans?',
-        content: 'GymCraft is currently using the gpt-4o model by OpenAI.',
+        content: 'GymCraft is currently using the gpt-5.4-mini model by OpenAI.',
     },
     {
         title: 'Will new features be added in the future?',

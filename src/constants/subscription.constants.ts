@@ -8,6 +8,10 @@ export interface TierLimits {
     explainRunsPerDay: number;
     gymPlansPerMonth: number | null;
     garminBackfillDays: number;
+    // Model for weekly reports and explain-run. Must be listed in `allowedModels` in the
+    // proxy's app/config/openAI.config.js, or the proxy silently falls back to its default.
+    // Gym-plan generation ignores this and always uses the proxy default (ADR 0005: its
+    // request is browser-built, so a client-sent model would be spoofable).
     aiModel: string;
 }
 
