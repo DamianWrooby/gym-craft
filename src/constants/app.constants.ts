@@ -4,7 +4,6 @@ export enum appConfig {
     baseAppUrlDEV = 'http://localhost:5173/app',
     baseUrlPROD = 'https://gymcraft.damianwroblewski.com',
     baseAppUrlPROD = 'https://gymcraft.damianwroblewski.com/app',
-    openAIapiUrl = 'https://api.openai.com/v1/chat/completions',
     proxyApiUrlDEV = 'http://localhost:3000/api/generate-plan',
     proxyApiUrlPROD = 'https://gym-craft-ai-proxy.onrender.com/api/generate-plan',
     weeklyReportApiUrlDEV = 'http://localhost:3000/api/weekly-report',
@@ -19,9 +18,6 @@ export enum appConfig {
     plansApiUrl = '/api/plans',
     generalPlanLimitApiUrl = '/api/general-plan-limit',
     administratorEmail = 'dwroblewski89@gmail.com',
-    model = 'gpt-5.4-mini',
-    openAIcompletionSeed = 1,
-    openAIcompletionTemperature = 0.2,
     planLimit = 10,
 }
 
