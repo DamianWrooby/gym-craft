@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
+    import { billingEnabled } from '$lib/utils/billing-flag';
     import type { SubscriptionTier } from '@/constants/subscription.constants';
 
     export let tier: SubscriptionTier;
@@ -55,6 +56,8 @@
         <button type="button" class="btn variant-soft-primary" disabled={loading} on:click={openPortal}>
             Manage subscription
         </button>
+    {:else if !billingEnabled}
+        <p class="text-sm opacity-80">Supporter plans are coming soon.</p>
     {:else}
         <p class="mb-3 text-sm opacity-80">
             Support GymCraft and unlock the full toolkit: 15 weekly reports &amp; 5 AI gym plans per month, 5 run

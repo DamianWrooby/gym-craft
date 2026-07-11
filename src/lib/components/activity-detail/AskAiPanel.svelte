@@ -4,6 +4,7 @@
     import Markdown from '$lib/components/markdown/Markdown.svelte';
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import { EXPLAIN_QUESTION_MAX_LENGTH } from '@/constants/training-report.constants';
+    import { billingEnabled } from '$lib/utils/billing-flag';
 
     export let userId: string;
     export let activityDbId: string;
@@ -44,7 +45,9 @@
             if (!res.ok) {
                 error = payload?.message ?? 'Failed to generate explanation.';
                 showUpgradeHint =
-                    payload?.code === 'EXPLAIN_LIMIT_REACHED' && $page.data.user?.subscriptionTier === 'FREE';
+                    billingEnabled &&
+                    payload?.code === 'EXPLAIN_LIMIT_REACHED' &&
+                    $page.data.user?.subscriptionTier === 'FREE';
             } else {
                 analysis = payload?.data?.analysis ?? null;
                 question = trimmed;

@@ -1,6 +1,7 @@
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/database';
 import { createResponse } from '$lib/utils/response';
+import { billingEnabled } from '$lib/utils/billing-flag';
 import { appConfig } from '@/constants/app.constants';
 import { PUBLIC_APP_ENV } from '$env/static/public';
 import { STRIPE_PRICE_ANNUAL, STRIPE_PRICE_LIFETIME, STRIPE_PRICE_MONTHLY } from '$env/static/private';
@@ -14,6 +15,9 @@ const PLANS: Record<PlanKey, { price: string; mode: 'subscription' | 'payment' }
 };
 
 export async function POST({ request, locals }: { request: Request; locals: App.Locals }): Promise<Response> {
+    if (!billingEnabled) {
+        return createResponse(503, { code: 'BILLING_DISABLED', message: 'Supporter plans are not available yet' });
+    }
     if (!locals.user) return createResponse(401, { message: 'Unauthorized' });
 
     const body = await request.json().catch(() => null);
