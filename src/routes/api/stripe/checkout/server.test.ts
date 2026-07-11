@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$env/static/public', () => ({ PUBLIC_APP_ENV: 'development' }));
+vi.mock('$env/static/public', () => ({ PUBLIC_APP_ENV: 'development', PUBLIC_BILLING_ENABLED: 'true' }));
 vi.mock('$env/static/private', () => ({
     SECRET_STRIPE_KEY: 'sk_test_x',
     STRIPE_PRICE_MONTHLY: 'price_monthly',
