@@ -1,4 +1,4 @@
-import { NewPlan, Plan } from './../../../models/plan/plan.model';
+import type { NewPlan, Plan } from './../../../models/plan/plan.model';
 import {
     addPlan,
     getGeneralPlanLimit,

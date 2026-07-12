@@ -9,15 +9,14 @@
         "skipLibCheck": true,
         "sourceMap": true,
         "strict": true,
-        "baseUrl": ".",
         "types": ["@testing-library/jest-dom"],
         "paths": {
             "$lib": ["./src/lib"],
             "$lib/*": ["./src/lib/*"],
-            "@/*": ["src/*"],
-            "@components/*": ["src/lib/components/*"],
-            "@models/*": ["src/models/*"],
-            "@assets/*": ["src/assets/*"]
+            "@/*": ["./src/*"],
+            "@components/*": ["./src/lib/components/*"],
+            "@models/*": ["./src/models/*"],
+            "@assets/*": ["./src/assets/*"]
         }
     }
 }
