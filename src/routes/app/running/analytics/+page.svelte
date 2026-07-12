@@ -1,7 +1,7 @@
 <script lang="ts">
     import Seo from '$lib/components/seo/Seo.svelte';
     import { page } from '$app/stores';
-    import { goto, invalidate } from '$app/navigation';
+    import { goto, invalidateAll } from '$app/navigation';
     import { onMount } from 'svelte';
     import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
     import { RefreshCwIcon, ArrowRightIcon } from 'svelte-feather-icons';
@@ -73,7 +73,9 @@
                         'variant-filled-success',
                     );
                 }
-                await invalidate(() => true);
+                // invalidate(() => true) only reruns loads with url dependencies; this page's
+                // server load has none, so it needs invalidateAll to refetch after sync.
+                await invalidateAll();
                 return;
             }
             if (result.code === 'INVALID_TOKEN') {
@@ -89,7 +91,7 @@
                 return;
             }
             if (result.code === 'STALE_STATE') {
-                await invalidate(() => true);
+                await invalidateAll();
                 return;
             }
             makeToast(toastStore, result.message || 'Sync failed', 'variant-filled-error');
