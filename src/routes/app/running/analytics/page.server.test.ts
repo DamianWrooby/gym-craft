@@ -4,9 +4,11 @@ vi.mock('$env/static/public', () => ({ PUBLIC_APP_ENV: 'test' }));
 
 const mocks = vi.hoisted(() => ({
     db: {
-        activity: { findMany: vi.fn() },
+        activity: { findMany: vi.fn(), update: vi.fn() },
         garminSyncState: { findUnique: vi.fn() },
         garminData: { findUnique: vi.fn() },
+        athleteProfile: { findUnique: vi.fn() },
+        $transaction: vi.fn(async (ops: unknown[]) => ops),
     },
     getWeeklyReports: vi.fn(),
 }));
@@ -19,7 +21,7 @@ import { load } from './+page.server';
 const userId = 'user-1';
 const locals = { user: { id: userId } } as unknown as App.Locals;
 
-function activityRow(id: string, startTime: string) {
+function activityRow(id: string, startTime: string, trimpLoad: number | null = 40) {
     return {
         id,
         userId,
@@ -47,7 +49,7 @@ function activityRow(id: string, startTime: string) {
         avgStrideLength: 1.2,
         elevationGainM: 25,
         elevationLossM: 25,
-        trimpLoad: 40,
+        trimpLoad,
         raw: {},
         fetchedAt: new Date(),
     };
@@ -122,6 +124,37 @@ describe('load /app/running/analytics (dashboard)', () => {
         expect(result.needsInitialSync).toBe(false);
         expect(result.garminEmail).toBe('athlete@example.com');
         expect(result.lastSyncedAt).toBe('2026-06-07T11:00:00.000Z');
+    });
+
+    it('computes and persists TRIMP for synced activities so the load summary is populated', async () => {
+        const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+        // Fresh sync: every row still has trimpLoad null; history spans > 28 days.
+        const rows = [
+            activityRow('a-1', daysAgo(1), null),
+            activityRow('a-2', daysAgo(3), null),
+            activityRow('a-3', daysAgo(10), null),
+            activityRow('a-4', daysAgo(20), null),
+            activityRow('a-5', daysAgo(35), null),
+        ];
+        mocks.db.activity.findMany.mockResolvedValueOnce(rows);
+        mocks.db.garminSyncState.findUnique.mockResolvedValueOnce({
+            userId,
+            lastSyncedAt: new Date(),
+            oldestActivityAt: new Date(daysAgo(60)),
+            backfillComplete: true,
+            updatedAt: new Date(),
+        });
+        mocks.db.garminData.findUnique.mockResolvedValueOnce({ email: 'athlete@example.com' });
+        mocks.db.athleteProfile.findUnique.mockResolvedValueOnce({ restingHR: 50, maxHR: 190, sex: 'MALE' });
+        mocks.getWeeklyReports.mockResolvedValueOnce([]);
+
+        const result = await load({ locals });
+
+        expect(result.summary.acwr).toBeGreaterThan(0);
+        expect(result.summary.hasSufficientHistory).toBe(true);
+        expect(mocks.db.$transaction).toHaveBeenCalledTimes(1);
+        expect(mocks.db.activity.update).toHaveBeenCalledTimes(5);
+        expect(result.recentActivities.every((a) => a.trimpLoad != null && a.trimpLoad > 0)).toBe(true);
     });
 
     it('flags needsInitialSync and empty previews when there is no data', async () => {

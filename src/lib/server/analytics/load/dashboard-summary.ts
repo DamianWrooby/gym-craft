@@ -21,6 +21,8 @@ export interface DashboardSummary {
     monotony: number;
     monotonyIsHigh: boolean;
     hasActivities: boolean;
+    /** True once the earliest activity is at least 28 days old, so the chronic load (and ACWR) is meaningful. */
+    hasSufficientHistory: boolean;
 }
 
 export function computeDashboardSummary(activities: DashboardSummaryActivity[], asOf: Date): DashboardSummary {
@@ -38,12 +40,17 @@ export function computeDashboardSummary(activities: DashboardSummaryActivity[], 
     const last7 = new Set(enumerateDates(asOf, ACUTE_DAYS));
     let sevenDayDistanceM = 0;
     let sessions7d = 0;
+    let earliestStartMs = Number.POSITIVE_INFINITY;
     for (const a of activities) {
-        if (last7.has(toIsoDate(new Date(a.startTime)))) {
+        const start = new Date(a.startTime);
+        if (last7.has(toIsoDate(start))) {
             sevenDayDistanceM += a.distanceM ?? 0;
             sessions7d += 1;
         }
+        if (start.getTime() < earliestStartMs) earliestStartMs = start.getTime();
     }
+
+    const daysOfHistory = isFinite(earliestStartMs) ? Math.floor((asOf.getTime() - earliestStartMs) / 86_400_000) : 0;
 
     return {
         acwr: round(acwr, 2),
@@ -53,6 +60,7 @@ export function computeDashboardSummary(activities: DashboardSummaryActivity[], 
         monotony: isFinite(monotonyRaw) ? round(monotonyRaw, 2) : 0,
         monotonyIsHigh: interpretMonotony(monotonyRaw).isHigh,
         hasActivities: activities.length > 0,
+        hasSufficientHistory: daysOfHistory >= CHRONIC_DAYS,
     };
 }
 

@@ -3,6 +3,7 @@ import { db } from '$lib/database';
 import { getWeeklyReports } from '$lib/prisma/prisma';
 import { toActivityListItem, type ActivityListItem } from '$lib/server/garmin/activity-row-mapper';
 import { computeDashboardSummary, type DashboardSummary } from '$lib/server/analytics/load/dashboard-summary';
+import { ensureTrimpLoads, mapProfileSex } from '$lib/server/analytics/load/ensure-trimp';
 
 export interface DashboardReportPreview {
     id: string;
@@ -26,14 +27,23 @@ export const load = async ({ locals }: { locals: App.Locals }): Promise<Dashboar
     const userId = locals.user?.id;
     if (!userId) throw redirect(302, '/app/login');
 
-    const [rows, syncState, garminData, reports] = await Promise.all([
+    const [rows, syncState, garminData, reports, profile] = await Promise.all([
         db.activity.findMany({ where: { userId }, orderBy: { startTime: 'desc' } }),
         db.garminSyncState.findUnique({ where: { userId } }),
         db.garminData.findUnique({ where: { userId }, select: { email: true, sessionToken: true } }),
         getWeeklyReports(userId),
+        db.athleteProfile.findUnique({ where: { userId }, select: { restingHR: true, maxHR: true, sex: true } }),
     ]);
 
-    const activities = rows.map(toActivityListItem);
+    // Sync stores trimpLoad as null; compute + persist any missing loads so ACWR/monotony
+    // are populated without requiring a weekly report first.
+    const rowsWithTrimp = await ensureTrimpLoads(rows, {
+        restingHR: profile?.restingHR ?? null,
+        maxHR: profile?.maxHR ?? null,
+        sex: profile ? mapProfileSex(profile.sex) : null,
+    });
+
+    const activities = rowsWithTrimp.map(toActivityListItem);
     const summary = computeDashboardSummary(
         activities.map((a) => ({ startTime: a.startTime, distanceM: a.distanceM, trimpLoad: a.trimpLoad })),
         new Date(),

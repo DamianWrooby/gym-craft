@@ -116,7 +116,9 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
                     },
                 },
                 create: row,
-                update: row,
+                // trimpLoad is computed lazily after sync and must survive re-syncs of the
+                // same window, so the update payload never touches it.
+                update: { ...row, trimpLoad: undefined },
             }),
         ),
     );

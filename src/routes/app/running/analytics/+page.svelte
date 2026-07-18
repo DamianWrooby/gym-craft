@@ -164,7 +164,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
             <div class="card variant-soft-surface p-4 flex flex-col gap-1">
                 <span class="text-xs uppercase opacity-60">Load</span>
-                {#if summary.hasActivities && summary.acwr > 0}
+                {#if summary.hasActivities && summary.hasSufficientHistory && summary.acwr > 0}
                     <span class="text-lg font-bold {STATUS_CLASS[summary.loadStatus]}">
                         {STATUS_LABEL[summary.loadStatus]}
                     </span>
