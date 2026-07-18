@@ -1,3 +1,5 @@
+import type { AthleteProfile } from '@prisma/client';
+
 const EDWARDS_ZONE_WEIGHTS = [1, 2, 3, 4, 5] as const;
 
 const BANISTER_COEFFS = {
@@ -6,6 +8,16 @@ const BANISTER_COEFFS = {
 } as const;
 
 export type TrimpSex = 'male' | 'female';
+
+export interface TrimpProfile {
+    restingHR: number | null;
+    maxHR: number | null;
+    sex?: TrimpSex | null;
+}
+
+export function mapProfileSex(sex: AthleteProfile['sex']): TrimpSex {
+    return sex === 'FEMALE' ? 'female' : 'male';
+}
 
 export interface TrimpZoneSeconds {
     zone1: number;

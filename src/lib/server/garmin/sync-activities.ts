@@ -2,6 +2,8 @@ import { db } from '$lib/database';
 import { fetchGarminActivities } from './fetch-activities';
 import { toIsoDate } from '$lib/utils/iso-week';
 import { pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
+import { computeTrimp, mapProfileSex, type TrimpProfile } from '$lib/server/analytics/load/trimp';
+import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 import type { Prisma } from '@prisma/client';
 
@@ -104,7 +106,17 @@ export async function persistActivities(
 async function upsertActivities(userId: string, activities: GarminActivity[]): Promise<number> {
     if (activities.length === 0) return 0;
 
-    const rows = activities.map((activity) => toRow(userId, activity));
+    const profile = await db.athleteProfile.findUnique({
+        where: { userId },
+        select: { restingHR: true, maxHR: true, sex: true },
+    });
+    const trimpProfile: TrimpProfile = {
+        restingHR: profile?.restingHR ?? null,
+        maxHR: profile?.maxHR ?? null,
+        sex: profile ? mapProfileSex(profile.sex) : null,
+    };
+
+    const rows = activities.map((activity) => toRow(userId, activity, trimpProfile));
 
     const results = await db.$transaction(
         rows.map((row) =>
@@ -116,9 +128,7 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
                     },
                 },
                 create: row,
-                // trimpLoad is computed lazily after sync and must survive re-syncs of the
-                // same window, so the update payload never touches it.
-                update: { ...row, trimpLoad: undefined },
+                update: row,
             }),
         ),
     );
@@ -126,11 +136,11 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
     return results.length;
 }
 
-function toRow(userId: string, activity: GarminActivity) {
+function toRow(userId: string, activity: GarminActivity, profile: TrimpProfile) {
     const startTime = parseGarminStartTime(activity);
     const raw = activity as unknown as Prisma.InputJsonValue;
 
-    return {
+    const row = {
         userId,
         garminActivityId: BigInt(activity.activityId),
         activityType: activity.activityType.typeKey,
@@ -158,8 +168,21 @@ function toRow(userId: string, activity: GarminActivity) {
         avgStrideLength: activity.avgStrideLength ?? null,
         elevationGainM: activity.elevationGain ?? null,
         elevationLossM: activity.elevationLoss ?? null,
-        trimpLoad: null,
         raw,
+    };
+
+    // Computed at write time so a synced row always carries a load; re-syncs recompute
+    // deterministically from the same inputs (and pick up profile changes).
+    return {
+        ...row,
+        trimpLoad: computeTrimp({
+            durationSec: row.durationSec,
+            hrZoneSeconds: hrZoneSecondsFromRow(row),
+            averageHr: row.averageHr,
+            restingHr: profile.restingHR,
+            maxHr: profile.maxHR,
+            sex: profile.sex ?? 'male',
+        }),
     };
 }
 

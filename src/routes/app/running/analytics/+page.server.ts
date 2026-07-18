@@ -3,7 +3,8 @@ import { db } from '$lib/database';
 import { getWeeklyReports } from '$lib/prisma/prisma';
 import { toActivityListItem, type ActivityListItem } from '$lib/server/garmin/activity-row-mapper';
 import { computeDashboardSummary, type DashboardSummary } from '$lib/server/analytics/load/dashboard-summary';
-import { ensureTrimpLoads, mapProfileSex } from '$lib/server/analytics/load/ensure-trimp';
+import { ensureTrimpLoads } from '$lib/server/analytics/load/ensure-trimp';
+import { mapProfileSex } from '$lib/server/analytics/load/trimp';
 
 export interface DashboardReportPreview {
     id: string;
