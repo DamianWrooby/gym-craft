@@ -1,5 +1,6 @@
 import { db } from '$lib/database';
-import { computeTrimp, type TrimpSex } from './trimp';
+import type { TrimpSex } from './trimp';
+import { ensureTrimpLoads } from './ensure-trimp';
 import {
     buildDailyLoadMap,
     computeAcwr,
@@ -10,7 +11,6 @@ import {
 import { computeMonotony, computeStrain } from './monotony';
 import { interpretAcwr, interpretMonotony } from './interpret';
 import { toIsoDate } from '$lib/utils/iso-week';
-import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import type { MetricsLoadProfile } from '../types';
 
 const ACUTE_DAYS = 7;
@@ -44,35 +44,11 @@ export async function computeLoadProfile(
         },
     });
 
-    const entries: DailyLoadEntry[] = [];
-    const trimpUpdates: { id: string; trimpLoad: number }[] = [];
-
-    for (const activity of activities) {
-        let trimp = activity.trimpLoad;
-        if (trimp == null) {
-            trimp = computeTrimp({
-                durationSec: activity.durationSec,
-                hrZoneSeconds: hrZoneSecondsFromRow(activity),
-                averageHr: activity.averageHr ?? null,
-                restingHr: profile.restingHR,
-                maxHr: profile.maxHR,
-                sex: profile.sex ?? 'male',
-            });
-            trimpUpdates.push({ id: activity.id, trimpLoad: trimp });
-        }
-        entries.push({ date: toIsoDate(activity.startTime), load: trimp });
-    }
-
-    if (trimpUpdates.length > 0) {
-        await db.$transaction(
-            trimpUpdates.map((u) =>
-                db.activity.update({
-                    where: { id: u.id },
-                    data: { trimpLoad: u.trimpLoad },
-                }),
-            ),
-        );
-    }
+    const withTrimp = await ensureTrimpLoads(activities, profile);
+    const entries: DailyLoadEntry[] = withTrimp.map((activity) => ({
+        date: toIsoDate(activity.startTime),
+        load: activity.trimpLoad,
+    }));
 
     const dailyLoads = buildDailyLoadMap(entries);
 

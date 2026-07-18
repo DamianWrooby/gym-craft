@@ -39,4 +39,28 @@ describe('computeDashboardSummary', () => {
         expect(summary.monotony).toBe(0);
         expect(summary.acwr).toBe(0);
     });
+
+    it('flags sufficient history once the earliest activity is at least 28 days old', () => {
+        const summary = computeDashboardSummary(
+            [
+                { startTime: '2026-06-06T07:00:00Z', distanceM: 5000, trimpLoad: 40 },
+                { startTime: '2026-05-01T07:00:00Z', distanceM: 8000, trimpLoad: 60 },
+            ],
+            ASOF,
+        );
+        expect(summary.hasSufficientHistory).toBe(true);
+    });
+
+    it('flags insufficient history when all activities are more recent than 28 days', () => {
+        const summary = computeDashboardSummary(
+            [{ startTime: '2026-06-06T07:00:00Z', distanceM: 5000, trimpLoad: 40 }],
+            ASOF,
+        );
+        expect(summary.hasSufficientHistory).toBe(false);
+    });
+
+    it('flags insufficient history for empty history', () => {
+        const summary = computeDashboardSummary([], ASOF);
+        expect(summary.hasSufficientHistory).toBe(false);
+    });
 });
