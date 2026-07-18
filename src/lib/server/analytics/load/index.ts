@@ -1,11 +1,14 @@
 import { db } from '$lib/database';
-import type { TrimpSex } from './trimp';
+import type { TrimpProfile } from './trimp';
 import { ensureTrimpLoads } from './ensure-trimp';
 import {
+    ACUTE_DAYS,
+    CHRONIC_DAYS,
     buildDailyLoadMap,
     computeAcwr,
     computeAverageDailyLoad,
     computeWindowTotalLoad,
+    hasSufficientHistory,
     type DailyLoadEntry,
 } from './acwr';
 import { computeMonotony, computeStrain } from './monotony';
@@ -13,14 +16,12 @@ import { interpretAcwr, interpretMonotony } from './interpret';
 import { toIsoDate } from '$lib/utils/iso-week';
 import type { MetricsLoadProfile } from '../types';
 
-const ACUTE_DAYS = 7;
-const CHRONIC_DAYS = 28;
 const PREVIOUS_WEEK_OFFSET = 7;
 
 export async function computeLoadProfile(
     userId: string,
     asOf: Date,
-    profile: { restingHR: number | null; maxHR: number | null; sex?: TrimpSex | null },
+    profile: TrimpProfile,
 ): Promise<MetricsLoadProfile> {
     const windowStart = new Date(asOf);
     windowStart.setUTCDate(windowStart.getUTCDate() - (CHRONIC_DAYS + PREVIOUS_WEEK_OFFSET - 1));
@@ -70,11 +71,6 @@ export async function computeLoadProfile(
     const acwrInterpretation = interpretAcwr(acwr);
     const monotonyInterpretation = interpretMonotony(monotony);
 
-    const earliestActivityDate = activities[0]?.startTime ?? null;
-    const daysOfHistory = earliestActivityDate
-        ? Math.floor((asOf.getTime() - earliestActivityDate.getTime()) / 86_400_000)
-        : 0;
-
     return {
         asOf: toIsoDate(asOf),
         acute7d: round(acute, 1),
@@ -90,7 +86,7 @@ export async function computeLoadProfile(
         monotonyIsHigh: monotonyInterpretation.isHigh,
         monotonyNarrative: monotonyInterpretation.narrative,
         activitiesConsidered: activities.length,
-        hasSufficientHistory: daysOfHistory >= CHRONIC_DAYS,
+        hasSufficientHistory: hasSufficientHistory(activities[0]?.startTime ?? null, asOf),
     };
 }
 

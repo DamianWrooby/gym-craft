@@ -2,6 +2,9 @@ import { toIsoDate } from '$lib/utils/iso-week';
 
 export { toIsoDate };
 
+export const ACUTE_DAYS = 7;
+export const CHRONIC_DAYS = 28;
+
 export interface DailyLoadEntry {
     /** ISO date string (YYYY-MM-DD) in the same timezone used to assign activities to days. */
     date: string;
@@ -31,6 +34,17 @@ export function computeWindowTotalLoad(dailyLoads: Map<string, number>, asOf: Da
 export function computeAcwr(acuteLoad: number, chronicLoad: number): number {
     if (chronicLoad <= 0) return 0;
     return acuteLoad / chronicLoad;
+}
+
+export function daysOfHistory(earliestStart: Date | number | null, asOf: Date): number {
+    const ms = earliestStart instanceof Date ? earliestStart.getTime() : earliestStart;
+    if (ms == null || !isFinite(ms)) return 0;
+    return Math.floor((asOf.getTime() - ms) / 86_400_000);
+}
+
+/** ACWR needs a full chronic window of history before the ratio is meaningful. */
+export function hasSufficientHistory(earliestStart: Date | number | null, asOf: Date): boolean {
+    return daysOfHistory(earliestStart, asOf) >= CHRONIC_DAYS;
 }
 
 export function enumerateDates(asOf: Date, windowDays: number): string[] {

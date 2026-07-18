@@ -1,10 +1,16 @@
 import { toIsoDate } from '$lib/utils/iso-week';
-import { buildDailyLoadMap, computeAcwr, computeAverageDailyLoad, enumerateDates, type DailyLoadEntry } from './acwr';
+import {
+    ACUTE_DAYS,
+    CHRONIC_DAYS,
+    buildDailyLoadMap,
+    computeAcwr,
+    computeAverageDailyLoad,
+    enumerateDates,
+    hasSufficientHistory,
+    type DailyLoadEntry,
+} from './acwr';
 import { computeMonotony } from './monotony';
 import { interpretAcwr, interpretMonotony, type AcwrStatus } from './interpret';
-
-const ACUTE_DAYS = 7;
-const CHRONIC_DAYS = 28;
 
 export interface DashboardSummaryActivity {
     /** ISO timestamp string. */
@@ -40,17 +46,14 @@ export function computeDashboardSummary(activities: DashboardSummaryActivity[], 
     const last7 = new Set(enumerateDates(asOf, ACUTE_DAYS));
     let sevenDayDistanceM = 0;
     let sessions7d = 0;
-    let earliestStartMs = Number.POSITIVE_INFINITY;
     for (const a of activities) {
-        const start = new Date(a.startTime);
-        if (last7.has(toIsoDate(start))) {
+        if (last7.has(toIsoDate(new Date(a.startTime)))) {
             sevenDayDistanceM += a.distanceM ?? 0;
             sessions7d += 1;
         }
-        if (start.getTime() < earliestStartMs) earliestStartMs = start.getTime();
     }
 
-    const daysOfHistory = isFinite(earliestStartMs) ? Math.floor((asOf.getTime() - earliestStartMs) / 86_400_000) : 0;
+    const earliestStartMs = activities.length ? Math.min(...activities.map((a) => Date.parse(a.startTime))) : null;
 
     return {
         acwr: round(acwr, 2),
@@ -60,7 +63,7 @@ export function computeDashboardSummary(activities: DashboardSummaryActivity[], 
         monotony: isFinite(monotonyRaw) ? round(monotonyRaw, 2) : 0,
         monotonyIsHigh: interpretMonotony(monotonyRaw).isHigh,
         hasActivities: activities.length > 0,
-        hasSufficientHistory: daysOfHistory >= CHRONIC_DAYS,
+        hasSufficientHistory: hasSufficientHistory(earliestStartMs, asOf),
     };
 }
 

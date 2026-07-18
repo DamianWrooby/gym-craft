@@ -7,7 +7,7 @@ import { computeLoadProfile } from '$lib/server/analytics/load';
 import { EXPLAIN_QUESTION_MAX_LENGTH } from '@/constants/training-report.constants';
 import { getLimit } from '@/constants/subscription.constants';
 import { toIsoDate } from '$lib/utils/iso-week';
-import type { TrimpSex } from '$lib/server/analytics/load/trimp';
+import { mapProfileSex } from '$lib/server/analytics/load/trimp';
 
 const RECENT_WINDOW_DAYS = 14;
 
@@ -91,7 +91,7 @@ export async function POST({
             loadProfile = await computeLoadProfile(userId, activity.startTime, {
                 restingHR: profile.restingHR,
                 maxHR: profile.maxHR,
-                sex: mapSex(profile.sex),
+                sex: mapProfileSex(profile.sex),
             });
         } catch (err) {
             console.warn(`[explain-run] load profile failed for user ${userId}: ${(err as Error).message}`);
@@ -119,8 +119,4 @@ export async function POST({
     });
 
     return createResponse(200, { data: { analysis: proxy.analysis } });
-}
-
-function mapSex(sex: 'MALE' | 'FEMALE' | 'OTHER'): TrimpSex {
-    return sex === 'FEMALE' ? 'female' : 'male';
 }

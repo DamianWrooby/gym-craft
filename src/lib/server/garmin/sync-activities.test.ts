@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { pickIncrementalStart } from '$lib/garmin/sync-window';
+import { computeTrimp } from '$lib/server/analytics/load/trimp';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 
 const mocks = vi.hoisted(() => ({
     db: {
         activity: { upsert: vi.fn() },
+        athleteProfile: { findUnique: vi.fn() },
         garminSyncState: { update: vi.fn(), upsert: vi.fn() },
         $transaction: vi.fn(async (ops: unknown[]) => ops),
     },
@@ -57,7 +59,8 @@ describe('persistActivities', () => {
         averageHR: 145,
     } as unknown as GarminActivity;
 
-    it('does not overwrite an already computed trimpLoad when re-syncing an existing activity', async () => {
+    it('computes trimpLoad at write time from the athlete profile, on create and update alike', async () => {
+        mocks.db.athleteProfile.findUnique.mockResolvedValueOnce({ restingHR: 50, maxHR: 190, sex: 'MALE' });
         mocks.db.garminSyncState.update.mockResolvedValueOnce({});
 
         const result = await persistActivities('user-1', [garminActivity], 'incremental', 0);
@@ -65,7 +68,29 @@ describe('persistActivities', () => {
         expect(result.ok).toBe(true);
         expect(mocks.db.activity.upsert).toHaveBeenCalledTimes(1);
         const upsertArgs = mocks.db.activity.upsert.mock.calls[0][0];
-        expect(upsertArgs.create.trimpLoad).toBeNull();
-        expect(upsertArgs.update.trimpLoad).toBeUndefined();
+        const expectedTrimp = computeTrimp({
+            durationSec: 1800,
+            hrZoneSeconds: null,
+            averageHr: 145,
+            restingHr: 50,
+            maxHr: 190,
+            sex: 'male',
+        });
+        expect(expectedTrimp).toBeGreaterThan(0);
+        expect(upsertArgs.create.trimpLoad).toBe(expectedTrimp);
+        // Updates recompute deterministically from the same inputs, so re-syncs can never
+        // regress a row back to a null load.
+        expect(upsertArgs.update.trimpLoad).toBe(expectedTrimp);
+    });
+
+    it('falls back to a duration-based trimpLoad when the user has no athlete profile', async () => {
+        mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+        mocks.db.garminSyncState.update.mockResolvedValueOnce({});
+
+        const result = await persistActivities('user-1', [garminActivity], 'incremental', 0);
+
+        expect(result.ok).toBe(true);
+        const upsertArgs = mocks.db.activity.upsert.mock.calls[0][0];
+        expect(upsertArgs.create.trimpLoad).toBe(60); // 30 min * 2
     });
 });

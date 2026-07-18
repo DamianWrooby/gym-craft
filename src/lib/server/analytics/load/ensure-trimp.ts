@@ -1,13 +1,8 @@
 import { db } from '$lib/database';
-import { computeTrimp, type TrimpSex } from './trimp';
+import { computeTrimp, type TrimpProfile } from './trimp';
 import { hrZoneSecondsFromRow, type HrZoneRow } from '$lib/utils/hr-zones';
-import type { AthleteProfile } from '@prisma/client';
 
-export interface TrimpProfile {
-    restingHR: number | null;
-    maxHR: number | null;
-    sex?: TrimpSex | null;
-}
+export type { TrimpProfile };
 
 export interface TrimpSourceRow extends HrZoneRow {
     id: string;
@@ -16,9 +11,7 @@ export interface TrimpSourceRow extends HrZoneRow {
     trimpLoad: number | null;
 }
 
-export function mapProfileSex(sex: AthleteProfile['sex']): TrimpSex {
-    return sex === 'FEMALE' ? 'female' : 'male';
-}
+type WithTrimp<T extends TrimpSourceRow> = Omit<T, 'trimpLoad'> & { trimpLoad: number };
 
 /**
  * Fill in missing `trimpLoad` values: compute TRIMP for every row where it is null and
@@ -28,12 +21,12 @@ export function mapProfileSex(sex: AthleteProfile['sex']): TrimpSex {
 export async function ensureTrimpLoads<T extends TrimpSourceRow>(
     rows: T[],
     profile: TrimpProfile,
-): Promise<(Omit<T, 'trimpLoad'> & { trimpLoad: number })[]> {
+): Promise<WithTrimp<T>[]> {
     const updates: { id: string; trimpLoad: number }[] = [];
 
     const filled = rows.map((row) => {
         if (row.trimpLoad != null) {
-            return { ...row, trimpLoad: row.trimpLoad };
+            return row as WithTrimp<T>;
         }
         const trimp = computeTrimp({
             durationSec: row.durationSec,
