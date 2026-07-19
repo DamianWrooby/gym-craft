@@ -15,7 +15,8 @@ notes.txt
 .notes.md
 
 .ai
-docs
+/docs/*
+!/docs/agents/
 .claude
 .cursor
 .agents
