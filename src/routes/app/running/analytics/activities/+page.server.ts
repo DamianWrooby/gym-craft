@@ -9,7 +9,7 @@ export interface ActivityListPageData {
 
 export const load = async ({ locals }: { locals: App.Locals }): Promise<ActivityListPageData> => {
     const userId = locals.user?.id;
-    if (!userId) throw redirect(302, '/app/login');
+    if (!userId) redirect(302, '/app/login');
 
     const [rows, syncState] = await Promise.all([
         db.activity.findMany({

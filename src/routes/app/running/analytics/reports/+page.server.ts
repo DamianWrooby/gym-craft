@@ -4,7 +4,7 @@ import { getAthleteProfile, getMonthlyWeeklyReportCount, getRunningGoals, getWee
 
 export async function load({ locals }) {
     const userId = locals.user?.id;
-    if (!userId) throw error(401, 'Unauthorized');
+    if (!userId) error(401, 'Unauthorized');
 
     const [err, results] = await to(
         Promise.all([
@@ -14,7 +14,7 @@ export async function load({ locals }) {
             getRunningGoals(userId, { includeArchived: false }),
         ]),
     );
-    if (err || !results) throw error(500, 'Cannot load reports');
+    if (err || !results) error(500, 'Cannot load reports');
     const [reports, monthlyReportCount, profile, goals] = results;
 
     return {

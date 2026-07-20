@@ -26,7 +26,7 @@ export interface DashboardPageData {
 
 export const load = async ({ locals }: { locals: App.Locals }): Promise<DashboardPageData> => {
     const userId = locals.user?.id;
-    if (!userId) throw redirect(302, '/app/login');
+    if (!userId) redirect(302, '/app/login');
 
     const [rows, syncState, garminData, reports, profile] = await Promise.all([
         db.activity.findMany({ where: { userId }, orderBy: { startTime: 'desc' } }),
