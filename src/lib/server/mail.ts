@@ -47,7 +47,7 @@ export async function sendVerificationToken(userId: string, email: string) {
 
         return verificationToken;
     } catch (err) {
-        if (err) throw error(500, 'Verification email could not be sent');
+        if (err) error(500, 'Verification email could not be sent');
     }
 }
 
@@ -83,9 +83,9 @@ const verifyEmail = async (userId: string, email: string) => {
             where: { id: userId },
             select: { id: true, email: true },
         });
-        if (!user) throw error(404, 'User not found');
-        if (user.email !== email) throw error(500, 'Email mismatch');
+        if (!user) error(404, 'User not found');
+        if (user.email !== email) error(500, 'Email mismatch');
     } catch (err) {
-        throw error(500, 'Database error');
+        error(500, 'Database error');
     }
 };

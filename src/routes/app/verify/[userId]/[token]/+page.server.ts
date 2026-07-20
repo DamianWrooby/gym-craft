@@ -6,7 +6,7 @@ export async function load({ params }) {
     const [err] = await to(verifyToken(params.userId, params.token));
 
     if (err) {
-        throw error(400, 'Token error');
+        error(400, 'Token error');
     }
 
     return { status: 200, body: 'Account verified' };
