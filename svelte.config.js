@@ -10,27 +10,17 @@ const config = {
         inspector: true,
     },
     kit: {
-        csrf: { checkOrigin: true },
+        // CSRF origin check on cross-site form POSTs. In kit 2 `csrf.checkOrigin` is deprecated
+        // in favour of `csrf.trustedOrigins` (see @sveltejs/kit config options.js). checkOrigin
+        // still defaults to true, so an empty trustedOrigins list = strict same-origin with no
+        // exceptions — behaviourally identical to the old `checkOrigin: true`.
+        csrf: { trustedOrigins: [] },
         adapter: adapter(),
         alias: {
             '@components': path.resolve('./src/lib/components'),
             '@lib': path.resolve('./src/lib'),
             '@utils': path.resolve('./src/lib/utils'),
             '@models': path.resolve('./src/models'),
-        },
-        typescript: {
-            // Kit 1.x emits options TypeScript has since removed or deprecated:
-            // importsNotUsedAsValues/preserveValueImports were removed in TS 5.5 (TS5102) and
-            // moduleResolution "node" (node10) is deprecated in TS 6. Swap them for their
-            // replacements — the same values SvelteKit 2 generates.
-            config: (tsconfig) => {
-                delete tsconfig.compilerOptions.importsNotUsedAsValues;
-                delete tsconfig.compilerOptions.preserveValueImports;
-                delete tsconfig.compilerOptions.ignoreDeprecations;
-                tsconfig.compilerOptions.verbatimModuleSyntax = true;
-                tsconfig.compilerOptions.moduleResolution = 'bundler';
-                return tsconfig;
-            },
         },
     },
 };
