@@ -161,7 +161,7 @@
                     <li
                         class="group !m-0 px-4 py-2 text-surface-500 dark:text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-200 dark:odd:bg-surface-900 even:bg-surface-300 dark:even:bg-surface-800 hover:bg-white dark:hover:bg-surface-600">
                         <span class="w-1/12">#{plan.position}</span>
-                        <div class="w-5/12 flex flex-row items-center">
+                        <div class="w-4/12 flex flex-row items-center">
                             {#if editNameEnabledIndex === index}
                                 <input
                                     class="input"
@@ -184,7 +184,8 @@
                                 </button>
                             {/if}
                         </div>
-                        <div class="w-6/12 flex flex-row justify-end items-center">
+                        <span class="w-3/12 text-sm">{plan.createdAt}</span>
+                        <div class="w-4/12 flex flex-row justify-end items-center">
                             <button type="button" class="p-2" on:click={() => showPlan(plan)}>
                                 <EyeIcon
                                     class="w-4 invisible group-hover:visible hover:text-tertiary-100 transition-colors" />
