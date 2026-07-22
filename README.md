@@ -37,8 +37,6 @@ GymCraft has two product surfaces:
 
 **Also new:** a full running analytics dashboard — a training-load snapshot, a searchable/filterable activity history, per-activity HR & pace charts, and an athlete profile with running goals that sharpen every AI report and coaching answer.
 
-https://github.com/user-attachments/assets/PASTE_RUNNING_FEATURES_VIDEO_ID_HERE
-
 ## How does it work?
 
 The user enters data through a clear form and GymCraft under the hood configures the AI model accordingly and enriches that data using prompt engineering techniques to produce the best quality results.
@@ -61,6 +59,8 @@ This integration is designed for a frictionless experience—no manual file tran
 ## Running Analytics Dashboard
 
 For runners, GymCraft reads your Garmin training history and turns it into coach-grade insight.
+
+https://github.com/user-attachments/assets/72fe330e-91dd-47bc-8493-e1530e3279ff
 
 ### Activity sync
 
