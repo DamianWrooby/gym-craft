@@ -1,11 +1,12 @@
 <script lang="ts">
     import { enhance, applyAction } from '$app/forms';
     import { loadingState } from '@/stores';
-    import { debounce } from 'lodash';
+    import debounce from 'lodash/debounce';
     import { validatePasswordComplexity } from '$lib/utils/form-validation.js';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
     import Card from '@components/card/Card.svelte';
+    import Spinner from '@components/loading/spinner/Spinner.svelte';
     import type { ActionResult } from '@sveltejs/kit';
 
     export let form;
@@ -184,7 +185,12 @@
                 <button
                     class="btn variant-filled-primary"
                     type="submit"
-                    disabled={!isFormValid || !isFormFilled || $loadingState}>Register</button>
+                    disabled={!isFormValid || !isFormFilled || $loadingState}>
+                    {#if $loadingState}
+                        <Spinner size={4} />
+                    {/if}
+                    <span>Register</span>
+                </button>
             </div>
         </form>
     </section>
