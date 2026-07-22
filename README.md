@@ -13,7 +13,9 @@ https://github.com/user-attachments/assets/6ca0492a-74ec-402e-9f93-c15612cb136c
     - [Project Overview](#project-overview)
     - [How does it work?](#how-does-it-work)
     - [Garmin Connect Integration](#garmin-connect-integration)
+    - [Running Analytics Dashboard](#running-analytics-dashboard)
     - [Training Reports & AI Performance Coach](#training-reports--ai-performance-coach)
+    - [Athlete Profile & Running Goals](#athlete-profile--running-goals)
     - [Technologies Used](#technologies-used)
     - [Architecture Schema](#architecture-schema)
     - [Production Link](#production-link)
@@ -32,6 +34,10 @@ GymCraft has two product surfaces:
 - **Running side** — Garmin activity sync, weekly coach-style training reports with training-load analytics (TRIMP, ACWR, monotony), and per-activity conversational AI that answers free-form questions about any of your runs.
 
 **New:** GymCraft now features seamless [Garmin Connect™](https://connect.garmin.com/) integration, allowing users to sync AI-generated workout plans directly to their Garmin devices.
+
+**Also new:** a full running analytics dashboard — a training-load snapshot, a searchable/filterable activity history, per-activity HR & pace charts, and an athlete profile with running goals that sharpen every AI report and coaching answer.
+
+https://github.com/user-attachments/assets/PASTE_RUNNING_FEATURES_VIDEO_ID_HERE
 
 ## How does it work?
 
@@ -52,13 +58,27 @@ Effortlessly sync your AI-generated workout plans with your Garmin Connect™ ac
 
 This integration is designed for a frictionless experience—no manual file transfers or complex setup required.
 
-## Training Reports & AI Performance Coach
+## Running Analytics Dashboard
 
 For runners, GymCraft reads your Garmin training history and turns it into coach-grade insight.
 
 ### Activity sync
 
-Imports your last 90 days of activities from Garmin Connect and keeps them in sync. Per-activity splits and HR/pace time series are pulled on demand the first time you open an activity, then cached.
+Imports up to 120 days of activities from Garmin Connect on first connection, then keeps them in sync incrementally with every visit. Activities are stored in the database — no repeated Garmin calls to browse your history.
+
+### Dashboard
+
+Land on `/app/running` and get an at-a-glance snapshot: current training-load status (Undertraining · Optimal · Overreach · High risk) with ACWR, 7-day distance, monotony, and weekly session count, plus previews of your most recent activities and weekly reports.
+
+### Activity history
+
+A dedicated, filterable activity list — pick a date range, choose how many rows per page, and page through your full training history without waiting on Garmin's API.
+
+### Activity detail
+
+Click into any run for the full picture: key stats up top (distance, duration, pace, heart rate), an interactive heart-rate-and-pace overlay chart showing how effort evolved through the run, and a kilometer-by-kilometer splits table.
+
+## Training Reports & AI Performance Coach
 
 ### Weekly training reports
 
@@ -69,23 +89,25 @@ A coach-style markdown review of the week, broken into six sections:
 3. **Intensity quality** — time in heart-rate zones and what it implies.
 4. **Efficiency & response** — pace, HR, and week-over-week deltas.
 5. **Training load & risk** — interpreted using TRIMP-based metrics.
-6. **Recommended adjustments for next week** — concrete actions (intensity %, session mix, what to add/avoid) plus a one-line *Fatigue Risk · Readiness · Adaptation* status.
+6. **Recommended adjustments for next week** — concrete actions (intensity %, session mix, what to add/avoid) plus a one-line _Fatigue Risk · Readiness · Adaptation_ status.
 
 Each report includes a **Training Load card** showing:
 
-| Metric | What it means |
-|---|---|
-| **Acute load (7d avg)** | Recent training stress |
-| **Chronic load (28d avg)** | Fitness baseline you've built up |
-| **ACWR** | Acute ÷ chronic — sweet spot 0.8–1.3, spike > 1.5 |
-| **Monotony (7d)** | How uniform your week was — > 2.0 limits adaptation |
-| **Weekly load Δ** | Percent change vs the previous week |
+| Metric                     | What it means                                       |
+| -------------------------- | --------------------------------------------------- |
+| **Acute load (7d avg)**    | Recent training stress                              |
+| **Chronic load (28d avg)** | Fitness baseline you've built up                    |
+| **ACWR**                   | Acute ÷ chronic — sweet spot 0.8–1.3, spike > 1.5   |
+| **Monotony (7d)**          | How uniform your week was — > 2.0 limits adaptation |
+| **Weekly load Δ**          | Percent change vs the previous week                 |
 
-A status badge — *Under-training · Optimal · Overreaching · High risk* — colour-codes your current state at a glance, with hover tooltips explaining each metric in plain English.
+A status badge — _Under-training · Optimal · Overreaching · High risk_ — colour-codes your current state at a glance, with hover tooltips explaining each metric in plain English.
+
+Beyond the written review, each report renders week-over-week stat deltas, a daily volume bar chart, a heart-rate-zone donut, and a pace-vs-heart-rate scatter — and can be exported for your own records.
 
 ### "Explain my run"
 
-Open any activity and ask the coach a free-form question. One-click prompts like *"Why did I fade?"*, *"Was my pacing good?"*, *"Was this productive?"*, and *"How does this compare to my recent runs?"* are at the top. The AI grounds its answer in:
+Open any activity and ask the coach a free-form question. One-click prompts like _"Why did I fade?"_, _"Was my pacing good?"_, _"Was this productive?"_, and _"How does this compare to my recent runs?"_ are at the top. The AI grounds its answer in:
 
 - That activity's splits and HR/pace samples
 - Your last 14 days of training
@@ -93,6 +115,10 @@ Open any activity and ask the coach a free-form question. One-click prompts like
 - Your athlete profile (HR bounds, VO2max, sex, age)
 
 It never invents numbers, never diagnoses injuries, and stays within 3–5 short paragraphs. Powered by the same OpenAI proxy that handles plan generation, with a per-user daily rate limit.
+
+## Athlete Profile & Running Goals
+
+Set up your athlete profile — heart-rate zones, resting/max HR, VO2max, sex, age — and add priority-ordered running goals (race, base building, tempo work, recovery). GymCraft feeds this context into every weekly report and every "Explain my run" answer, so recommendations are tailored to what you're actually training for.
 
 ## Technologies Used
 
