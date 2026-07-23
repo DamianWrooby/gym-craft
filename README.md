@@ -60,7 +60,7 @@ This integration is designed for a frictionless experience—no manual file tran
 
 For runners, GymCraft reads your Garmin training history and turns it into coach-grade insight.
 
-https://github.com/user-attachments/assets/72fe330e-91dd-47bc-8493-e1530e3279ff
+https://github.com/user-attachments/assets/d202fbba-364d-4aab-ad03-8e61fe76379e
 
 ### Activity sync
 
