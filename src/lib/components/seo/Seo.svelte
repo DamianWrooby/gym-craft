@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { page } from '$app/stores';
     import { appConfig } from '@/constants/app.constants';
     import Screenshot from '$lib/images/gym-craft-app-ss.png';
 
@@ -28,5 +29,5 @@
     <meta name="twitter:description" content={metaDescription} />
     <meta name="twitter:image" content={ogImage} />
 
-    <link rel="canonical" href={baseUrl} />
+    <link rel="canonical" href={`${baseUrl}${$page.url.pathname}`} />
 </svelte:head>
