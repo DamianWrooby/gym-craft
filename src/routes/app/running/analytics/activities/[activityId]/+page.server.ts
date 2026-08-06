@@ -4,7 +4,7 @@ import type { ActivitySample, ActivitySplit } from '$lib/server/garmin/fetch-act
 
 export const load = async ({ params, locals }: { params: { activityId: string }; locals: App.Locals }) => {
     const userId = locals.user?.id;
-    if (!userId) throw redirect(302, '/app/login');
+    if (!userId) redirect(302, '/app/login');
 
     const rawId = params.activityId;
     const asBigInt = parseBigIntSafe(rawId);
@@ -21,7 +21,7 @@ export const load = async ({ params, locals }: { params: { activityId: string };
               });
 
     if (!activity) {
-        throw error(404, 'Activity not found — try syncing your Garmin history first.');
+        error(404, 'Activity not found — try syncing your Garmin history first.');
     }
 
     return {

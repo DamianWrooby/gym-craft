@@ -42,7 +42,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         if (isPathAllowed(pathname)) {
             return addSecurityHeaders(await resolve(event));
         }
-        throw redirect(302, LOGIN_PAGE_PATH);
+        redirect(302, LOGIN_PAGE_PATH);
     }
 
     await updateUser(event);
@@ -52,7 +52,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         if (isPathAllowed(pathname)) {
             return addSecurityHeaders(await resolve(event));
         }
-        throw redirect(302, LOGIN_PAGE_PATH);
+        redirect(302, LOGIN_PAGE_PATH);
     }
 
     return addSecurityHeaders(await resolve(event));

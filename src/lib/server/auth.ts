@@ -9,7 +9,7 @@ interface AuthenticatedUser {
 export function getAuthenticatedUser(event: RequestEvent): AuthenticatedUser {
     const user = event.locals.user;
     if (!user) {
-        throw error(401, 'Unauthorized');
+        error(401, 'Unauthorized');
     }
     return user;
 }
@@ -17,7 +17,7 @@ export function getAuthenticatedUser(event: RequestEvent): AuthenticatedUser {
 export function assertOwnership(event: RequestEvent, resourceUserId: string): AuthenticatedUser {
     const user = getAuthenticatedUser(event);
     if (user.id !== resourceUserId) {
-        throw error(403, 'Forbidden');
+        error(403, 'Forbidden');
     }
     return user;
 }
