@@ -25,6 +25,8 @@
     const toastStore = getToastStore();
 
     let syncing = false;
+    /** Only set while a multi-window backfill is running — a single-call sync has nothing to count. */
+    let syncProgress: string | null = null;
     // Garmin session token; refreshed in-place when the user re-authenticates via the modal.
     let sessionToken: string | null = data.garminSessionToken;
 
@@ -60,6 +62,9 @@
                 sessionToken,
                 syncState: { backfillComplete: !data.needsInitialSync, lastSyncedAt: data.lastSyncedAt },
                 backfillDays: TIER_LIMITS[user.subscriptionTier].garminBackfillDays,
+                onProgress: (completed, total) => {
+                    syncProgress = total > 1 ? `${completed} of ${total} periods imported…` : null;
+                },
             });
 
             if (result.ok) {
@@ -106,6 +111,7 @@
             makeToast(toastStore, result.message || 'Sync failed', 'variant-filled-error');
         } finally {
             syncing = false;
+            syncProgress = null;
         }
     }
 
@@ -222,7 +228,9 @@
                     {/each}
                 </ul>
             {:else if syncing}
-                <p class="text-center opacity-70 py-6">Fetching your Garmin history…</p>
+                <p class="text-center opacity-70 py-6">
+                    {syncProgress ?? 'Fetching your Garmin history…'}
+                </p>
             {:else}
                 <p class="text-center opacity-70 italic py-6">
                     No activities yet — use “Sync now” above to import your Garmin history.

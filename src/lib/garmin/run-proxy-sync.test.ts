@@ -152,6 +152,47 @@ describe('runProxySync', () => {
         expect(persistBody.activities).toHaveLength(4);
     });
 
+    it('reports progress after each completed window', async () => {
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 1 }] }))
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 2 }] }))
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 3 }] }))
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 4 }] }))
+            .mockResolvedValueOnce(
+                jsonResponse(200, { data: { mode: 'backfill', activitiesUpserted: 4, lastSyncedAt: 'x' } }),
+            );
+        const onProgress = vi.fn();
+
+        await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 120, onProgress });
+
+        expect(onProgress.mock.calls).toEqual([
+            [1, 4],
+            [2, 4],
+            [3, 4],
+            [4, 4],
+        ]);
+    });
+
+    it('reports a single window for an incremental sync, so callers need no special case', async () => {
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [] }))
+            .mockResolvedValueOnce(
+                jsonResponse(200, { data: { mode: 'incremental', activitiesUpserted: 0, lastSyncedAt: 'x' } }),
+            );
+        const onProgress = vi.fn();
+
+        await runProxySync({
+            userId,
+            garminEmail,
+            sessionToken,
+            syncState: { backfillComplete: true, lastSyncedAt: '2026-06-01T00:00:00.000Z' },
+            backfillDays: 120,
+            onProgress,
+        });
+
+        expect(onProgress.mock.calls).toEqual([[1, 1]]);
+    });
+
     it('keeps an incremental sync as a single proxy call', async () => {
         fetchMock
             .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 1 }] }))

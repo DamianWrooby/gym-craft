@@ -30,6 +30,12 @@ export interface RunProxySyncArgs {
     sessionToken: string | null;
     /** Tier-based backfill window (TIER_LIMITS[tier].garminBackfillDays). */
     backfillDays: number;
+    /**
+     * Called after each proxy window completes. A backfill is several sequential calls of up to
+     * 150s each, so without this the UI has nothing to show for minutes at a time. Fires once with
+     * `total: 1` for an incremental sync, so callers need no special case.
+     */
+    onProgress?: (completed: number, total: number) => void;
 }
 
 const GARMIN_WAKE_BUDGET_MS = 120_000;
@@ -176,7 +182,7 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
     const windows = mode === 'backfill' ? splitDateRange(startDate, endDate) : [{ startDate, endDate }];
 
     const activities: unknown[] = [];
-    for (const range of windows) {
+    for (const [index, range] of windows.entries()) {
         // The Bearer token is the identity; the proxy forwards it to the microservice. No credentials.
         const proxy = await postJson(
             proxyUrl,
@@ -199,6 +205,7 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
             return { ok: false, code: 'PROXY_ERROR', message: 'Garmin returned an unreadable window' };
         }
         activities.push(...proxy.payload.data);
+        args.onProgress?.(index + 1, windows.length);
     }
 
     const persist = await postJson(`/api/user/${userId}/garmin/sync`, { activities, mode });
