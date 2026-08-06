@@ -74,7 +74,6 @@
         "bcrypt": "^5.1.1",
         "d3-array": "^3.2.4",
         "d3-scale": "^4.0.2",
-        "dompurify": "^3.4.3",
         "html2pdf.js": "0.9.3",
         "layercake": "^8.4.4",
         "lodash": "^4.17.21",
@@ -83,6 +82,7 @@
         "nodemailer": "^6.10.1",
         "nodemailer-mailgun-transport": "^2.1.5",
         "openai": "^4.104.0",
-        "stripe": "^22.3.0"
+        "stripe": "^22.3.0",
+        "xss": "^1.0.15"
     }
 }

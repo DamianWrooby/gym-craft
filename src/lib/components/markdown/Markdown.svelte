@@ -3,12 +3,11 @@
 
     export let source: string;
 
-    // Empty on the server (no DOM to sanitize with), filled in on hydration.
     $: safeHtml = renderMarkdown(source);
 </script>
 
 <div class="markdown prose dark:prose-invert max-w-none">
-    <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized via DOMPurify in renderMarkdown() -->
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized against an allowlist in renderMarkdown() -->
     {@html safeHtml}
 </div>
 

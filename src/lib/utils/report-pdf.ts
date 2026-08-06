@@ -1,4 +1,4 @@
-import { renderMarkdownForPdf } from './sanitize-markdown';
+import { renderMarkdown } from './sanitize-markdown';
 
 interface PdfGoal {
     goalType: string;
@@ -23,7 +23,7 @@ function escapeHtml(text: string): string {
 
 export function buildReportPdfHtml(report: PdfExportableReport): string {
     // The summary is LLM-generated, so sanitize before embedding.
-    const summaryHtml = renderMarkdownForPdf(report.summary);
+    const summaryHtml = renderMarkdown(report.summary);
 
     const parts: string[] = [
         `<h1>Weekly Training Report — ${report.periodStart} to ${report.periodEnd}</h1>`,
