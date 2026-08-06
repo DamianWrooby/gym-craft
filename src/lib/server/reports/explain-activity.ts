@@ -94,9 +94,7 @@ export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt
             maxHr: activity.maxHr,
             hrZoneSeconds: hrZoneSecondsFromRow(activity),
             averageSpeedMps: activity.averageSpeed,
-            ...(isPace
-                ? { avgPaceSecPerKm, avgPace: formatPaceSecPerKm(avgPaceSecPerKm) }
-                : {}),
+            ...(isPace ? { avgPaceSecPerKm, avgPace: formatPaceSecPerKm(avgPaceSecPerKm) } : {}),
             averageCadence: activity.averageCadence,
             avgStrideLength: activity.avgStrideLength,
             elevationGainM: activity.elevationGainM,

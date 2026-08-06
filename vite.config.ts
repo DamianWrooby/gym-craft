@@ -11,6 +11,11 @@ export default defineConfig({
             '@components': path.resolve(__dirname, './src/lib/components'),
             '@models': path.resolve('./src/models'),
         },
+        // Vitest runs in node, so without this vite-plugin-svelte hands it the SSR build of every
+        // component — and onMount never runs under SSR. Mount-time behaviour would then silently
+        // do nothing in tests while working fine in the browser. Scoped to vitest so the real
+        // build keeps its own resolution.
+        ...(process.env.VITEST ? { conditions: ['browser'] } : {}),
     },
     plugins: [sveltekit(), purgeCss()],
     test: {

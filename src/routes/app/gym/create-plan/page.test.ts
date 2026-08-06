@@ -19,7 +19,8 @@ vi.mock('@skeletonlabs/skeleton', () => {
     const getModalStore = vi.fn().mockReturnValue({ trigger: vi.fn() });
     return { getToastStore, getModalStore };
 });
-vi.mock('$lib/utils/toasts', () => ({ makeToast: vi.fn() }));
+vi.mock('$lib/utils/toasts', () => ({ makeToast: vi.fn(), makeUpgradeToast: vi.fn() }));
+import { makeToast } from '$lib/utils/toasts';
 
 // Loading store used in the component
 vi.mock('@/stores', () => ({ loadingState: writable(false) }));
@@ -32,6 +33,7 @@ import { page as pageStore } from '$app/stores';
 describe('create-plan +page.svelte', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        sessionStorage.clear();
         (pageStore as any).set({ data: { user: { session: 'sess', plansLeft: 1 } } });
         loadingState.set(false);
     });
@@ -63,5 +65,33 @@ describe('create-plan +page.svelte', () => {
         });
 
         expect(screen.queryByRole('status')).toBeNull();
+    });
+
+    // The draft is parked when an expired session bounces a generation attempt. Restoring it
+    // silently looks identical to losing it, so the page has to say something.
+    it('toasts when the survey restores a parked draft', async () => {
+        sessionStorage.setItem('gymcraft:survey-draft', JSON.stringify({ personalInfo: { sex: 'female', age: 31 } }));
+
+        render(CreatePlanPage);
+
+        await waitFor(() => {
+            expect(makeToast).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.stringContaining('restored your previous answers'),
+                'variant-filled-success',
+            );
+        });
+    });
+
+    it('stays quiet when there is no parked draft', async () => {
+        render(CreatePlanPage);
+
+        await waitFor(() => {
+            expect(
+                screen.getAllByText('Fill out the survey and generate a training plan tailored to your goals')[0],
+            ).toBeInTheDocument();
+        });
+
+        expect(makeToast).not.toHaveBeenCalled();
     });
 });

@@ -6,10 +6,7 @@ import type { Action, Actions } from '../$types';
 import { isString } from '$lib/utils/form-validation';
 
 import { db } from '$lib/database';
-
-function hashSessionToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
-}
+import { hashSessionToken } from '$lib/server/session-token';
 
 const login: Action = async ({ cookies, request }) => {
     const data = await request.formData();

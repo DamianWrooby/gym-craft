@@ -3,11 +3,13 @@ import { appConfig } from '@/constants/app.constants';
 import { isProduction } from '$lib/utils/environment';
 import { resolveSyncWindow, type SyncMode, type SyncStateSnapshot } from '$lib/garmin/sync-window';
 import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
+import { splitDateRange } from '$lib/garmin/date-chunks';
 
 export type RunProxySyncErrorCode =
     | 'GARMIN_EMAIL_NOT_CONFIGURED'
     | 'INVALID_TOKEN'
     | 'STALE_STATE'
+    | 'GARMIN_TIMEOUT'
     | 'PROXY_ERROR'
     | 'PERSIST_ERROR';
 
@@ -18,8 +20,7 @@ export interface SyncSummary {
 }
 
 export type RunProxySyncResult =
-    | { ok: true; summary: SyncSummary }
-    | { ok: false; code: RunProxySyncErrorCode; message: string };
+    { ok: true; summary: SyncSummary } | { ok: false; code: RunProxySyncErrorCode; message: string };
 
 export interface RunProxySyncArgs {
     userId: string;
@@ -29,10 +30,22 @@ export interface RunProxySyncArgs {
     sessionToken: string | null;
     /** Tier-based backfill window (TIER_LIMITS[tier].garminBackfillDays). */
     backfillDays: number;
+    /**
+     * Called after each proxy window completes. A backfill is several sequential calls of up to
+     * 150s each, so without this the UI has nothing to show for minutes at a time. Fires once with
+     * `total: 1` for an incremental sync, so callers need no special case.
+     */
+    onProgress?: (completed: number, total: number) => void;
 }
 
 const GARMIN_WAKE_BUDGET_MS = 120_000;
 const GARMIN_WAKE_INTERVAL_MS = 3_000;
+
+/**
+ * Must stay above the proxy's own 120s ceiling: aborting earlier would cancel requests that were
+ * about to succeed and turn a slow Garmin into a client error the proxy could have explained.
+ */
+const PROXY_REQUEST_TIMEOUT_MS = 150_000;
 
 /**
  * Render spins the free Garmin microservice down after ~15 min idle, and its Cloudflare edge
@@ -62,26 +75,75 @@ async function wakeGarminService(): Promise<void> {
     console.warn('[garmin-wake] budget exhausted; proceeding anyway');
 }
 
-type PostJsonResult = { ok: boolean; status: number; payload: Record<string, unknown> } | { error: string };
+type PostJsonResult =
+    { ok: boolean; status: number; payload: Record<string, unknown> } | { error: string; aborted?: boolean };
 
-async function postJson(url: string, body: unknown, headers: Record<string, string> = {}): Promise<PostJsonResult> {
+interface PostJsonOptions {
+    headers?: Record<string, string>;
+    timeoutMs?: number;
+}
+
+async function postJson(url: string, body: unknown, options: PostJsonOptions = {}): Promise<PostJsonResult> {
+    const { headers = {}, timeoutMs } = options;
+
+    const controller = timeoutMs ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
     const [fetchError, response] = await to(
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...headers },
             body: JSON.stringify(body),
+            ...(controller ? { signal: controller.signal } : {}),
         }),
     );
+    if (timer) clearTimeout(timer);
+
     if (fetchError || !response) {
-        return { error: fetchError?.message ?? 'Request failed' };
+        const aborted = fetchError?.name === 'AbortError';
+        return { error: fetchError?.message ?? 'Request failed', aborted };
     }
 
-    const [parseError, payload] = await to(response.json());
-    if (parseError) {
-        return { error: 'Invalid response' };
+    // Read as text first: a Render edge error (throttle, cold start) answers with HTML, and a
+    // bare .json() would turn that into an opaque parse failure instead of a reportable status.
+    const [readError, raw] = await to(response.text());
+    if (readError) {
+        return { error: 'Could not read the response' };
     }
 
-    return { ok: response.ok, status: response.status, payload: payload as Record<string, unknown> };
+    let payload: Record<string, unknown> = {};
+    if (raw && raw.trim()) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'object' && parsed !== null) payload = parsed as Record<string, unknown>;
+        } catch {
+            // Non-JSON body: keep the status, let the caller report it generically.
+            if (response.ok) return { error: 'Invalid response' };
+        }
+    }
+
+    return { ok: response.ok, status: response.status, payload };
+}
+
+/**
+ * Maps a proxy failure onto a caller-facing code. The proxy tags its own errors — `INVALID_TOKEN`
+ * for a credentials problem, `GARMIN_SERVICE_ERROR` for everything transient — so the `code` is
+ * what we branch on; the message text is only a fallback for older service builds.
+ */
+function classifyProxyFailure(
+    status: number,
+    payload: Record<string, unknown>,
+): { code: RunProxySyncErrorCode; message: string } {
+    const message = typeof payload.message === 'string' ? payload.message : undefined;
+
+    if (status === 401 || payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
+        return { code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
+    }
+    // 504 is the proxy giving up on Garmin after 120s — transient, and worth retrying.
+    if (status === 504) {
+        return { code: 'GARMIN_TIMEOUT', message: message ?? 'Garmin service timed out' };
+    }
+    return { code: 'PROXY_ERROR', message: message ?? 'Garmin service error' };
 }
 
 /**
@@ -93,6 +155,7 @@ async function postJson(url: string, body: unknown, headers: Record<string, stri
  * Returns a normalized result so each page can render its own toasts / inline errors.
  * On `INVALID_TOKEN` the caller should prompt for the Garmin password and call again with it.
  * On `STALE_STATE` the caller should reload fresh sync state and retry once.
+ * On `GARMIN_TIMEOUT` Garmin itself was too slow — offer a plain retry.
  */
 export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySyncResult> {
     const { userId, garminEmail, syncState, sessionToken, backfillDays } = args;
@@ -114,20 +177,36 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
         await wakeGarminService();
     }
 
-    // The Bearer token is the identity; the proxy forwards it to the microservice. No credentials.
-    const proxy = await postJson(proxyUrl, { startDate, endDate }, { Authorization: `Bearer ${sessionToken}` });
-    if ('error' in proxy) {
-        return { ok: false, code: 'PROXY_ERROR', message: proxy.error };
-    }
-    if (!proxy.ok) {
-        const message = typeof proxy.payload.message === 'string' ? proxy.payload.message : undefined;
-        if (proxy.status === 401 || proxy.payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
-            return { ok: false, code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
-        }
-        return { ok: false, code: 'PROXY_ERROR', message: message ?? 'Garmin service error' };
-    }
+    // A backfill spans up to 120 days, which is exactly the window Garmin is slowest on, so it
+    // goes out as month-sized requests. Incremental syncs are a week and stay a single call.
+    const windows = mode === 'backfill' ? splitDateRange(startDate, endDate) : [{ startDate, endDate }];
 
-    const activities = Array.isArray(proxy.payload.data) ? proxy.payload.data : [];
+    const activities: unknown[] = [];
+    for (const [index, range] of windows.entries()) {
+        // The Bearer token is the identity; the proxy forwards it to the microservice. No credentials.
+        const proxy = await postJson(
+            proxyUrl,
+            { startDate: range.startDate, endDate: range.endDate },
+            { headers: { Authorization: `Bearer ${sessionToken}` }, timeoutMs: PROXY_REQUEST_TIMEOUT_MS },
+        );
+        if ('error' in proxy) {
+            const code = proxy.aborted ? 'GARMIN_TIMEOUT' : 'PROXY_ERROR';
+            return { ok: false, code, message: proxy.aborted ? 'Garmin service timed out' : proxy.error };
+        }
+        if (!proxy.ok) {
+            return { ok: false, ...classifyProxyFailure(proxy.status, proxy.payload) };
+        }
+
+        // Partial results are never persisted: a `backfill` write marks the backfill complete, so
+        // saving half a window would leave a permanent hole no later sync goes back to fill. A 200
+        // without a `data` array is that same hole wearing a success status — an empty body, or a
+        // shape we do not recognise — so it fails the whole sync rather than counting as no rides.
+        if (!Array.isArray(proxy.payload.data)) {
+            return { ok: false, code: 'PROXY_ERROR', message: 'Garmin returned an unreadable window' };
+        }
+        activities.push(...proxy.payload.data);
+        args.onProgress?.(index + 1, windows.length);
+    }
 
     const persist = await postJson(`/api/user/${userId}/garmin/sync`, { activities, mode });
     if ('error' in persist) {

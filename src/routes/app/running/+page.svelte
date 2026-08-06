@@ -26,6 +26,8 @@
     let syncing = false;
     let syncError: string | null = null;
     let syncMessage: string | null = null;
+    /** Only set while a multi-window backfill is running — a single-call sync has nothing to count. */
+    let syncProgress: string | null = null;
     // The Garmin session token; refreshed in-place when the user re-authenticates via the modal.
     let sessionToken: string | null = data.garminSessionToken;
 
@@ -48,6 +50,7 @@
         syncing = true;
         syncError = null;
         syncMessage = null;
+        syncProgress = null;
         try {
             const result = await runProxySync({
                 userId: $page.data.user?.id ?? '',
@@ -55,6 +58,9 @@
                 sessionToken,
                 syncState: data.syncState,
                 backfillDays,
+                onProgress: (completed, total) => {
+                    syncProgress = total > 1 ? `Imported ${completed} of ${total} periods…` : null;
+                },
             });
 
             if (result.ok) {
@@ -80,11 +86,19 @@
                 return;
             }
 
+            if (result.code === 'GARMIN_TIMEOUT') {
+                // Garmin itself was too slow, not a credentials or data problem — a plain retry
+                // often succeeds, and each retry picks up where the last sync left off.
+                syncError = 'Garmin took too long to respond. Please try syncing again.';
+                return;
+            }
+
             syncError = result.message;
         } catch (err) {
             syncError = err instanceof Error ? err.message : 'Sync failed';
         } finally {
             syncing = false;
+            syncProgress = null;
         }
     }
 
@@ -138,7 +152,7 @@
                         <p class="font-semibold">Import your Garmin history</p>
                         <p class="text-sm opacity-80">
                             We'll fetch your last {backfillDays} days of activities so training-load analytics can work. This
-                            runs once and takes a few seconds.
+                            runs once and can take a few minutes — keep this tab open.
                         </p>
                     </div>
                     <button class="btn variant-filled-warning" on:click={() => runSync()} disabled={syncing}>
@@ -157,6 +171,9 @@
                         <span>{syncing ? 'Syncing…' : 'Refresh'}</span>
                     </button>
                 </aside>
+            {/if}
+            {#if syncProgress}
+                <p class="text-sm opacity-80 mt-2">{syncProgress}</p>
             {/if}
             {#if syncError}
                 <p class="text-error-500 text-sm mt-2">{syncError}</p>
