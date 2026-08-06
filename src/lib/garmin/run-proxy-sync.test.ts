@@ -81,9 +81,9 @@ describe('runProxySync', () => {
         expect(fetchMock).toHaveBeenCalledTimes(1); // never reached the persist call
     });
 
-    it('persists an empty list when the proxy returns a non-array data field', async () => {
+    it('persists an empty list for a genuinely empty window', async () => {
         fetchMock
-            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: null }))
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [] }))
             .mockResolvedValueOnce(
                 jsonResponse(200, { data: { mode: 'backfill', activitiesUpserted: 0, lastSyncedAt: 'x' } }),
             );
@@ -92,6 +92,26 @@ describe('runProxySync', () => {
 
         const persistBody = JSON.parse(fetchMock.mock.calls[1][1].body);
         expect(persistBody.activities).toEqual([]);
+    });
+
+    // A `backfill` persist marks the backfill complete, so "no data field" must not read as "no
+    // activities" — that would close the window over a gap no later sync goes back to fill.
+    it('fails the sync when a window returns 200 without a data array', async () => {
+        fetchMock.mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: null }));
+
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 30 });
+
+        expect(result).toEqual({ ok: false, code: 'PROXY_ERROR', message: 'Garmin returned an unreadable window' });
+        expect(fetchMock).toHaveBeenCalledTimes(1); // never reached the persist call
+    });
+
+    it('fails the sync when a window returns 200 with an empty body', async () => {
+        fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }));
+
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 30 });
+
+        expect(result).toEqual({ ok: false, code: 'PROXY_ERROR', message: 'Garmin returned an unreadable window' });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it('reports GARMIN_TIMEOUT when the proxy gives up on Garmin', async () => {

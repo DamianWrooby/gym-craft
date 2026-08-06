@@ -14,7 +14,11 @@
     import type { GeneratedWorkout, Plan, WorkoutSegment, WorkoutStep } from '@models/plan/plan.model';
     import { exerciseMap, workoutCategoriesSet } from '@/constants/workout.constants';
     import { PUBLIC_APP_ENV } from '$env/static/public';
-    import { generatePlan as callGeneratePlanProxy, type GeneratePlanErrorCode } from '$lib/gym/generate-plan';
+    import {
+        generatePlan as callGeneratePlanProxy,
+        isRetryableCode,
+        type GeneratePlanErrorCode,
+    } from '$lib/gym/generate-plan';
     import { saveSurveyDraft } from '$lib/gym/survey-draft';
 
     const user: User = $page.data.user;
@@ -114,6 +118,11 @@
         if (code === 'INVALID_FORM_DATA') {
             return 'We could not process your survey answers <br> Please try again or contact support';
         }
+        if (code === 'PROXY_ERROR') {
+            // Network fault, or the proxy/OpenAI itself failing — nothing was wrong with the
+            // answers, so say that rather than implying the plan came back and failed validation.
+            return 'We could not reach the plan generator <br> Please try again in a moment';
+        }
         return 'Failed to generate a valid plan after maximum retries';
     }
 
@@ -135,7 +144,7 @@
             if (!result.ok) {
                 // A rejected session or a rejected payload returns the same answer every time —
                 // burning the retries on them only delays the message the user needs.
-                if (result.code === 'INVALID_SESSION' || result.code === 'INVALID_FORM_DATA') return result;
+                if (!isRetryableCode(result.code)) return result;
                 lastFailure = result;
                 continue;
             }

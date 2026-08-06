@@ -17,20 +17,25 @@ export interface CallExplainProxyResult {
     error?: string;
 }
 
-/** The proxy aborts its OpenAI call at 45s; stay comfortably above that so we read its answer. */
-const PROXY_TIMEOUT_MS = 60_000;
-
 /** 502 (OpenAI failed/timed out) and 503 (upstream rate limit) are transient — one retry each. */
 const RETRYABLE_STATUSES = new Set([502, 503]);
 const MAX_ATTEMPTS = 2;
 const RETRY_BACKOFF_MS = 1_000;
 
 /**
- * A retry is only worth starting when there is time left for it. These calls run inside a
- * SvelteKit function with its own platform ceiling, so a first attempt that already burned the
- * budget (typically the proxy's own 45s timeout) must fail fast rather than double the wait.
+ * Budget for the whole call, retries included — every attempt draws from it, so no combination of
+ * attempts can outlast it. It must stay under the Netlify function timeout configured for the
+ * site: overshooting turns an actionable 502 into a platform timeout with no body at all, which is
+ * strictly worse than the error we already had in hand. 55s assumes the site has raised the
+ * timeout past Netlify's 10s default — lower this to match if it has not.
  */
-const RETRY_BUDGET_MS = 25_000;
+const TOTAL_BUDGET_MS = 55_000;
+
+/**
+ * Never start an attempt that cannot outlive the proxy's own 45s OpenAI abort by a useful margin —
+ * a shorter one can only end in our own abort, wasting whatever budget is left.
+ */
+const MIN_ATTEMPT_MS = 50_000;
 
 export async function callWeeklyReportProxy(prompt: ReportPrompt, model?: string): Promise<CallProxyResult> {
     const url = isProduction() ? appConfig.weeklyReportApiUrlPROD : appConfig.weeklyReportApiUrlDEV;
@@ -61,15 +66,19 @@ async function postPrompt(
     tag: string,
 ): Promise<PostPromptResult> {
     const start = Date.now();
+    const deadline = start + TOTAL_BUDGET_MS;
     let last: PostPromptResult = { ok: false, error: 'Proxy was not called', retryable: false };
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        last = await postPromptOnce(url, prompt, model);
-        if (last.ok || !last.retryable) return last;
+        const remaining = deadline - Date.now();
+        if (remaining < MIN_ATTEMPT_MS) {
+            console.warn(`[${tag}] budget spent after ${attempt - 1} attempt(s) in ${Date.now() - start}ms`);
+            return last;
+        }
 
-        const elapsed = Date.now() - start;
-        if (attempt === MAX_ATTEMPTS || elapsed > RETRY_BUDGET_MS) {
-            console.warn(`[${tag}] giving up after ${attempt} attempt(s) in ${elapsed}ms: ${last.error}`);
+        last = await postPromptOnce(url, prompt, model, remaining);
+        if (last.ok || !last.retryable || attempt === MAX_ATTEMPTS) {
+            if (!last.ok) console.warn(`[${tag}] giving up after ${attempt} attempt(s): ${last.error}`);
             return last;
         }
 
@@ -83,10 +92,11 @@ async function postPrompt(
 async function postPromptOnce(
     url: string,
     prompt: { system: string; user: string },
-    model?: string,
+    model: string | undefined,
+    timeoutMs: number,
 ): Promise<PostPromptResult> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     const [error, response] = await to(
         fetch(url, {

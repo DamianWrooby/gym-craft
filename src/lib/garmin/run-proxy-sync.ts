@@ -192,8 +192,13 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
         }
 
         // Partial results are never persisted: a `backfill` write marks the backfill complete, so
-        // saving half a window would leave a permanent hole no later sync goes back to fill.
-        if (Array.isArray(proxy.payload.data)) activities.push(...proxy.payload.data);
+        // saving half a window would leave a permanent hole no later sync goes back to fill. A 200
+        // without a `data` array is that same hole wearing a success status — an empty body, or a
+        // shape we do not recognise — so it fails the whole sync rather than counting as no rides.
+        if (!Array.isArray(proxy.payload.data)) {
+            return { ok: false, code: 'PROXY_ERROR', message: 'Garmin returned an unreadable window' };
+        }
+        activities.push(...proxy.payload.data);
     }
 
     const persist = await postJson(`/api/user/${userId}/garmin/sync`, { activities, mode });
