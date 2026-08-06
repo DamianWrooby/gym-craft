@@ -8,10 +8,7 @@ import { validateRegisterFormData, isString } from '$lib/utils/form-validation';
 import { to } from 'await-to-js';
 
 import { db } from '$lib/database';
-
-function hashSessionToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
-}
+import { hashSessionToken } from '$lib/server/session-token';
 
 const register: Action = async ({ request }) => {
     const data = await request.formData();

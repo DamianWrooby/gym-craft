@@ -1,13 +1,9 @@
-import crypto from 'crypto';
 import { db } from '$lib/database';
 import { resolveTier } from '$lib/server/subscription/tier';
+import { hashSessionToken } from '$lib/server/session-token';
 import { TIER_LIMITS } from '@/constants/subscription.constants';
 import { currentMonthStartIso } from '$lib/utils/iso-week';
 import type { RequestEvent } from '@sveltejs/kit';
-
-function hashSessionToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
-}
 
 export async function updateUser(event: RequestEvent) {
     const session = event.cookies?.get('session');

@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import crypto from 'crypto';
+import { hashSessionToken } from '$lib/server/session-token';
 
 /**
  * The AI proxy authenticates plan generation by matching the posted `session` against
@@ -11,10 +11,6 @@ import crypto from 'crypto';
  * whatever the cookie holds before looking it up), so its blast radius is plan generation only,
  * not the account.
  */
-function hashSessionToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
-}
-
 export async function load({ locals, cookies }) {
     const user = locals?.user;
 
