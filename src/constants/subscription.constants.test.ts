@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TIER_LIMITS, getLimit } from './subscription.constants';
+import { PROXY_ALLOWED_MODELS, TIER_LIMITS, getLimit } from './subscription.constants';
 
 describe('TIER_LIMITS', () => {
     it('encodes the agreed FREE caps', () => {
@@ -16,6 +16,16 @@ describe('TIER_LIMITS', () => {
         expect(TIER_LIMITS.SUPPORTER.gymPlansPerMonth).toBe(5);
         expect(TIER_LIMITS.SUPPORTER.garminBackfillDays).toBe(120);
         expect(TIER_LIMITS.SUPPORTER.aiModel).toBe('gpt-5.4');
+    });
+});
+
+describe('tier models vs the proxy allowlist', () => {
+    // The proxy silently falls back to its default for an unknown id, so a mismatch here would
+    // downgrade a tier without any visible failure.
+    it('keeps every tier model inside the proxy allowlist', () => {
+        for (const tier of Object.keys(TIER_LIMITS) as Array<keyof typeof TIER_LIMITS>) {
+            expect(PROXY_ALLOWED_MODELS).toContain(TIER_LIMITS[tier].aiModel);
+        }
     });
 });
 

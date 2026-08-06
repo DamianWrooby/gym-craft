@@ -17,6 +17,7 @@
     import { loadingState } from '@/stores';
     import type { SurveyFormModel } from '@/models/survey/survey-form.model';
     import { formDataMock } from '@/constants/mockData.constants';
+    import { takeSurveyDraft } from '$lib/gym/survey-draft';
 
     const user: User = $page.data.user;
     const dispatch = createEventDispatcher<{ complete: { formData: SurveyFormModel } }>();
@@ -89,6 +90,19 @@
     let stepsNumber = Object.keys(formData).length;
 
     onMount(() => {
+        // Answers parked when a generation attempt bounced off an expired session. Merged per
+        // section so a draft written before a survey change cannot drop newly added fields.
+        const draft = takeSurveyDraft();
+        if (draft) {
+            formData = {
+                personalInfo: { ...formData.personalInfo, ...draft.personalInfo },
+                goals: { ...formData.goals, ...draft.goals },
+                experience: { ...formData.experience, ...draft.experience },
+                lifestyle: { ...formData.lifestyle, ...draft.lifestyle },
+                fitnessLevel: { ...formData.fitnessLevel, ...draft.fitnessLevel },
+                equipment: { ...formData.equipment, ...draft.equipment },
+            };
+        }
         openInfoModal();
     });
 

@@ -146,7 +146,9 @@ export async function POST({
     const prompt = buildReportPrompt({ metrics, profile, goals, notes });
     const proxy = await callWeeklyReportProxy(prompt, getLimit(locals.user.subscriptionTier, 'aiModel'));
     if (!proxy.ok || !proxy.summary) {
-        return createResponse(502, { code: 'LLM_FAILED', message: proxy.error ?? 'LLM proxy failed' });
+        // proxy.error carries OpenAI's own wording — diagnostics, not copy. Log it, show our own.
+        console.error(`[weekly-report] proxy failed for user ${userId}: ${proxy.error}`);
+        return createResponse(502, { code: 'LLM_FAILED', message: 'Coach service is temporarily unavailable' });
     }
 
     const report = await persistTrainingReport({ ...baseInput, summary: proxy.summary });

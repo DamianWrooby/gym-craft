@@ -80,6 +80,13 @@
                 return;
             }
 
+            if (result.code === 'GARMIN_TIMEOUT') {
+                // Garmin itself was too slow, not a credentials or data problem — a plain retry
+                // often succeeds, and each retry picks up where the last sync left off.
+                syncError = 'Garmin took too long to respond. Please try syncing again.';
+                return;
+            }
+
             syncError = result.message;
         } catch (err) {
             syncError = err instanceof Error ? err.message : 'Sync failed';

@@ -94,6 +94,15 @@
                 await invalidateAll();
                 return;
             }
+            if (result.code === 'GARMIN_TIMEOUT') {
+                // Garmin was too slow — transient, and a retry resumes from the last sync point.
+                makeToast(
+                    toastStore,
+                    'Garmin took too long to respond <br> Please try syncing again',
+                    'variant-filled-warning',
+                );
+                return;
+            }
             makeToast(toastStore, result.message || 'Sync failed', 'variant-filled-error');
         } finally {
             syncing = false;

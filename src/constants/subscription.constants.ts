@@ -15,6 +15,14 @@ export interface TierLimits {
     aiModel: string;
 }
 
+/**
+ * Mirror of `allowedModels` in the AI proxy (`app/config/openAI.config.js`). An id the proxy does
+ * not recognise is not an error there — it logs a warning and quietly falls back to its default,
+ * so a typo would silently downgrade paying users. Keeping the list here lets a test catch that
+ * before deploy; when a tier model changes, update the proxy's allowlist in the same change.
+ */
+export const PROXY_ALLOWED_MODELS = ['gpt-5.4-mini', 'gpt-5.4'] as const;
+
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     FREE: {
         weeklyReportsPerMonth: 2,

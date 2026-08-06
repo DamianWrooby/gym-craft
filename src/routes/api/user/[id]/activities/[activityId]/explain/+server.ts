@@ -109,7 +109,9 @@ export async function POST({
 
     const proxy = await callExplainRunProxy(prompt, getLimit(locals.user.subscriptionTier, 'aiModel'));
     if (!proxy.ok || !proxy.analysis) {
-        return createResponse(502, { code: 'LLM_FAILED', message: proxy.error ?? 'AI proxy failed' });
+        // proxy.error carries OpenAI's own wording — diagnostics, not copy. Log it, show our own.
+        console.error(`[explain-run] proxy failed for user ${userId}: ${proxy.error}`);
+        return createResponse(502, { code: 'LLM_FAILED', message: 'AI service is temporarily unavailable' });
     }
 
     await db.aiUsage.upsert({
