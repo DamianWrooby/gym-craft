@@ -1,47 +1,9 @@
-<script lang="ts" context="module">
-    import DOMPurify from 'isomorphic-dompurify';
-
-    DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-        if (node.tagName === 'A') {
-            node.setAttribute('rel', 'noopener noreferrer');
-            node.setAttribute('target', '_blank');
-        }
-    });
-</script>
-
 <script lang="ts">
-    import { marked } from 'marked';
+    import { renderMarkdown } from '$lib/utils/sanitize-markdown';
 
     export let source: string;
 
-    const ALLOWED_TAGS = [
-        'p',
-        'br',
-        'strong',
-        'em',
-        'ul',
-        'ol',
-        'li',
-        'h2',
-        'h3',
-        'h4',
-        'blockquote',
-        'code',
-        'pre',
-        'a',
-        'hr',
-    ];
-    const ALLOWED_ATTR = ['href', 'rel', 'target'];
-
-    function renderMarkdown(input: string): string {
-        const rawHtml = marked.parse(input ?? '', { async: false, gfm: true, breaks: true }) as string;
-        return DOMPurify.sanitize(rawHtml, {
-            ALLOWED_TAGS,
-            ALLOWED_ATTR,
-            FORBID_ATTR: ['style', 'class', 'onerror', 'onclick', 'onload'],
-        });
-    }
-
+    // Empty on the server (no DOM to sanitize with), filled in on hydration.
     $: safeHtml = renderMarkdown(source);
 </script>
 

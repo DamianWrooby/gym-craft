@@ -1,5 +1,4 @@
-import { marked } from 'marked';
-import DOMPurify from 'isomorphic-dompurify';
+import { renderMarkdownForPdf } from './sanitize-markdown';
 
 interface PdfGoal {
     goalType: string;
@@ -18,35 +17,13 @@ export interface PdfExportableReport {
     };
 }
 
-// Same allowlist as Markdown.svelte — the summary is LLM-generated, so sanitize before embedding.
-const ALLOWED_TAGS = [
-    'p',
-    'br',
-    'strong',
-    'em',
-    'ul',
-    'ol',
-    'li',
-    'h2',
-    'h3',
-    'h4',
-    'blockquote',
-    'code',
-    'pre',
-    'a',
-    'hr',
-];
-const ALLOWED_ATTR = ['href'];
-
 function escapeHtml(text: string): string {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 export function buildReportPdfHtml(report: PdfExportableReport): string {
-    const summaryHtml = DOMPurify.sanitize(
-        marked.parse(report.summary ?? '', { async: false, gfm: true, breaks: true }) as string,
-        { ALLOWED_TAGS, ALLOWED_ATTR, FORBID_ATTR: ['style', 'class', 'onerror', 'onclick', 'onload'] },
-    );
+    // The summary is LLM-generated, so sanitize before embedding.
+    const summaryHtml = renderMarkdownForPdf(report.summary);
 
     const parts: string[] = [
         `<h1>Weekly Training Report — ${report.periodStart} to ${report.periodEnd}</h1>`,

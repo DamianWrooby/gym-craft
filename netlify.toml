@@ -1,0 +1,10 @@
+# Build settings not specified here (command, publish directory) continue to come
+# from the Netlify UI. Redirects intentionally stay in `_redirects` — adapter-netlify
+# rejects a netlify.toml that declares them.
+
+[build.environment]
+    # The serverless renderer must run on a Node version that supports require() of an
+    # ES module (20.19+ / 22.12+). Without it, CJS dependencies deep in the SSR bundle
+    # blow up with ERR_REQUIRE_ESM on the first non-navigated page load. Netlify defaults
+    # the function runtime to the Lambda runtime, not to `.node-version`, so pin it here.
+    AWS_LAMBDA_JS_RUNTIME = "nodejs22.x"
