@@ -34,7 +34,17 @@ const detail: ActivityDetailPayload = {
     startTimeGMT: '2026-06-01 15:50:00',
     duration: 6055,
     distance: 20010,
-    splits: [{ splitIndex: 0, distanceM: 1000, durationSec: 287, averageHr: 152, averageSpeed: 3.48, elevationGainM: 4, elevationLossM: 2 }],
+    splits: [
+        {
+            splitIndex: 0,
+            distanceM: 1000,
+            durationSec: 287,
+            averageHr: 152,
+            averageSpeed: 3.48,
+            elevationGainM: 4,
+            elevationLossM: 2,
+        },
+    ],
     samples: [
         { timestampSec: 0, heartRate: 110, speed: 3.0, elevationM: 100 },
         { timestampSec: 5, heartRate: 114, speed: 0, elevationM: 100 },
@@ -88,9 +98,7 @@ describe('buildExplainPrompt — pace enrichment', () => {
     });
 
     it('keeps raw m/s (no pace) for non-pace activities like cycling', () => {
-        const { user } = buildExplainPrompt(
-            baseParams({ activity: baseActivity({ activityType: 'cycling' }) }),
-        );
+        const { user } = buildExplainPrompt(baseParams({ activity: baseActivity({ activityType: 'cycling' }) }));
         const payload = parsePayload(user);
 
         expect(payload.activity.avgPace).toBeUndefined();
