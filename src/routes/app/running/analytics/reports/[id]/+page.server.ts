@@ -4,11 +4,11 @@ import { getReportById } from '$lib/prisma/prisma';
 
 export async function load({ locals, params }) {
     const userId = locals.user?.id;
-    if (!userId) throw error(401, 'Unauthorized');
+    if (!userId) error(401, 'Unauthorized');
 
     const [err, report] = await to(getReportById(params.id, userId));
-    if (err) throw error(500, 'Cannot load report');
-    if (!report) throw error(404, 'Report not found');
+    if (err) error(500, 'Cannot load report');
+    if (!report) error(404, 'Report not found');
 
     return {
         report: {

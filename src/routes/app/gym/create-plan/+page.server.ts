@@ -14,7 +14,7 @@ import { hashSessionToken } from '$lib/server/session-token';
 export async function load({ locals, cookies }) {
     const user = locals?.user;
 
-    if (!user.emailVerified) throw redirect(302, '/app');
+    if (!user.emailVerified) redirect(302, '/app');
 
     const session = cookies.get('session');
 

@@ -6,7 +6,7 @@ import { hashSessionToken } from '$lib/server/session-token';
 import type { Actions, PageServerLoad } from '../$types';
 
 export const load: PageServerLoad = async () => {
-    throw redirect(302, '/app');
+    redirect(302, '/app');
 };
 
 export const actions: Actions = {
@@ -29,6 +29,6 @@ export const actions: Actions = {
             secure: isProduction(),
         });
 
-        throw redirect(302, '/app/login');
+        redirect(302, '/app/login');
     },
 };
