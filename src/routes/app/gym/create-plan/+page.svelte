@@ -103,6 +103,14 @@
         goto('/app');
     };
 
+    function handleDraftRestored() {
+        makeToast(
+            toastStore,
+            'We restored your previous answers <br> Step through the survey and generate the plan again',
+            'variant-filled-success',
+        );
+    }
+
     function handleExpiredSession(formData: SurveyFormModel) {
         saveSurveyDraft(formData);
         makeToast(
@@ -224,5 +232,5 @@
 {#if $loadingState}
     <Loader />
 {:else}
-    <SurveyForm on:complete={generatePlan} />
+    <SurveyForm on:complete={generatePlan} on:restored={handleDraftRestored} />
 {/if}

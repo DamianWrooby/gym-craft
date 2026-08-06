@@ -20,7 +20,7 @@
     import { takeSurveyDraft } from '$lib/gym/survey-draft';
 
     const user: User = $page.data.user;
-    const dispatch = createEventDispatcher<{ complete: { formData: SurveyFormModel } }>();
+    const dispatch = createEventDispatcher<{ complete: { formData: SurveyFormModel }; restored: void }>();
     const modalStore = getModalStore();
 
     const formValidation = isProduction();
@@ -102,6 +102,9 @@
                 fitnessLevel: { ...formData.fitnessLevel, ...draft.fitnessLevel },
                 equipment: { ...formData.equipment, ...draft.equipment },
             };
+            // The restore is invisible otherwise: the user lands back on step 1 with no reason to
+            // believe six steps of answers survived the trip through the login page.
+            dispatch('restored');
         }
         openInfoModal();
     });
