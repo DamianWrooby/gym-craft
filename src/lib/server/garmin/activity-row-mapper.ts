@@ -1,4 +1,27 @@
-import type { Activity } from '@prisma/client';
+import type { Activity, Prisma } from '@prisma/client';
+
+/**
+ * The columns `toActivityListItem` reads — and nothing else. Notably absent is `raw`,
+ * the full Garmin payload for the activity: selecting it (which is what Prisma does by
+ * default) meant every list query dragged a JSON blob per row across the wire for data
+ * no list surface renders.
+ */
+export const activityListSelect = {
+    id: true,
+    garminActivityId: true,
+    activityType: true,
+    activityName: true,
+    startTime: true,
+    durationSec: true,
+    distanceM: true,
+    calories: true,
+    averageHr: true,
+    averageSpeed: true,
+    elevationGainM: true,
+    trimpLoad: true,
+} satisfies Prisma.ActivitySelect;
+
+export type ActivityListRow = Pick<Activity, keyof typeof activityListSelect>;
 
 export interface ActivityListItem {
     id: string;
@@ -15,7 +38,7 @@ export interface ActivityListItem {
     trimpLoad: number | null;
 }
 
-export function toActivityListItem(row: Activity): ActivityListItem {
+export function toActivityListItem(row: ActivityListRow): ActivityListItem {
     return {
         id: row.id,
         garminActivityId: row.garminActivityId.toString(),

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { db } from '$lib/database';
-import { toActivityListItem, type ActivityListItem } from '$lib/server/garmin/activity-row-mapper';
+import { activityListSelect, toActivityListItem, type ActivityListItem } from '$lib/server/garmin/activity-row-mapper';
 
 export interface ActivityListPageData {
     activities: ActivityListItem[];
@@ -15,6 +15,7 @@ export const load = async ({ locals }: { locals: App.Locals }): Promise<Activity
         db.activity.findMany({
             where: { userId },
             orderBy: { startTime: 'desc' },
+            select: activityListSelect,
         }),
         db.garminSyncState.findUnique({ where: { userId } }),
     ]);

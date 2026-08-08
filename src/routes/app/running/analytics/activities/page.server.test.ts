@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$lib/database', () => ({ db: mocks.db }));
 
 import { load } from './+page.server';
+import { activityListSelect } from '$lib/server/garmin/activity-row-mapper';
 
 const userId = 'user-1';
 const locals = { user: { id: userId } } as unknown as App.Locals;
@@ -73,7 +74,10 @@ describe('load /app/running/analytics/activities', () => {
         expect(mocks.db.activity.findMany).toHaveBeenCalledWith({
             where: { userId },
             orderBy: { startTime: 'desc' },
+            select: activityListSelect,
         });
+        // `raw` is the full Garmin payload per activity — never needed by a list view.
+        expect(activityListSelect).not.toHaveProperty('raw');
         expect(result.activities).toHaveLength(1);
         expect(result.activities[0].id).toBe('a-1');
         expect(result.activities[0].garminActivityId).toBe('111');

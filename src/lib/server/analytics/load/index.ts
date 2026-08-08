@@ -1,6 +1,6 @@
 import { db } from '$lib/database';
 import type { TrimpProfile } from './trimp';
-import { ensureTrimpLoads } from './ensure-trimp';
+import { fillTrimpLoads } from './fill-trimp';
 import {
     ACUTE_DAYS,
     CHRONIC_DAYS,
@@ -45,7 +45,7 @@ export async function computeLoadProfile(
         },
     });
 
-    const withTrimp = await ensureTrimpLoads(activities, profile);
+    const withTrimp = fillTrimpLoads(activities, profile);
     const entries: DailyLoadEntry[] = withTrimp.map((activity) => ({
         date: toIsoDate(activity.startTime),
         load: activity.trimpLoad,

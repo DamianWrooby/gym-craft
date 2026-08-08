@@ -93,13 +93,26 @@ export async function updateGeneratedPlansNumber(userId: string): Promise<number
     return newGeneratedPlansNumber;
 }
 
+const generalPlanLimitKey = 'configuration_general_plan_limit';
+/**
+ * Longer than the default TTL. This is a global config row with no in-app writer — it
+ * only changes by hand in the database — but it is read on every authenticated request
+ * via updateUser(), so an uncached read put a DB round trip on every navigation.
+ */
+const GENERAL_PLAN_LIMIT_TTL_S = 300;
+
 export async function getGeneralPlanLimit(): Promise<number> {
+    const cached = cache.get<number>(generalPlanLimitKey);
+    if (cached !== undefined) return cached;
+
     const generalPlanLimit = await db.configuration.findFirst({
         where: { name: 'generalPlanLimit' },
         select: { value: true },
     });
 
-    return generalPlanLimit ? +generalPlanLimit.value : 0;
+    const value = generalPlanLimit ? +generalPlanLimit.value : 0;
+    cache.set(generalPlanLimitKey, value, GENERAL_PLAN_LIMIT_TTL_S);
+    return value;
 }
 
 export async function updatePlanName(planId: string, newName: string, userId: string): Promise<void> {
@@ -377,15 +390,23 @@ export async function getRunningGoalsByIds(
     });
 }
 
-export async function getWeeklyReports(userId: string): Promise<TrainingReport[]> {
+/** The fields both report list surfaces actually render. */
+export type WeeklyReportListItem = Pick<TrainingReport, 'id' | 'periodStart' | 'periodEnd' | 'summary' | 'createdAt'>;
+
+export async function getWeeklyReports(userId: string): Promise<WeeklyReportListItem[]> {
     const key = trainingReportsKey(userId);
-    const cached = cache.get<TrainingReport[]>(key);
+    const cached = cache.get<WeeklyReportListItem[]>(key);
     if (cached !== undefined) return cached;
 
     const reports = await db.trainingReport.findMany({
         where: { userId, type: 'WEEKLY' },
         orderBy: { periodStart: 'desc' },
         take: 52,
+        // `metrics` and `goalContext` are large JSON blobs read only by the report detail
+        // page, which loads its own row via getReportById. Selecting them here meant up to
+        // 52 of each were fetched, cached and serialised to the browser on both
+        // /running/analytics and /running/analytics/reports with no consumer.
+        select: { id: true, periodStart: true, periodEnd: true, summary: true, createdAt: true },
     });
     cache.set(key, reports);
     return reports;
