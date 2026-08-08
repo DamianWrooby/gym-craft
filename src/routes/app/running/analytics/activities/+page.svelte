@@ -1,36 +1,36 @@
 <script lang="ts">
     import Seo from '$lib/components/seo/Seo.svelte';
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { ArrowLeftIcon } from 'svelte-feather-icons';
     import Card from '@components/card/Card.svelte';
     import ActivityRow from '$lib/components/activity-list/ActivityRow.svelte';
     import { toIsoDate } from '$lib/utils/iso-week';
+    import { activityListSearch } from '$lib/utils/activity-list-query';
     import type { ActivityListPageData } from './+page.server';
 
     export let data: ActivityListPageData;
 
-    const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
-
-    let currentPage = 1;
-    let pageSize = 10;
-
-    const today = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 7);
-
-    let startDate = toIsoDate(sevenDaysAgo);
-    let endDate = toIsoDate(today);
+    // The window and the revealed row count both live in the URL, so the server decides what
+    // this page shows. That is what lets a reload — or coming back from an activity detail
+    // page — land on the same rows at the same scroll position.
+    let startDate = data.from;
+    let endDate = data.to;
     let dateError = '';
+    let loadingMore = false;
 
     $: maxDate = toIsoDate(new Date());
+    // Re-sync the inputs whenever a navigation lands: the URL is the truth, and any edit the
+    // user had not applied yet is exactly what should be discarded.
+    $: syncInputs(data.from, data.to);
 
-    $: filteredActivities = data.activities.filter((a) => {
-        const day = a.startTime.slice(0, 10);
-        return day >= startDate && day <= endDate;
+    function syncInputs(from: string, to: string) {
+        startDate = from;
+        endDate = to;
+    }
+
+    afterNavigate(() => {
+        loadingMore = false;
     });
-    $: totalPages = filteredActivities.length ? Math.ceil(filteredActivities.length / pageSize) : 1;
-    $: paginated = filteredActivities.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-    $: if (currentPage > totalPages) currentPage = totalPages;
 
     function validateDates(): boolean {
         if (!startDate || !endDate) {
@@ -47,6 +47,21 @@
         }
         dateError = '';
         return true;
+    }
+
+    function applyFilter() {
+        if (!validateDates()) return;
+        // A new window starts from the first batch again.
+        goto(activityListSearch(startDate, endDate, data.pageSize), { noScroll: true, keepFocus: true });
+    }
+
+    function loadMore() {
+        loadingMore = true;
+        goto(activityListSearch(data.from, data.to, data.shown + data.pageSize), {
+            noScroll: true,
+            keepFocus: true,
+            replaceState: true,
+        });
     }
 
     function formatLastSynced(iso: string | null): string {
@@ -76,14 +91,7 @@
                 <span>End date</span>
                 <input type="date" class="input" bind:value={endDate} min={startDate} max={maxDate} />
             </label>
-            <button
-                type="button"
-                class="btn variant-filled-primary"
-                on:click={() => {
-                    if (validateDates()) currentPage = 1;
-                }}>
-                Apply filter
-            </button>
+            <button type="button" class="btn variant-filled-primary" on:click={applyFilter}>Apply filter</button>
         </div>
         {#if dateError}
             <p class="text-error-500 text-center mb-2">{dateError}</p>
@@ -91,39 +99,25 @@
 
         <p class="text-center text-sm opacity-70 mb-4">Last synced: {formatLastSynced(data.lastSyncedAt)}</p>
 
-        {#if filteredActivities.length}
+        {#if data.activities.length}
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500 mt-4">
-                {#each paginated as activity (activity.id)}
+                {#each data.activities as activity (activity.id)}
                     <ActivityRow {activity} />
                 {/each}
             </ul>
-            <div class="flex flex-row flex-wrap justify-center items-center gap-3 mt-4">
-                <label class="flex flex-row items-center gap-2 text-sm">
-                    <span>Per page:</span>
-                    <select class="select select-sm w-auto" bind:value={pageSize} on:change={() => (currentPage = 1)}>
-                        {#each PAGE_SIZE_OPTIONS as option}
-                            <option value={option}>{option}</option>
-                        {/each}
-                    </select>
-                </label>
-                {#if totalPages > 1}
-                    <button
-                        type="button"
-                        class="btn btn-sm variant-soft"
-                        disabled={currentPage === 1}
-                        on:click={() => (currentPage = Math.max(1, currentPage - 1))}>
-                        Previous
-                    </button>
-                    <span class="text-sm">Page {currentPage} of {totalPages}</span>
-                    <button
-                        type="button"
-                        class="btn btn-sm variant-soft"
-                        disabled={currentPage === totalPages}
-                        on:click={() => (currentPage = Math.min(totalPages, currentPage + 1))}>
-                        Next
+            <div class="flex flex-col justify-center items-center gap-2 mt-4">
+                <p class="text-sm opacity-70" aria-live="polite">
+                    Showing {data.activities.length} of {data.total} in range
+                </p>
+                {#if data.atMaxShown}
+                    <p class="text-sm text-center opacity-70">
+                        That is as far as this list goes — narrow the date range to see older activities.
+                    </p>
+                {:else if data.hasMore}
+                    <button type="button" class="btn btn-sm variant-soft" disabled={loadingMore} on:click={loadMore}>
+                        {loadingMore ? 'Loading…' : 'Load more'}
                     </button>
                 {/if}
-                <span class="text-sm opacity-70">({filteredActivities.length} in range)</span>
             </div>
         {:else}
             <p class="text-center mt-4">No activities in the selected date range.</p>
