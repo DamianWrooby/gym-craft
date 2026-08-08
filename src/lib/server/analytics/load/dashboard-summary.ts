@@ -31,7 +31,18 @@ export interface DashboardSummary {
     hasSufficientHistory: boolean;
 }
 
-export function computeDashboardSummary(activities: DashboardSummaryActivity[], asOf: Date): DashboardSummary {
+/**
+ * @param activities Activities within the rolling load window (28d chronic + headroom).
+ * @param earliestActivityAt Start time of the user's *first ever* activity, or null if
+ *   they have none. Passed in rather than derived from `activities` because the caller
+ *   queries a bounded window: the oldest row in that window says nothing about how long
+ *   the athlete has been training, which is what `hasSufficientHistory` reports.
+ */
+export function computeDashboardSummary(
+    activities: DashboardSummaryActivity[],
+    asOf: Date,
+    earliestActivityAt: Date | null,
+): DashboardSummary {
     const entries: DailyLoadEntry[] = activities.map((a) => ({
         date: toIsoDate(new Date(a.startTime)),
         load: a.trimpLoad ?? 0,
@@ -53,8 +64,6 @@ export function computeDashboardSummary(activities: DashboardSummaryActivity[], 
         }
     }
 
-    const earliestStartMs = activities.length ? Math.min(...activities.map((a) => Date.parse(a.startTime))) : null;
-
     return {
         acwr: round(acwr, 2),
         loadStatus: interpretAcwr(acwr).status,
@@ -63,7 +72,7 @@ export function computeDashboardSummary(activities: DashboardSummaryActivity[], 
         monotony: isFinite(monotonyRaw) ? round(monotonyRaw, 2) : 0,
         monotonyIsHigh: interpretMonotony(monotonyRaw).isHigh,
         hasActivities: activities.length > 0,
-        hasSufficientHistory: hasSufficientHistory(earliestStartMs, asOf),
+        hasSufficientHistory: hasSufficientHistory(earliestActivityAt, asOf),
     };
 }
 

@@ -7,6 +7,7 @@
     import { RefreshCwIcon, ArrowRightIcon } from 'svelte-feather-icons';
     import Card from '@components/card/Card.svelte';
     import ActivityRow from '$lib/components/activity-list/ActivityRow.svelte';
+    import SkeletonBlock from '$lib/components/loading/skeleton-block/SkeletonBlock.svelte';
     import { makeToast } from '$lib/utils/toasts';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import { isSyncStale } from '$lib/utils/sync-staleness';
@@ -153,8 +154,6 @@
     function formatKm(meters: number): string {
         return `${(meters / 1000).toFixed(1)} km`;
     }
-
-    $: summary = data.summary;
 </script>
 
 <Seo title="Analytics | GymCraft™" metaDescription="Training analytics dashboard." />
@@ -176,43 +175,62 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
-            <div class="card variant-soft-surface p-4 flex flex-col gap-1">
-                <span class="text-xs uppercase opacity-60">Load</span>
-                {#if summary.hasActivities && summary.hasSufficientHistory && summary.acwr > 0}
-                    <span class="text-lg font-bold {STATUS_CLASS[summary.loadStatus]}">
-                        {STATUS_LABEL[summary.loadStatus]}
-                    </span>
-                    <span class="text-xs opacity-70">ACWR {summary.acwr.toFixed(2)}</span>
-                {:else}
-                    <span class="text-lg font-bold opacity-50">—</span>
-                    <span class="text-xs opacity-70">Not enough history</span>
-                {/if}
+        {#await data.summary}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
+                {#each ['Load', '7-day distance', 'Monotony', 'Sessions'] as label (label)}
+                    <div class="card variant-soft-surface p-4 flex flex-col gap-2">
+                        <span class="text-xs uppercase opacity-60">{label}</span>
+                        <SkeletonBlock height="h-6" width="w-2/3" />
+                        <SkeletonBlock height="h-3" width="w-1/2" />
+                    </div>
+                {/each}
             </div>
-            <div class="card variant-soft-surface p-4 flex flex-col gap-1">
-                <span class="text-xs uppercase opacity-60">7-day distance</span>
-                <span class="text-lg font-bold"
-                    >{summary.hasActivities ? formatKm(summary.sevenDayDistanceM) : '—'}</span>
-                <span class="text-xs opacity-70">last 7 days</span>
-            </div>
-            <div class="card variant-soft-surface p-4 flex flex-col gap-1">
-                <span class="text-xs uppercase opacity-60">Monotony</span>
-                {#if summary.hasActivities}
-                    <span class="text-lg font-bold">{summary.monotony.toFixed(2)}</span>
-                    <span class="text-xs {summary.monotonyIsHigh ? 'text-warning-500' : 'opacity-70'}">
-                        {summary.monotonyIsHigh ? 'high' : 'good'}
-                    </span>
-                {:else}
-                    <span class="text-lg font-bold opacity-50">—</span>
+        {:then summary}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
+                <div class="card variant-soft-surface p-4 flex flex-col gap-1">
+                    <span class="text-xs uppercase opacity-60">Load</span>
+                    {#if summary.hasActivities && summary.hasSufficientHistory && summary.acwr > 0}
+                        <span class="text-lg font-bold {STATUS_CLASS[summary.loadStatus]}">
+                            {STATUS_LABEL[summary.loadStatus]}
+                        </span>
+                        <span class="text-xs opacity-70">ACWR {summary.acwr.toFixed(2)}</span>
+                    {:else}
+                        <span class="text-lg font-bold opacity-50">—</span>
+                        <span class="text-xs opacity-70">Not enough history</span>
+                    {/if}
+                </div>
+                <div class="card variant-soft-surface p-4 flex flex-col gap-1">
+                    <span class="text-xs uppercase opacity-60">7-day distance</span>
+                    <span class="text-lg font-bold"
+                        >{summary.hasActivities ? formatKm(summary.sevenDayDistanceM) : '—'}</span>
                     <span class="text-xs opacity-70">last 7 days</span>
-                {/if}
+                </div>
+                <div class="card variant-soft-surface p-4 flex flex-col gap-1">
+                    <span class="text-xs uppercase opacity-60">Monotony</span>
+                    {#if summary.hasActivities}
+                        <span class="text-lg font-bold">{summary.monotony.toFixed(2)}</span>
+                        <span class="text-xs {summary.monotonyIsHigh ? 'text-warning-500' : 'opacity-70'}">
+                            {summary.monotonyIsHigh ? 'high' : 'good'}
+                        </span>
+                    {:else}
+                        <span class="text-lg font-bold opacity-50">—</span>
+                        <span class="text-xs opacity-70">last 7 days</span>
+                    {/if}
+                </div>
+                <div class="card variant-soft-surface p-4 flex flex-col gap-1">
+                    <span class="text-xs uppercase opacity-60">Sessions</span>
+                    <span class="text-lg font-bold">{summary.hasActivities ? summary.sessions7d : '—'}</span>
+                    <span class="text-xs opacity-70">/ 7 days</span>
+                </div>
             </div>
-            <div class="card variant-soft-surface p-4 flex flex-col gap-1">
-                <span class="text-xs uppercase opacity-60">Sessions</span>
-                <span class="text-lg font-bold">{summary.hasActivities ? summary.sessions7d : '—'}</span>
-                <span class="text-xs opacity-70">/ 7 days</span>
+        {:catch}
+            <!-- Never fall back to a zeroed summary: interpretAcwr(0) reads as
+                 'Undertraining', which would state something false about the athlete. -->
+            <div class="card variant-soft-warning p-4 mb-10 flex flex-wrap items-center justify-between gap-3">
+                <span class="text-sm">Training load unavailable right now.</span>
+                <button type="button" class="btn btn-sm variant-soft" on:click={() => invalidateAll()}>Retry</button>
             </div>
-        </div>
+        {/await}
 
         <section class="mb-10">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -245,30 +263,46 @@
                     See all <ArrowRightIcon size="14" />
                 </a>
             </div>
-            {#if data.recentReports.length}
+            {#await data.recentReports}
                 <ul class="space-y-3">
-                    {#each data.recentReports as report (report.id)}
-                        <li>
-                            <a
-                                href="/app/running/analytics/reports/{report.id}"
-                                data-sveltekit-preload-data="hover"
-                                class="block rounded-xl border border-surface-300 dark:border-surface-700 p-4 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors no-underline text-inherit">
-                                <div class="flex flex-wrap justify-between items-baseline gap-2">
-                                    <h4 class="font-semibold">
-                                        Week of {formatReportPeriod(report.periodStart, report.periodEnd)}
-                                    </h4>
-                                    <span class="text-xs opacity-60">
-                                        {new Date(report.createdAt).toLocaleDateString()}
-                                    </span>
-                                </div>
-                                <p class="text-sm opacity-80 mt-1">{reportSummaryPreview(report.summary)}</p>
-                            </a>
+                    {#each [0, 1, 2] as i (i)}
+                        <li
+                            class="rounded-xl border border-surface-300 dark:border-surface-700 p-4 flex flex-col gap-2">
+                            <SkeletonBlock height="h-4" width="w-1/2" />
+                            <SkeletonBlock height="h-3" width="w-full" />
                         </li>
                     {/each}
                 </ul>
-            {:else}
-                <p class="text-center opacity-70 italic py-4">No reports yet — generate your first weekly report.</p>
-            {/if}
+            {:then recentReports}
+                {#if recentReports.length}
+                    <ul class="space-y-3">
+                        {#each recentReports as report (report.id)}
+                            <li>
+                                <a
+                                    href="/app/running/analytics/reports/{report.id}"
+                                    data-sveltekit-preload-data="hover"
+                                    class="block rounded-xl border border-surface-300 dark:border-surface-700 p-4 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors no-underline text-inherit">
+                                    <div class="flex flex-wrap justify-between items-baseline gap-2">
+                                        <h4 class="font-semibold">
+                                            Week of {formatReportPeriod(report.periodStart, report.periodEnd)}
+                                        </h4>
+                                        <span class="text-xs opacity-60">
+                                            {new Date(report.createdAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <p class="text-sm opacity-80 mt-1">{reportSummaryPreview(report.summary)}</p>
+                                </a>
+                            </li>
+                        {/each}
+                    </ul>
+                {:else}
+                    <p class="text-center opacity-70 italic py-4">
+                        No reports yet — generate your first weekly report.
+                    </p>
+                {/if}
+            {:catch}
+                <p class="text-center opacity-70 italic py-4">Recent reports unavailable right now.</p>
+            {/await}
             <div class="flex justify-center mt-4">
                 <button
                     type="button"
