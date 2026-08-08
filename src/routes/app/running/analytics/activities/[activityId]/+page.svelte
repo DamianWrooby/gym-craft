@@ -27,7 +27,12 @@
 
     let backTarget = '/app/running/analytics/activities';
     afterNavigate(({ from }) => {
-        backTarget = resolveBackTarget(from?.url.pathname, '/app/running/analytics/activities');
+        // Includes the search string: the list page keeps its date window and revealed row
+        // count there, so dropping it would send the user back to a reset list.
+        backTarget = resolveBackTarget(
+            from ? `${from.url.pathname}${from.url.search}` : undefined,
+            '/app/running/analytics/activities',
+        );
     });
 
     let detail = activity.detail;

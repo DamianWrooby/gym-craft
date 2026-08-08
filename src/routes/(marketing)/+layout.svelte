@@ -1,11 +1,10 @@
 <script lang="ts">
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
-    import { navigating } from '$app/stores';
     import { initializeStores } from '@skeletonlabs/skeleton';
     import { Modal, Toast } from '@skeletonlabs/skeleton';
     import { HomeIcon } from 'svelte-feather-icons';
-    import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
+    import NavProgress from '$lib/components/loading/nav-progress/NavProgress.svelte';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
     import { onMount } from 'svelte';
     import Banner from '$lib/components/banner/Banner.svelte';
@@ -36,6 +35,7 @@
 
 <Modal />
 <Toast position={'br'} />
+<NavProgress />
 
 <AppShell>
     <svelte:fragment slot="header">
@@ -58,11 +58,10 @@
         </AppBar>
     </svelte:fragment>
     <!-- Router Slot -->
-    {#if $navigating}
-        <Spinner size={10} />
-    {:else}
-        <slot />
-    {/if}
+    <!-- The outgoing page stays rendered and interactive during navigation; NavProgress
+         is the only in-flight signal. Swapping in a spinner here blanked the page on
+         every navigation, amplifying any server-load latency into blank-screen time. -->
+    <slot />
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
         <div class="hidden sm:block bg-primary-500 font-thin text-center py-2 font-semibold">
