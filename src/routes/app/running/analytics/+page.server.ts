@@ -6,6 +6,7 @@ import { computeDashboardSummary, type DashboardSummary } from '$lib/server/anal
 import { fillTrimpLoads } from '$lib/server/analytics/load/fill-trimp';
 import { mapProfileSex } from '$lib/server/analytics/load/trimp';
 import { ACUTE_DAYS, CHRONIC_DAYS } from '$lib/server/analytics/load/acwr';
+import { NON_TRAINING_TYPE_KEYS } from '$lib/utils/activity-type';
 
 /** Chronic load looks back 28 days; the extra acute week covers timezone edges at the boundary. */
 const SUMMARY_WINDOW_DAYS = CHRONIC_DAYS + ACUTE_DAYS;
@@ -38,10 +39,11 @@ async function buildSummary(userId: string, asOf: Date): Promise<DashboardSummar
 
     const [windowRows, earliest, profile] = await Promise.all([
         db.activity.findMany({
-            where: { userId, startTime: { gte: windowStart } },
+            where: { userId, startTime: { gte: windowStart }, activityType: { notIn: NON_TRAINING_TYPE_KEYS } },
             orderBy: { startTime: 'desc' },
             select: {
                 startTime: true,
+                activityType: true,
                 distanceM: true,
                 trimpLoad: true,
                 durationSec: true,
@@ -53,10 +55,15 @@ async function buildSummary(userId: string, asOf: Date): Promise<DashboardSummar
                 hrZone5Sec: true,
             },
         }),
-        // `hasSufficientHistory` asks how long the athlete has been training, which the
+        // `hasSufficientHistory` asks how long the athlete has been *training*, which the
         // bounded window above cannot answer. An indexed _min is cheap and keeps the
         // flag meaning exactly what it meant when this page read every activity row.
-        db.activity.aggregate({ where: { userId }, _min: { startTime: true } }),
+        // Excludes walking for the same reason the window does: a two-year-old commute
+        // walk would otherwise report a beginner as having a mature chronic baseline.
+        db.activity.aggregate({
+            where: { userId, activityType: { notIn: NON_TRAINING_TYPE_KEYS } },
+            _min: { startTime: true },
+        }),
         db.athleteProfile.findUnique({ where: { userId }, select: { restingHR: true, maxHR: true, sex: true } }),
     ]);
 
@@ -69,6 +76,7 @@ async function buildSummary(userId: string, asOf: Date): Promise<DashboardSummar
     return computeDashboardSummary(
         withTrimp.map((a) => ({
             startTime: a.startTime.toISOString(),
+            activityType: a.activityType,
             distanceM: a.distanceM,
             trimpLoad: a.trimpLoad,
         })),

@@ -122,6 +122,43 @@ describe('load /app/running/analytics (dashboard)', () => {
         }
     });
 
+    it('excludes non-training activities from the load window and the history probe', async () => {
+        mockActivityQueries([activityRow('a-1', '2026-06-06T07:00:00Z')]);
+        mocks.db.garminSyncState.findUnique.mockResolvedValue({ lastSyncedAt: new Date(), backfillComplete: true });
+        mocks.db.garminData.findUnique.mockResolvedValue(null);
+        mocks.db.athleteProfile.findUnique.mockResolvedValue(null);
+        mocks.getWeeklyReports.mockResolvedValue([]);
+
+        const result = await load({ locals });
+        await result.summary;
+
+        const windowCall = mocks.db.activity.findMany.mock.calls
+            .map(([args]) => args)
+            .find((c) => c.where.startTime != null);
+        // Auto-logged walks would pad the chronic baseline and depress ACWR.
+        expect(windowCall.where.activityType).toEqual({ notIn: ['walking'] });
+        expect(windowCall.select.activityType).toBe(true);
+
+        // The _min probe must exclude them too: a two-year-old commute walk would otherwise
+        // report a brand-new runner as having a mature chronic baseline.
+        const [aggregateArgs] = mocks.db.activity.aggregate.mock.calls[0];
+        expect(aggregateArgs.where.activityType).toEqual({ notIn: ['walking'] });
+    });
+
+    it('keeps non-training activities visible in the recent-activities list', async () => {
+        mockActivityQueries([activityRow('a-1', '2026-06-06T07:00:00Z')]);
+        mocks.db.garminSyncState.findUnique.mockResolvedValue({ lastSyncedAt: new Date(), backfillComplete: true });
+        mocks.db.garminData.findUnique.mockResolvedValue(null);
+        mocks.db.athleteProfile.findUnique.mockResolvedValue(null);
+        mocks.getWeeklyReports.mockResolvedValue([]);
+
+        await load({ locals });
+
+        // Hiding a synced walk from the list would make the Garmin sync look broken.
+        const recentCall = mocks.db.activity.findMany.mock.calls.map(([args]) => args).find((c) => c.take != null);
+        expect(recentCall.where.activityType).toBeUndefined();
+    });
+
     it('computes TRIMP in memory for legacy rows without persisting anything', async () => {
         const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
         // Legacy rows: synced before TRIMP was computed at write time.

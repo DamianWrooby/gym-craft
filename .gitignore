@@ -20,3 +20,6 @@ docs
 .cursor
 .agents
 CLAUDE.md
+CONTEXT.md
+SECURITY_AUDIT.md
+SECURITY_FIXES.md
