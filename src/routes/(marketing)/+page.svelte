@@ -4,91 +4,66 @@
     import Seo from '$lib/components/seo/Seo.svelte';
     import CtaButton from '$lib/components/cta-button/CtaButton.svelte';
     import FaqAccordion from '$lib/components/faq-accordion/FaqAccordion.svelte';
-    import DemoVideo from '$lib/videos/GymCraft-demo.mp4';
+    import DemoVideo from '$lib/components/demo-video/DemoVideo.svelte';
+    import RunningDemoVideo from '$lib/videos/GymCraft-running-demo.mp4';
+    import GymCraftDemoVideo from '$lib/videos/GymCraft-demo.mp4';
     import GarminDemoVideo from '$lib/videos/Garmin-demo.mp4';
 
     import { howItWorksItems, trainingComponentItems, faqItems } from './content';
-    import Play from '$lib/images/play.svg';
     import ManImage from '$lib/images/man-at-gym2.jpeg';
     import GymImage from '$lib/images/gym-31.jpeg';
 
-    let video: HTMLVideoElement;
-    let videoGarmin: HTMLVideoElement;
-    let isPlayButtonVisible = {
-        demo: true,
-        garmin: true,
-    };
-
-    const onPlayClick = (src: 'demo' | 'garmin') => {
-        const videoMapping = {
-            demo: video,
-            garmin: videoGarmin,
-        };
-        videoMapping[src].paused || videoMapping[src].ended ? playVideo(src) : pauseVideo(src);
-    };
-
-    const playVideo = (src: 'demo' | 'garmin') => {
-        const videoMapping = {
-            demo: video,
-            garmin: videoGarmin,
-        };
-        videoMapping[src].play();
-        isPlayButtonVisible[src] = false;
-    };
-
-    const pauseVideo = (src: 'demo' | 'garmin') => {
-        const videoMapping = {
-            demo: video,
-            garmin: videoGarmin,
-        };
-        videoMapping[src].pause();
-        isPlayButtonVisible[src] = true;
-    };
+    // Skeleton's AccordionItem only renders its panel while open, so the FAQ answers never
+    // reach the prerendered HTML — only the questions do. This mirrors them into the head as
+    // FAQPage structured data so the answers are at least machine-readable. Every `<` is
+    // escaped to <: without it, an answer containing a closing script tag would end the
+    // block early. For the same reason the tag below is written as <\/script>.
+    const faqJsonLd = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqItems.map((item) => ({
+            '@type': 'Question',
+            name: item.title,
+            acceptedAnswer: { '@type': 'Answer', text: item.content },
+        })),
+    }).replace(/</g, '\\u003c');
 </script>
 
+<svelte:head>
+    <!-- eslint-disable-next-line svelte/no-at-html-tags, no-useless-escape -- built at build time from static copy in ./content with every `<` escaped, so nothing untrusted can be injected; the `\/` stops the HTML tokenizer ending the enclosing script block here -->
+    {@html `<script type="application/ld+json">${faqJsonLd}<\/script>`}
+</svelte:head>
+
 <Seo
-    title="AI-Powered Fitness App connected with Garmin | GymCraft™ - AI fitness coach | Generate workout plans tailored to your goals"
-    metaDescription="Generate custom fitness plans based on your goals and abilities. AI-powered workout generator for beginners, pros, and personal trainers." />
+    title="GymCraft™ — AI workout plans &amp; Garmin running analytics"
+    metaDescription="AI-generated workout plans synced to your Garmin, plus training-load analytics and weekly AI reports for every run you record. Free to start." />
 
 <section class="relative py-24 overflow-hidden w-full flex flex-col xl:flex-row items-center justify-center">
     <div class="z-10 w-full xl:w-1/2 p-5 xl:p-16 text-center">
+        <!--
+            The H1 deliberately names the product category rather than today's two features:
+            GymCraft is growing into a set of AI tools for athletes, and "AI coach" covers a
+            third tool without a rewrite. It is also a real search term, unlike an abstract
+            umbrella such as "AI tools for athletes", so the H2 below is where the specific
+            keywords — workout plans, Garmin, training load — earn their place.
+        -->
         <h1 class="h1 font-bold mb-5">
-            Create a <span
+            <span
                 class="bg-gradient-to-br from-primary-500 to-surface-400 bg-clip-text text-transparent box-decoration-clone"
-                >training plan</span>
-            tailored to
+                >Your AI coach</span>
+            for smarter,
             <span
                 class="bg-gradient-to-br from-blue-500 to-surface-400 bg-clip-text text-transparent box-decoration-clone"
-                >your needs</span>
+                >data-driven training</span>
         </h1>
         <h2 class="h4">
-            GymCraft is an advanced AI tool thanks to which you will quickly create a training plan based on your goals,
-            abilities and limitations
+            GymCraft builds your workout plans, syncs them to your Garmin, and turns every session you record into
+            training-load analytics and coach-style weekly reports
         </h2>
         <CtaButton url="/app" text="Try it for FREE" />
     </div>
     <div class="z-10 w-full xl:w-1/2 p-5 xl:p-16 xl:pl-0">
-        <div class="relative perspective-right">
-            <video
-                bind:this={video}
-                class="rounded-lg w-full aspect-video"
-                muted={false}
-                preload="metadata"
-                on:ended={() => (isPlayButtonVisible.demo = true)}>
-                <source src={DemoVideo} type="video/mp4" />
-                Your browser does not support the video tag.
-            </video>
-            <button
-                class="absolute top-0 w-full h-full flex justify-center items-center group"
-                on:click={() => onPlayClick('demo')}
-                aria-label="Play video">
-                <img
-                    alt="play button"
-                    src={Play}
-                    class="w-24 h-24 cursor-pointer group-hover:drop-shadow-[0px_0px_10px_rgba(255,255,255,0.5)]"
-                    class:hidden={!isPlayButtonVisible.demo} />
-            </button>
-        </div>
+        <DemoVideo src={GymCraftDemoVideo} tilt="right" />
     </div>
 </section>
 <section
@@ -96,14 +71,20 @@
     <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
         <h2 class="h2 pb-10 font-semibold">The fastest way to target your training and get the results you want</h2>
         <p class="text-left font-light text-lg md:text-xl pb-5">
-            Personalized training plans are designed based on <span class="text-secondary-400"
-                >individual fitness levels, goals, and body types,</span> ensuring that every exercise contributes directly
-            to achieving specific results. This tailored approach maximizes efficiency and effectiveness.
+            Training plans are built around <span class="text-secondary-400"
+                >individual fitness levels, goals, and body types,</span> so every exercise contributes directly to achieving
+            specific results. This tailored approach maximizes efficiency and effectiveness.
         </p>
         <p class="text-left font-light text-lg md:text-xl pb-5">
             Whether the goal is <span class="text-secondary-400">weight loss, muscle gain, endurance, or recovery</span
             >, a custom plan adjusts exercises, intensity, and progression rates according to the user’s unique goals,
             allowing for steady progress.
+        </p>
+        <p class="text-left font-light text-lg md:text-xl pb-5">
+            The plan is only half the picture. GymCraft also reads the sessions you actually record, turns them into
+            <span class="text-secondary-400">training load</span>, and tells you whether the work is adding up the way
+            you intended — so you can adjust from
+            <span class="text-secondary-400">evidence rather than guesswork</span>.
         </p>
         <div class="w-full py-10 flex">
             <img
@@ -146,6 +127,14 @@
             >. It provides fresh workout ideas and exercises you might not have considered, helping you break through
             plateaus, <span class="text-secondary-400">diversify your training</span>, and push your limits further.
         </p>
+        <h4 class="h4 text-left font-semibold">Runners who want to know if it's working</h4>
+        <p class="text-left font-light text-lg md:text-xl pb-5">
+            You already record every session. GymCraft turns that history into <span class="text-secondary-400"
+                >training load</span
+            >, tells you whether you're building or
+            <span class="text-secondary-400">heading for trouble</span>, and reviews your week the way a coach would —
+            using your own data rather than a generic template.
+        </p>
         <h4 class="h4 text-left font-semibold">Personal trainers in need of a head start</h4>
         <p class="text-left font-light text-lg md:text-xl pb-5">
             Personal trainers can use the app to quickly generate a base training plan skeleton for their clients. The
@@ -179,27 +168,7 @@
 <section
     class="relative text-surface-500 dark:text-surface-200 overflow-hidden w-full flex flex-col xl:flex-row justify-center">
     <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
-        <div class="relative perspective-left">
-            <video
-                bind:this={videoGarmin}
-                class="rounded-lg w-full aspect-video"
-                muted={false}
-                preload="metadata"
-                on:ended={() => (isPlayButtonVisible.garmin = true)}>
-                <source src={GarminDemoVideo} type="video/mp4" />
-                Your browser does not support the video tag.
-            </video>
-            <button
-                class="absolute top-0 w-full h-full flex justify-center items-center group"
-                on:click={() => onPlayClick('garmin')}
-                aria-label="Play video">
-                <img
-                    alt="play button"
-                    src={Play}
-                    class="w-24 h-24 cursor-pointer group-hover:drop-shadow-[0px_0px_10px_rgba(255,255,255,0.5)]"
-                    class:hidden={!isPlayButtonVisible.garmin} />
-            </button>
-        </div>
+        <DemoVideo src={GarminDemoVideo} tilt="left" />
     </div>
     <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
         <h2 class="h2 font-bold mb-4 text-primary-700 dark:text-error-500">Seamless Garmin Integration</h2>
@@ -226,6 +195,36 @@
     </div>
 </section>
 <!-- End Garmin Integration Section -->
+
+<!-- Running Analytics Section -->
+<section
+    class="relative bg-surface-100 dark:bg-surface-900 text-surface-500 dark:text-surface-200 overflow-hidden w-full flex flex-col-reverse xl:flex-row justify-center">
+    <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
+        <h2 class="h2 font-bold mb-4 text-primary-700 dark:text-error-500">Running Analytics</h2>
+        <p class="text-lg md:text-xl font-light mb-6">
+            Sync your Garmin activities and get a full picture of your training. GymCraft turns every session you record
+            into a training load, compares your last 7 days against your last 28, and tells you whether you're building
+            fitness or digging a hole.
+        </p>
+        <ul class="list-disc list-inside text-left text-base md:text-lg font-light mb-8 mx-auto max-w-xl">
+            <li>Training load, ACWR and monotony, with a plain-English status</li>
+            <li>Every sport counts toward load — runs, rides, swims and hikes</li>
+            <li>7-day distance broken out per sport, never mixed together</li>
+            <li>Coach-style weekly AI reports with recommended adjustments</li>
+            <li>Ask AI about any single run, split by split</li>
+        </ul>
+        <p class="text-error-800 dark:text-error-400 text-lg md:text-xl font-light mb-6">
+            Stop guessing whether you're overdoing it — read it off the numbers your watch already collected.
+        </p>
+        <div class="flex justify-center">
+            <CtaButton url="/app" text="See your training load" />
+        </div>
+    </div>
+    <div class="z-10 xl:w-1/2 px-5 py-24 xl:px-16 xl:py-36 text-center">
+        <DemoVideo src={RunningDemoVideo} tilt="right" />
+    </div>
+</section>
+<!-- End Running Analytics Section -->
 
 <hr class="border !border-primary-900" />
 <section class="relative overflow-hidden w-full pt-10 flex flex-col xl:flex-row items-center justify-center">
@@ -266,23 +265,6 @@
     }
 
     @media (min-width: 1280px) {
-        .perspective-right {
-            transform: perspective(1600px) rotateY(-31deg);
-            transition: transform 1s ease 0s;
-        }
-        .perspective-right:hover {
-            transform: unset;
-            transition: transform 1s ease 0s;
-        }
-        .perspective-left {
-            transform: perspective(1600px) rotateY(31deg);
-            transition: transform 1s ease 0s;
-        }
-        .perspective-left:hover {
-            transform: unset;
-            transition: transform 1s ease 0s;
-        }
-
         .bg-img {
             background-attachment: fixed;
         }
