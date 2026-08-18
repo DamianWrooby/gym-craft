@@ -69,6 +69,13 @@
                 return;
             }
 
+            if (result.code === 'RATE_LIMITED') {
+                // Credentials are fine and Garmin is busy. A login prompt here would send the
+                // athlete through a cold password login, the most throttled path of all.
+                syncError = 'Garmin is rate limiting requests. Your login is fine — please try again in a few minutes.';
+                return;
+            }
+
             if (result.code === 'INVALID_TOKEN') {
                 makeToast(
                     toastStore,

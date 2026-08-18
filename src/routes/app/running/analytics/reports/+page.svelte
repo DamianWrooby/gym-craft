@@ -172,6 +172,15 @@
                 generating = false;
                 openOverwriteConfirmModal(data.existingId);
                 return;
+            case 'RATE_LIMITED':
+                // Not a credential failure — prompting would make the throttle worse.
+                generating = false;
+                makeToast(
+                    toastStore,
+                    'Garmin is rate limiting requests. Your login is fine — please try again in a few minutes.',
+                    'variant-filled-warning',
+                );
+                return;
             case 'INVALID_TOKEN':
                 generating = false;
                 makeToast(toastStore, 'Please re-authenticate with Garmin', 'variant-filled-warning');

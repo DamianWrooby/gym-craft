@@ -3,11 +3,13 @@ import { appConfig } from '@/constants/app.constants';
 import { isProduction } from '$lib/utils/environment';
 import { resolveSyncWindow, type SyncMode, type SyncStateSnapshot } from '$lib/garmin/sync-window';
 import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
+import { refreshGarminSession } from '$lib/garmin/refresh-session';
 import { splitDateRange } from '$lib/garmin/date-chunks';
 
 export type RunProxySyncErrorCode =
     | 'GARMIN_EMAIL_NOT_CONFIGURED'
     | 'INVALID_TOKEN'
+    | 'RATE_LIMITED'
     | 'STALE_STATE'
     | 'GARMIN_TIMEOUT'
     | 'PROXY_ERROR'
@@ -136,6 +138,11 @@ function classifyProxyFailure(
 ): { code: RunProxySyncErrorCode; message: string } {
     const message = typeof payload.message === 'string' ? payload.message : undefined;
 
+    // A throttle is not a credential failure. Reading it as one sends the athlete to a password
+    // prompt whose cold login is the most throttled path there is, which deepens the throttle.
+    if (status === 429 || payload.code === 'RATE_LIMITED') {
+        return { code: 'RATE_LIMITED', message: message ?? 'Garmin is rate limiting requests' };
+    }
     if (status === 401 || payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
         return { code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
     }
@@ -153,7 +160,10 @@ function classifyProxyFailure(
  *   2. Browser → SvelteKit (`/api/user/{id}/garmin/sync`) — fast map + upsert + state update.
  *
  * Returns a normalized result so each page can render its own toasts / inline errors.
- * On `INVALID_TOKEN` the caller should prompt for the Garmin password and call again with it.
+ * On `INVALID_TOKEN` the caller should prompt for the Garmin password and call again with it — but
+ * only after a silent renewal has already been tried and refused here, so the prompt means the
+ * stored Garmin authorization is genuinely dead rather than merely expired.
+ * On `RATE_LIMITED` the caller must back off and must NOT prompt: the credentials are fine.
  * On `STALE_STATE` the caller should reload fresh sync state and retry once.
  * On `GARMIN_TIMEOUT` Garmin itself was too slow — offer a plain retry.
  */
@@ -181,14 +191,38 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
     // goes out as month-sized requests. Incremental syncs are a week and stay a single call.
     const windows = mode === 'backfill' ? splitDateRange(startDate, endDate) : [{ startDate, endDate }];
 
+    // A backfill sends several windows in sequence, so the token has to be a mutable local: after a
+    // mid-loop renewal the remaining windows must use the new session, not the one already refused.
+    let activeToken = sessionToken;
+    let renewalTried = false;
+
     const activities: unknown[] = [];
     for (const [index, range] of windows.entries()) {
         // The Bearer token is the identity; the proxy forwards it to the microservice. No credentials.
-        const proxy = await postJson(
-            proxyUrl,
-            { startDate: range.startDate, endDate: range.endDate },
-            { headers: { Authorization: `Bearer ${sessionToken}` }, timeoutMs: PROXY_REQUEST_TIMEOUT_MS },
-        );
+        const requestWindow = () =>
+            postJson(
+                proxyUrl,
+                { startDate: range.startDate, endDate: range.endDate },
+                { headers: { Authorization: `Bearer ${activeToken}` }, timeoutMs: PROXY_REQUEST_TIMEOUT_MS },
+            );
+
+        let proxy = await requestWindow();
+
+        // Renew once per sync, never per window: a second refusal against a session minted moments
+        // ago means the stored authorization is dead, and looping would only reach that prompt slower.
+        if (!('error' in proxy) && !proxy.ok && !renewalTried) {
+            const failure = classifyProxyFailure(proxy.status, proxy.payload);
+            if (failure.code === 'INVALID_TOKEN') {
+                renewalTried = true;
+                const renewed = await refreshGarminSession(userId, activeToken);
+                if (!renewed.ok) {
+                    return { ok: false, code: renewed.code, message: renewed.message };
+                }
+                activeToken = renewed.sessionToken;
+                proxy = await requestWindow();
+            }
+        }
+
         if ('error' in proxy) {
             const code = proxy.aborted ? 'GARMIN_TIMEOUT' : 'PROXY_ERROR';
             return { ok: false, code, message: proxy.aborted ? 'Garmin service timed out' : proxy.error };
