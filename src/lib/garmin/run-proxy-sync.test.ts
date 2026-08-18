@@ -72,13 +72,54 @@ describe('runProxySync', () => {
         expect(persistBody.mode).toBe('backfill');
     });
 
-    it('surfaces INVALID_TOKEN from the proxy without persisting', async () => {
-        fetchMock.mockResolvedValueOnce(jsonResponse(500, { code: 'INVALID_TOKEN', message: 'No valid token found' }));
+    it('renews the session silently and retries the window, so the athlete sees nothing', async () => {
+        const summary = { mode: 'backfill', activitiesUpserted: 1, lastSyncedAt: 'x' };
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse(500, { code: 'INVALID_TOKEN', message: 'No valid token found' }))
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', sessionToken: 'sess-token-fresh' }))
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', data: [{ activityId: 1 }] }))
+            .mockResolvedValueOnce(jsonResponse(200, { data: summary }));
+
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 30 });
+
+        expect(result).toEqual({ ok: true, summary });
+        expect(fetchMock.mock.calls[1][0]).toContain(`/api/user/${userId}/garmin/session/refresh`);
+        // The rejected token is reported so the server can hand back a session another request minted.
+        expect(JSON.parse(fetchMock.mock.calls[1][1].body).staleToken).toBe(sessionToken);
+        // The retry must carry the NEW token: reusing the refused one would fail every later window.
+        expect(fetchMock.mock.calls[2][1].headers.Authorization).toBe('Bearer sess-token-fresh');
+    });
+
+    it('surfaces INVALID_TOKEN only after a renewal was refused, and never persists', async () => {
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse(500, { code: 'INVALID_TOKEN', message: 'No valid token found' }))
+            .mockResolvedValueOnce(jsonResponse(401, { code: 'REAUTH_REQUIRED', message: 'authorization dead' }));
 
         const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 30 });
 
         expect(result).toEqual({ ok: false, code: 'INVALID_TOKEN', message: expect.any(String) });
-        expect(fetchMock).toHaveBeenCalledTimes(1); // never reached the persist call
+        expect(fetchMock).toHaveBeenCalledTimes(2); // never reached the persist call
+    });
+
+    it('reports RATE_LIMITED without attempting a renewal, so a throttle never prompts for a password', async () => {
+        fetchMock.mockResolvedValueOnce(jsonResponse(429, { code: 'RATE_LIMITED', message: 'Garmin rate limit' }));
+
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 30 });
+
+        expect(result).toEqual({ ok: false, code: 'RATE_LIMITED', message: expect.any(String) });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('renews at most once per sync, so a dead authorization cannot become a refresh loop', async () => {
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse(500, { code: 'INVALID_TOKEN', message: 'No valid token found' }))
+            .mockResolvedValueOnce(jsonResponse(200, { status: 'success', sessionToken: 'sess-token-fresh' }))
+            .mockResolvedValueOnce(jsonResponse(500, { code: 'INVALID_TOKEN', message: 'No valid token found' }));
+
+        const result = await runProxySync({ userId, garminEmail, sessionToken, syncState, backfillDays: 30 });
+
+        expect(result).toEqual({ ok: false, code: 'INVALID_TOKEN', message: expect.any(String) });
+        expect(fetchMock).toHaveBeenCalledTimes(3); // proxy, refresh, retry — then it gives up
     });
 
     it('persists an empty list for a genuinely empty window', async () => {

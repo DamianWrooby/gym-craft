@@ -1,7 +1,7 @@
 import { to } from 'await-to-js';
-import { getGarminSessionToken } from '$lib/prisma/prisma';
-import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
 import { garminApiUrl, garminBearerHeaders } from './config';
+import { classifyGarminStatus } from './fetch-activities';
+import { withGarminSession, type GarminAttemptErrorCode, type GarminAttemptResult } from './with-garmin-session';
 
 export interface ActivitySplit {
     splitIndex: number;
@@ -31,12 +31,7 @@ export interface ActivityDetailPayload {
     samples: ActivitySample[];
 }
 
-export type FetchActivityDetailErrorCode =
-    | 'GARMIN_EMAIL_NOT_CONFIGURED'
-    | 'GARMIN_SERVICE_UNREACHABLE'
-    | 'GARMIN_SERVICE_PARSE_ERROR'
-    | 'INVALID_TOKEN'
-    | 'GARMIN_SERVICE_ERROR';
+export type FetchActivityDetailErrorCode = GarminAttemptErrorCode;
 
 export type FetchActivityDetailResult =
     | { ok: true; detail: ActivityDetailPayload }
@@ -47,23 +42,27 @@ export interface FetchActivityDetailParams {
     garminActivityId: bigint | number;
 }
 
+/**
+ * Fetches one activity's splits + downsampled samples. Session handling — including silently
+ * renewing an expired one and retrying once — belongs to `withGarminSession`.
+ */
 export async function fetchActivityDetail(params: FetchActivityDetailParams): Promise<FetchActivityDetailResult> {
     const { userId, garminActivityId } = params;
-
-    const [tokenError, sessionToken] = await to(getGarminSessionToken(userId));
-    if (tokenError || !sessionToken) {
-        return {
-            ok: false,
-            status: 401,
-            code: 'INVALID_TOKEN',
-            message: 'No valid token found',
-        };
-    }
 
     const body: Record<string, unknown> = {
         activityId: typeof garminActivityId === 'bigint' ? Number(garminActivityId) : garminActivityId,
     };
 
+    const result = await withGarminSession(userId, (sessionToken) => requestActivityDetail(sessionToken, body));
+    if (!result.ok) return result;
+
+    return { ok: true, detail: result.value };
+}
+
+async function requestActivityDetail(
+    sessionToken: string,
+    body: Record<string, unknown>,
+): Promise<GarminAttemptResult<ActivityDetailPayload>> {
     const url = `${garminApiUrl}/activity/detail`;
 
     const [fetchError, pyResponse] = await to(
@@ -95,8 +94,7 @@ export async function fetchActivityDetail(params: FetchActivityDetailParams): Pr
 
     if (!pyResponse.ok) {
         const message: string = data?.message || 'Garmin service error';
-        const code: FetchActivityDetailErrorCode =
-            pyResponse.status === 401 || isInvalidTokenMessage(message) ? 'INVALID_TOKEN' : 'GARMIN_SERVICE_ERROR';
+        const code = classifyGarminStatus(pyResponse.status, data, message);
         return { ok: false, status: pyResponse.status, code, message };
     }
 
@@ -110,7 +108,7 @@ export async function fetchActivityDetail(params: FetchActivityDetailParams): Pr
         };
     }
 
-    return { ok: true, detail: normalizeDetail(payload) };
+    return { ok: true, value: normalizeDetail(payload) };
 }
 
 function normalizeDetail(payload: Record<string, unknown>): ActivityDetailPayload {
