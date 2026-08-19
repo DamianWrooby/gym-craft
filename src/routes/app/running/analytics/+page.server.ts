@@ -16,7 +16,7 @@ export interface DashboardReportPreview {
     id: string;
     periodStart: string;
     periodEnd: string;
-    summary: string;
+    summaryPreview: string;
     createdAt: string;
 }
 
@@ -83,7 +83,7 @@ async function buildRecentReports(userId: string): Promise<DashboardReportPrevie
         id: r.id,
         periodStart: r.periodStart,
         periodEnd: r.periodEnd,
-        summary: r.summary,
+        summaryPreview: r.summaryPreview,
         createdAt: r.createdAt.toISOString(),
     }));
 }
