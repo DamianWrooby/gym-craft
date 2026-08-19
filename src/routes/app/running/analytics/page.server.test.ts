@@ -80,7 +80,7 @@ describe('load /app/running/analytics (dashboard)', () => {
                 id,
                 periodStart: '2026-06-01',
                 periodEnd: '2026-06-07',
-                summary: id.toUpperCase(),
+                summaryPreview: id.toUpperCase(),
                 createdAt: new Date('2026-06-08T00:00:00Z'),
             })),
         );
@@ -95,6 +95,7 @@ describe('load /app/running/analytics (dashboard)', () => {
         const reports = await result.recentReports;
         expect(reports).toHaveLength(3);
         expect(reports[0].id).toBe('r-1');
+        expect(reports[0].summaryPreview).toBe('R-1');
 
         const summary = await result.summary;
         expect(summary.hasActivities).toBe(true);

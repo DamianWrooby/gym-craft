@@ -1,5 +1,6 @@
 import { db } from '$lib/database';
 import { currentMonthStartIso } from '$lib/utils/iso-week';
+import { reportSummaryPreview } from '$lib/utils/report-format';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
 import type { AthleteProfile, Plan, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
@@ -390,8 +391,14 @@ export async function getRunningGoalsByIds(
     });
 }
 
-/** The fields both report list surfaces actually render. */
-export type WeeklyReportListItem = Pick<TrainingReport, 'id' | 'periodStart' | 'periodEnd' | 'summary' | 'createdAt'>;
+/**
+ * The fields both report list surfaces actually render. Neither renders the full
+ * `summary`; both show a short preview of it. So the list item carries a computed
+ * `summaryPreview`, never the full @db.Text — see getWeeklyReports.
+ */
+export type WeeklyReportListItem = Pick<TrainingReport, 'id' | 'periodStart' | 'periodEnd' | 'createdAt'> & {
+    summaryPreview: string;
+};
 
 export async function getWeeklyReports(userId: string): Promise<WeeklyReportListItem[]> {
     const key = trainingReportsKey(userId);
@@ -408,8 +415,16 @@ export async function getWeeklyReports(userId: string): Promise<WeeklyReportList
         // /running/analytics and /running/analytics/reports with no consumer.
         select: { id: true, periodStart: true, periodEnd: true, summary: true, createdAt: true },
     });
-    cache.set(key, reports);
-    return reports;
+    // Both list surfaces render only a preview of `summary` (a full LLM-written report
+    // held in @db.Text). Compute it here so the full text is never cached or shipped to
+    // the browser — only the ~140-char preview crosses the wire. Recompute-on-read, per
+    // ADR 0002; no stored preview column.
+    const items: WeeklyReportListItem[] = reports.map(({ summary, ...rest }) => ({
+        ...rest,
+        summaryPreview: reportSummaryPreview(summary),
+    }));
+    cache.set(key, items);
+    return items;
 }
 
 export async function getReportById(reportId: string, userId: string): Promise<TrainingReport | null> {

@@ -11,7 +11,7 @@
     import { makeToast } from '$lib/utils/toasts';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import { isSyncStale } from '$lib/utils/sync-staleness';
-    import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
+    import { formatReportPeriod } from '$lib/utils/report-format';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
     import { TIER_LIMITS } from '@/constants/subscription.constants';
     import { authenticateGarmin } from '$lib/garmin/authenticate';
@@ -300,7 +300,7 @@
                                             {new Date(report.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>
-                                    <p class="text-sm opacity-80 mt-1">{reportSummaryPreview(report.summary)}</p>
+                                    <p class="text-sm opacity-80 mt-1">{report.summaryPreview}</p>
                                 </a>
                             </li>
                         {/each}

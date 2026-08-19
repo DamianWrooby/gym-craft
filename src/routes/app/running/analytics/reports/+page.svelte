@@ -8,7 +8,7 @@
     import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
     import GenerateReportModal from '$lib/components/training-report/GenerateReportModal.svelte';
     import { ArrowLeftIcon } from 'svelte-feather-icons';
-    import { formatReportPeriod, reportSummaryPreview } from '$lib/utils/report-format';
+    import { formatReportPeriod } from '$lib/utils/report-format';
     import { makeToast, makeUpgradeToast } from '$lib/utils/toasts';
     import { to } from 'await-to-js';
     import { TIER_LIMITS } from '@/constants/subscription.constants';
@@ -19,7 +19,7 @@
         id: string;
         periodStart: string;
         periodEnd: string;
-        summary: string;
+        summaryPreview: string;
         createdAt: string;
     };
 
@@ -267,7 +267,7 @@
                                     {new Date(report.createdAt).toLocaleDateString()}
                                 </span>
                             </div>
-                            <p class="text-sm opacity-80 mt-1">{reportSummaryPreview(report.summary)}</p>
+                            <p class="text-sm opacity-80 mt-1">{report.summaryPreview}</p>
                         </button>
                     </li>
                 {/each}
