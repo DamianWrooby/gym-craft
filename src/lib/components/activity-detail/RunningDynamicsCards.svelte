@@ -24,7 +24,7 @@
 {#if fields.length > 0}
     <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
         {#each fields as f (f.label)}
-            <StatCard label={f.label} value={f.fmt(f.value)} />
+            <StatCard label={f.label} value={f.fmt(f.value ?? 0)} />
         {/each}
     </section>
 {/if}
