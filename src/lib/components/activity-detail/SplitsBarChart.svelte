@@ -41,6 +41,11 @@
         const hr = s.averageHr != null ? ` · ${Math.round(s.averageHr)} bpm` : '';
         return `Split ${s.splitIndex + 1}: ${pace}${hr}`;
     }
+
+    // The unit-less value shown inside each bar on desktop (e.g. "5:00" or "24.1").
+    function shortPace(s: ActivitySplit): string {
+        return formatPaceOrSpeed(splitSpeed(s), activityType).replace(' /km', '').replace(' km/h', '');
+    }
 </script>
 
 {#if usable.length > 0}
@@ -50,9 +55,14 @@
             {#each usable as s (s.splitIndex)}
                 <div class="flex flex-col items-center justify-end flex-1 min-w-[1.5rem] h-full">
                     <div
-                        class="w-full rounded-t"
+                        class="flex w-full items-end justify-center rounded-t"
                         style="height: {barHeightPct(s)}%; background-color: {hrColor(s.averageHr)}"
-                        title={splitTitle(s)} />
+                        title={splitTitle(s)}>
+                        <span
+                            class="hidden pb-1 text-[10px] font-semibold tabular-nums text-white/95 [text-shadow:0_1px_2px_rgba(0,0,0,0.55)] md:block">
+                            {shortPace(s)}
+                        </span>
+                    </div>
                     <span class="text-[10px] opacity-60 mt-1 tabular-nums">{s.splitIndex + 1}</span>
                 </div>
             {/each}

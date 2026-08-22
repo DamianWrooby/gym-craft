@@ -11,7 +11,6 @@
     import HrPaceOverlayChart from '$lib/components/activity-detail/HrPaceOverlayChart.svelte';
     import AskAiPanel from '$lib/components/activity-detail/AskAiPanel.svelte';
     import HrZoneDonut from '$lib/components/training-report/HrZoneDonut.svelte';
-    import ElevationChart from '$lib/components/activity-detail/ElevationChart.svelte';
     import RunningDynamicsCards from '$lib/components/activity-detail/RunningDynamicsCards.svelte';
     import RouteThumbnail from '$lib/components/activity-detail/RouteThumbnail.svelte';
     import SplitsBarChart from '$lib/components/activity-detail/SplitsBarChart.svelte';
@@ -213,13 +212,6 @@
             <section class="mb-10">
                 <h2 class="h3 font-semibold mb-3">Running dynamics</h2>
                 <RunningDynamicsCards dynamics={detail.dynamics} />
-            </section>
-        {/if}
-
-        {#if detail.samples.some((s) => s.elevationM != null)}
-            <section class="mb-10">
-                <h2 class="h3 font-semibold mb-3">Elevation</h2>
-                <ElevationChart samples={detail.samples} />
             </section>
         {/if}
 
