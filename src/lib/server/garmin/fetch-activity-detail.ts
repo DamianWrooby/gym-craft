@@ -18,6 +18,25 @@ export interface ActivitySample {
     heartRate: number | null;
     speed: number | null;
     elevationM: number | null;
+    cadence: number | null;
+    power: number | null;
+}
+
+export interface RoutePoint {
+    lat: number;
+    lng: number;
+}
+
+export interface ActivityDynamics {
+    avgCadence: number | null;
+    maxCadence: number | null;
+    avgGroundContactTimeMs: number | null;
+    avgVerticalOscillationCm: number | null;
+    avgVerticalRatioPct: number | null;
+    avgPowerW: number | null;
+    maxPowerW: number | null;
+    minTemperatureC: number | null;
+    maxTemperatureC: number | null;
 }
 
 export interface ActivityDetailPayload {
@@ -29,6 +48,8 @@ export interface ActivityDetailPayload {
     distance: number | null;
     splits: ActivitySplit[];
     samples: ActivitySample[];
+    route: RoutePoint[];
+    dynamics: ActivityDynamics | null;
 }
 
 export type FetchActivityDetailErrorCode = GarminAttemptErrorCode;
@@ -128,7 +149,33 @@ function normalizeDetail(payload: Record<string, unknown>): ActivityDetailPayloa
         distance: numberOrNull(payload.distance),
         splits,
         samples,
+        route: normalizeRoute(payload),
+        dynamics: normalizeDynamics(payload),
     };
+}
+
+function normalizeRoute(payload: Record<string, unknown>): RoutePoint[] {
+    if (!Array.isArray(payload.route)) return [];
+    return (payload.route as Record<string, unknown>[])
+        .map((p) => ({ lat: numberOrNull(p.lat), lng: numberOrNull(p.lng) }))
+        .filter((p): p is RoutePoint => p.lat !== null && p.lng !== null);
+}
+
+function normalizeDynamics(payload: Record<string, unknown>): ActivityDynamics | null {
+    const d = payload.dynamics as Record<string, unknown> | null | undefined;
+    if (!d || typeof d !== 'object') return null;
+    const out: ActivityDynamics = {
+        avgCadence: numberOrNull(d.avgCadence),
+        maxCadence: numberOrNull(d.maxCadence),
+        avgGroundContactTimeMs: numberOrNull(d.avgGroundContactTimeMs),
+        avgVerticalOscillationCm: numberOrNull(d.avgVerticalOscillationCm),
+        avgVerticalRatioPct: numberOrNull(d.avgVerticalRatioPct),
+        avgPowerW: numberOrNull(d.avgPowerW),
+        maxPowerW: numberOrNull(d.maxPowerW),
+        minTemperatureC: numberOrNull(d.minTemperatureC),
+        maxTemperatureC: numberOrNull(d.maxTemperatureC),
+    };
+    return Object.values(out).every((v) => v === null) ? null : out;
 }
 
 function normalizeSplit(split: Record<string, unknown>, fallbackIndex: number): ActivitySplit {
@@ -149,6 +196,8 @@ function normalizeSample(sample: Record<string, unknown>): ActivitySample {
         heartRate: numberOrNull(sample.heartRate),
         speed: numberOrNull(sample.speed),
         elevationM: numberOrNull(sample.elevationM),
+        cadence: numberOrNull(sample.cadence),
+        power: numberOrNull(sample.power),
     };
 }
 
@@ -163,3 +212,6 @@ function numberOrNull(value: unknown): number | null {
 function stringOrNull(value: unknown): string | null {
     return typeof value === 'string' && value.length > 0 ? value : null;
 }
+
+/** Test-only re-export so the normalizer can be unit-tested without a live fetch. */
+export const normalizeDetailForTest = normalizeDetail;

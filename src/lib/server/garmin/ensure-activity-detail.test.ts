@@ -69,6 +69,8 @@ describe('ensureActivityDetail', () => {
                 distance: 5000,
                 splits: cachedActivity.detail.splits,
                 samples: cachedActivity.detail.samples,
+                route: [],
+                dynamics: null,
             },
         });
         expect(mocks.fetchActivityDetail).not.toHaveBeenCalled();
@@ -100,6 +102,8 @@ describe('ensureActivityDetail', () => {
                 distance: 5000,
                 splits: fetchedDetail.splits,
                 samples: fetchedDetail.samples,
+                route: [],
+                dynamics: null,
             },
         });
     });

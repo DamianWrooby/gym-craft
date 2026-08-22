@@ -46,9 +46,11 @@ const detail: ActivityDetailPayload = {
         },
     ],
     samples: [
-        { timestampSec: 0, heartRate: 110, speed: 3.0, elevationM: 100 },
-        { timestampSec: 5, heartRate: 114, speed: 0, elevationM: 100 },
+        { timestampSec: 0, heartRate: 110, speed: 3.0, elevationM: 100, cadence: null, power: null },
+        { timestampSec: 5, heartRate: 114, speed: 0, elevationM: 100, cadence: null, power: null },
     ],
+    route: [],
+    dynamics: null,
 };
 
 function parsePayload(user: string) {

@@ -82,5 +82,8 @@ function toPayload(
         distance: activity.distanceM,
         splits: detail.splits,
         samples: detail.samples,
+        // Not yet persisted on `ActivityDetail`; only populated on a fresh Garmin fetch.
+        route: [],
+        dynamics: null,
     };
 }
