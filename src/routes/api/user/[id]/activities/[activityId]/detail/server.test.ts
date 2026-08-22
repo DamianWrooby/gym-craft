@@ -22,7 +22,20 @@ const locals = { user: { id: userId } } as unknown as App.Locals;
 const activityRow = { id: activityId, garminActivityId: 123n, detail: null };
 const splits = [{ splitIndex: 0, distanceM: 1000, durationSec: 300 }];
 const samples = [{ timestampSec: 0, heartRate: 140, speed: 3.3, elevationM: 10 }];
-// ensureActivityDetail returns the full payload; the endpoint projects it down to the time-series.
+const route = [{ lat: 50, lng: 19 }];
+const dynamics = {
+    avgCadence: 170,
+    maxCadence: null,
+    avgGroundContactTimeMs: null,
+    avgVerticalOscillationCm: null,
+    avgVerticalRatioPct: null,
+    avgPowerW: null,
+    maxPowerW: null,
+    minTemperatureC: null,
+    maxTemperatureC: null,
+};
+// ensureActivityDetail returns the full payload; the endpoint forwards the time-series plus
+// route/dynamics (the page needs all four — metadata stays off this response).
 const payload = {
     activityId: 123,
     activityName: 'Tempo run',
@@ -32,6 +45,8 @@ const payload = {
     distance: 5000,
     splits,
     samples,
+    route,
+    dynamics,
 };
 
 function makePost(id: string = userId, actId: string = activityId) {
@@ -59,13 +74,13 @@ describe('POST /api/user/[id]/activities/[activityId]/detail', () => {
         expect(mocks.ensureActivityDetail).not.toHaveBeenCalled();
     });
 
-    it('returns only the splits + samples time-series on success', async () => {
+    it('returns the splits, samples, route and dynamics on success', async () => {
         mocks.findFirst.mockResolvedValue(activityRow);
         mocks.ensureActivityDetail.mockResolvedValue({ ok: true, detail: payload });
         const res = await makePost();
         expect(res.status).toBe(200);
         const json = await res.json();
-        expect(json.data.detail).toEqual({ splits, samples });
+        expect(json.data.detail).toEqual({ splits, samples, route, dynamics });
     });
 
     it('calls ensureActivityDetail with no credentials (identity is the stored session token)', async () => {

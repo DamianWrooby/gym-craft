@@ -97,7 +97,7 @@
     }
 
     onMount(() => {
-        if (!detail) void loadDetail();
+        if (!detail || activity.detailStale) void loadDetail();
     });
 
     function formatDate(iso: string): string {

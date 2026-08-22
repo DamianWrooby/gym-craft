@@ -6,6 +6,7 @@ import type {
     ActivitySplit,
     RoutePoint,
 } from '$lib/server/garmin/fetch-activity-detail';
+import { CURRENT_DETAIL_SCHEMA_VERSION } from '$lib/server/garmin/ensure-activity-detail';
 
 export const load = async ({ params, locals }: { params: { activityId: string }; locals: App.Locals }) => {
     const userId = locals.user?.id;
@@ -70,6 +71,7 @@ export const load = async ({ params, locals }: { params: { activityId: string };
                       dynamics: (activity.detail.dynamics as unknown as ActivityDynamics) ?? null,
                   }
                 : null,
+            detailStale: activity.detail != null && activity.detail.schemaVersion < CURRENT_DETAIL_SCHEMA_VERSION,
         },
     };
 };
