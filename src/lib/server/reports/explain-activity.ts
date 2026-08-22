@@ -73,7 +73,8 @@ Hard rules:
 
 Data units:
 - Pace is given directly as \`paceSecPerKm\`/\`avgPaceSecPerKm\` (seconds per kilometer) with a pre-formatted \`pace\`/\`avgPace\` string (e.g. "5:02 /km"). Use these as-is; do NOT compute pace yourself.
-- Any field ending in \`Mps\` is a speed in meters/second. Distances are meters (\`...M\`), durations are seconds (\`...Sec\`), heart rate is bpm.`;
+- Any field ending in \`Mps\` is a speed in meters/second. Distances are meters (\`...M\`), durations are seconds (\`...Sec\`), heart rate is bpm.
+- \`dynamics\` holds summary running-form figures: cadence (spm), ground contact time (ms), vertical oscillation (cm), vertical ratio (%), and power (W). Reference them only when the question is about form or efficiency.`;
 
 export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt {
     const { question, activity, detail, recentActivities, loadProfile, profile } = params;
@@ -101,6 +102,7 @@ export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt
             elevationLossM: activity.elevationLossM,
             trimpLoad: activity.trimpLoad,
         },
+        dynamics: detail?.dynamics ?? null,
         splits: (detail?.splits ?? []).map((s) => serializeSplitForLlm(s, isPace)),
         samples: downsampleSamplesForLLM(detail?.samples ?? [], isPace),
         recentActivitiesLast14d: recentActivities.map((a) => ({

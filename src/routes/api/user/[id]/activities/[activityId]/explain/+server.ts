@@ -2,6 +2,7 @@ import { createResponse } from '$lib/utils/response';
 import { db } from '$lib/database';
 import { ensureActivityDetail } from '$lib/server/garmin/ensure-activity-detail';
 import { buildExplainPrompt } from '$lib/server/reports/explain-activity';
+import { activityTypeSupportsAiCoach } from '$lib/utils/activity-type';
 import { callExplainRunProxy } from '$lib/server/reports/call-proxy';
 import { computeLoadProfile } from '$lib/server/analytics/load';
 import { EXPLAIN_QUESTION_MAX_LENGTH } from '@/constants/training-report.constants';
@@ -59,6 +60,12 @@ export async function POST({
     }
     if (!activity) {
         return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: 'Activity not found' });
+    }
+    if (!activityTypeSupportsAiCoach(activity.activityType)) {
+        return createResponse(400, {
+            code: 'ACTIVITY_TYPE_NOT_SUPPORTED',
+            message: 'The AI coach is available for running activities only.',
+        });
     }
 
     const ensured = await ensureActivityDetail(userId, activity);

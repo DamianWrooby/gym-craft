@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isRunningActivity, partitionRunningActivities } from './activity-type';
+import {
+    isRunningActivity,
+    partitionRunningActivities,
+    isRunningTypeKey,
+    activityTypeSupportsAiCoach,
+} from './activity-type';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 
 function makeActivity(typeKey: string, activityId = 1): GarminActivity {
@@ -58,5 +63,26 @@ describe('partitionRunningActivities', () => {
         const { running, crossTraining } = partitionRunningActivities([]);
         expect(running).toEqual([]);
         expect(crossTraining).toEqual([]);
+    });
+});
+
+describe('isRunningTypeKey', () => {
+    it('is true for run variants', () => {
+        expect(isRunningTypeKey('running')).toBe(true);
+        expect(isRunningTypeKey('trail_running')).toBe(true);
+        expect(isRunningTypeKey('treadmill_running')).toBe(true);
+    });
+    it('is false for other modalities', () => {
+        expect(isRunningTypeKey('cycling')).toBe(false);
+        expect(isRunningTypeKey('lap_swimming')).toBe(false);
+        expect(isRunningTypeKey(null)).toBe(false);
+    });
+});
+
+describe('activityTypeSupportsAiCoach', () => {
+    it('is running-only today', () => {
+        expect(activityTypeSupportsAiCoach('running')).toBe(true);
+        expect(activityTypeSupportsAiCoach('trail_running')).toBe(true);
+        expect(activityTypeSupportsAiCoach('cycling')).toBe(false);
     });
 });

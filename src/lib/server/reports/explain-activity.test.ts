@@ -46,9 +46,11 @@ const detail: ActivityDetailPayload = {
         },
     ],
     samples: [
-        { timestampSec: 0, heartRate: 110, speed: 3.0, elevationM: 100 },
-        { timestampSec: 5, heartRate: 114, speed: 0, elevationM: 100 },
+        { timestampSec: 0, heartRate: 110, speed: 3.0, elevationM: 100, cadence: null, power: null },
+        { timestampSec: 5, heartRate: 114, speed: 0, elevationM: 100, cadence: null, power: null },
     ],
+    route: [],
+    dynamics: null,
 };
 
 function parsePayload(user: string) {
@@ -105,5 +107,38 @@ describe('buildExplainPrompt — pace enrichment', () => {
         expect(payload.activity.averageSpeedMps).toBe(3.31);
         expect(payload.samples[0].speedMps).toBe(3.0);
         expect(payload.samples[0].paceSecPerKm).toBeUndefined();
+    });
+});
+
+describe('buildExplainPrompt — running dynamics', () => {
+    it('includes running dynamics in the prompt when present', () => {
+        const prompt = buildExplainPrompt(
+            baseParams({
+                detail: {
+                    ...detail,
+                    dynamics: {
+                        avgCadence: 172,
+                        maxCadence: 184,
+                        avgGroundContactTimeMs: 240,
+                        avgVerticalOscillationCm: 8.5,
+                        avgVerticalRatioPct: 7,
+                        avgPowerW: 250,
+                        maxPowerW: 400,
+                        minTemperatureC: 10,
+                        maxTemperatureC: 15,
+                    },
+                },
+            }),
+        );
+
+        expect(prompt.user).toContain('"avgCadence":172');
+        expect(prompt.user).toContain('dynamics');
+    });
+
+    it('sends null dynamics when the activity has none', () => {
+        const { user } = buildExplainPrompt(baseParams());
+        const payload = parsePayload(user);
+
+        expect(payload.dynamics).toBeNull();
     });
 });

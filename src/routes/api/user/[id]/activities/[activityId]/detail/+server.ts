@@ -26,7 +26,7 @@ export async function POST({
             startTime: true,
             durationSec: true,
             distanceM: true,
-            detail: { select: { splits: true, samples: true } },
+            detail: { select: { splits: true, samples: true, route: true, dynamics: true, schemaVersion: true } },
         },
     });
 
@@ -39,6 +39,16 @@ export async function POST({
         return createResponse(result.status, { code: result.code, message: result.message });
     }
 
-    // The client (chart + splits table) only needs the time-series; metadata is already on the page.
-    return createResponse(200, { data: { detail: { splits: result.detail.splits, samples: result.detail.samples } } });
+    // The page renders the time-series, running dynamics and route from this payload; activity
+    // metadata (name, stats) is already on the page from the loader.
+    return createResponse(200, {
+        data: {
+            detail: {
+                splits: result.detail.splits,
+                samples: result.detail.samples,
+                route: result.detail.route,
+                dynamics: result.detail.dynamics,
+            },
+        },
+    });
 }
