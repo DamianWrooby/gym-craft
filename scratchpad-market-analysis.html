@@ -1,0 +1,496 @@
+<title>GymCraft Field Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    --ground: #f4f1ee;
+    --surface: #ffffff;
+    --surface-2: #faf8f6;
+    --ink: #1a1618;
+    --muted: #6d635f;
+    --faint: #9a908b;
+    --line: #e4ddd8;
+    --line-strong: #cfc6c0;
+    --brand: #c81e4a;
+    --brand-deep: #9c1338;
+    --edge: #0f766e;
+    --edge-bg: #e2f1ef;
+    --parity: #55606f;
+    --parity-bg: #e9ebef;
+    --threat: #a5620d;
+    --threat-bg: #f6ecdb;
+    --shadow: 0 1px 2px rgba(26,22,24,.04), 0 8px 24px rgba(26,22,24,.05);
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --ground: #16130f;
+      --surface: #201c19;
+      --surface-2: #1b1815;
+      --ink: #f0ebe6;
+      --muted: #a99f98;
+      --faint: #7c7169;
+      --line: #322c27;
+      --line-strong: #443c35;
+      --brand: #ff5c7e;
+      --brand-deep: #ff8199;
+      --edge: #5ecec1;
+      --edge-bg: #143b37;
+      --parity: #9aa6b6;
+      --parity-bg: #232a33;
+      --threat: #e0a250;
+      --threat-bg: #3a2c14;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #16130f;
+    --surface: #201c19;
+    --surface-2: #1b1815;
+    --ink: #f0ebe6;
+    --muted: #a99f98;
+    --faint: #7c7169;
+    --line: #322c27;
+    --line-strong: #443c35;
+    --brand: #ff5c7e;
+    --brand-deep: #ff8199;
+    --edge: #5ecec1;
+    --edge-bg: #143b37;
+    --parity: #9aa6b6;
+    --parity-bg: #232a33;
+    --threat: #e0a250;
+    --threat-bg: #3a2c14;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- typographic system ---- */
+  h1, h2, h3 { font-family: 'Archivo', system-ui, sans-serif; text-wrap: balance; margin: 0; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .72rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--brand); font-weight: 500;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* ---- masthead ---- */
+  header.mast {
+    border-bottom: 2px solid var(--ink);
+    padding: 64px 0 30px;
+    margin-bottom: 8px;
+  }
+  .mast-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    flex-wrap: wrap; gap: 10px 20px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .74rem;
+    letter-spacing: .06em; color: var(--muted);
+    padding-bottom: 26px;
+  }
+  .mast-top .dossier { color: var(--brand); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  h1.title {
+    font-size: clamp(2.5rem, 7vw, 4.6rem);
+    font-weight: 900; line-height: .98; letter-spacing: -.02em;
+    margin: 0 0 18px;
+  }
+  h1.title .accent { color: var(--brand); }
+  .standfirst {
+    font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+    color: var(--muted); max-width: 40ch; line-height: 1.45;
+    font-weight: 400;
+  }
+
+  /* ---- section scaffolding ---- */
+  section { padding: 46px 0; border-bottom: 1px solid var(--line); }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; }
+  .sec-num {
+    font-family: 'IBM Plex Mono', monospace; font-size: .8rem; font-weight: 600;
+    color: var(--brand); border: 1px solid var(--line-strong);
+    border-radius: 3px; padding: 2px 8px; flex: none;
+  }
+  h2 { font-size: clamp(1.5rem, 3.5vw, 2.1rem); font-weight: 800; letter-spacing: -.01em; }
+  .sec-sub { color: var(--muted); max-width: 62ch; margin: 10px 0 0; }
+
+  /* ---- BLUF ---- */
+  .bluf {
+    background: var(--surface); border: 1px solid var(--line);
+    border-left: 4px solid var(--brand);
+    border-radius: 6px; padding: 26px 28px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .bluf h2 { font-size: 1.15rem; letter-spacing: .01em; }
+  .bluf ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; counter-reset: b; }
+  .bluf li { display: flex; gap: 14px; align-items: flex-start; counter-increment: b; }
+  .bluf li::before {
+    content: counter(b); font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+    font-size: .8rem; color: var(--brand); border: 1px solid var(--line-strong);
+    border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; flex: none; margin-top: 2px;
+  }
+  .bluf li b { color: var(--ink); }
+  .bluf li span { color: var(--muted); }
+
+  /* ---- verdict chips ---- */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: .68rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 3px; white-space: nowrap;
+  }
+  .chip.edge   { color: var(--edge);   background: var(--edge-bg); }
+  .chip.parity { color: var(--parity); background: var(--parity-bg); }
+  .chip.threat { color: var(--threat); background: var(--threat-bg); }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* ---- lane label ---- */
+  .lane-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: .74rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    display: flex; align-items: center; gap: 12px; margin: 34px 0 16px;
+  }
+  .lane-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .lane-label:first-of-type { margin-top: 0; }
+
+  /* ---- competitor cards ---- */
+  .cards { display: grid; gap: 14px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 20px 22px; box-shadow: var(--shadow);
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .card-name { font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 1.18rem; letter-spacing: -.01em; }
+  .card-price { font-family: 'IBM Plex Mono', monospace; font-size: .8rem; color: var(--muted); }
+  .card-body { margin: 12px 0 0; display: grid; gap: 9px; }
+  .card-row { display: grid; grid-template-columns: 92px 1fr; gap: 12px; font-size: .93rem; }
+  .card-row .k {
+    font-family: 'IBM Plex Mono', monospace; font-size: .7rem; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--faint); padding-top: 3px;
+  }
+  .card-row .v { color: var(--ink); }
+  .card-row .v.mut { color: var(--muted); }
+  .card-row .v b { color: var(--brand-deep); font-weight: 600; }
+
+  /* ---- win / expose split ---- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .col {
+    border: 1px solid var(--line); border-radius: 6px; padding: 22px 24px;
+    background: var(--surface); box-shadow: var(--shadow);
+  }
+  .col.win { border-top: 4px solid var(--edge); }
+  .col.expose { border-top: 4px solid var(--threat); }
+  .col h3 { font-size: 1.05rem; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+  .col .tag {
+    font-family: 'IBM Plex Mono', monospace; font-size: .66rem; letter-spacing: .1em;
+    text-transform: uppercase; font-weight: 600; padding: 2px 7px; border-radius: 3px;
+  }
+  .col.win .tag { color: var(--edge); background: var(--edge-bg); }
+  .col.expose .tag { color: var(--threat); background: var(--threat-bg); }
+  .col ul { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 14px; }
+  .col li { font-size: .93rem; }
+  .col li b { display: block; margin-bottom: 2px; font-family: 'Archivo', sans-serif; font-size: .95rem; }
+  .col li span { color: var(--muted); }
+
+  /* ---- direction / recommendations ---- */
+  .recs { display: grid; gap: 14px; counter-reset: r; }
+  .rec {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: start;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 20px 22px; box-shadow: var(--shadow); counter-increment: r;
+  }
+  .rec::before {
+    content: "0" counter(r); font-family: 'Archivo', sans-serif; font-weight: 900;
+    font-size: 1.5rem; color: var(--brand); line-height: 1;
+  }
+  .rec-body h3 { font-size: 1.1rem; margin-bottom: 4px; }
+  .rec-body p { margin: 0; color: var(--muted); font-size: .93rem; }
+  .rec-tier {
+    font-family: 'IBM Plex Mono', monospace; font-size: .64rem; letter-spacing: .1em;
+    text-transform: uppercase; font-weight: 600; padding: 4px 8px; border-radius: 3px;
+    white-space: nowrap; height: fit-content;
+  }
+  .rec-tier.now  { color: var(--edge); background: var(--edge-bg); }
+  .rec-tier.next { color: var(--parity); background: var(--parity-bg); }
+  .rec-tier.hold { color: var(--threat); background: var(--threat-bg); }
+
+  /* ---- callout ---- */
+  .callout {
+    margin-top: 26px; background: var(--surface-2); border: 1px dashed var(--line-strong);
+    border-radius: 6px; padding: 18px 22px; font-size: .93rem; color: var(--muted);
+  }
+  .callout b { color: var(--ink); font-family: 'Archivo', sans-serif; }
+
+  /* ---- footer ---- */
+  footer { padding: 40px 0 60px; color: var(--faint); font-size: .82rem; }
+  footer .src-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+  }
+  footer ul { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; }
+  footer li { break-inside: avoid; margin-bottom: 6px; line-height: 1.4; }
+  footer a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+  footer a:hover { color: var(--brand); }
+  footer .meta { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+  a:focus-visible, li:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+  @media (max-width: 640px) {
+    .split { grid-template-columns: 1fr; }
+    .card-row { grid-template-columns: 1fr; gap: 2px; }
+    .rec { grid-template-columns: auto 1fr; }
+    .rec-tier { grid-column: 2; justify-self: start; }
+    footer ul { columns: 1; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div class="mast-top">
+      <span class="dossier">Competitive Field Report</span>
+      <span>PREPARED FOR: GYMCRAFT · AUG 2026 · INTERNAL</span>
+    </div>
+    <h1 class="title">Who else is<br>coaching the <span class="accent">data?</span></h1>
+    <p class="standfirst">A critical read of the running- and fitness-analytics market — and the narrow ground where a one-person hobby product can still win.</p>
+  </header>
+
+  <!-- ============ BLUF ============ -->
+  <section>
+    <div class="bluf">
+      <h2 class="mono">Bottom line, up front</h2>
+      <ol>
+        <li><span><b>Your analytics are already free elsewhere.</b> TRIMP, ACWR, monotony and strain are the whole point of intervals.icu and Runalyze — both free — and Garmin Connect shows training load natively. This is table stakes, not a moat.</span></li>
+        <li><span><b>Strava overlaps you less than it looks — for now.</b> Athlete Intelligence writes <em>one-way auto-summaries</em> on each activity. Strava has <b>no coach-style weekly report</b>, and true "ask about this workout" only works by leaving Strava for Claude via the MCP connector (June 2026). Your interactive report and in-app run Q&A are not yet replicated in-app — but Strava owns the data and owns Runna, so this is the long-term watch-item.</span></li>
+        <li><span><b>Your real edge is being a hybrid, and being cheap.</b> Almost nobody does gym + running in one opinionated app. A €25 lifetime price undercuts every $15–20/mo subscription in the market.</span></li>
+        <li><span><b>Direction: stop competing on analytics depth.</b> Lean into hybrid athletes, Garmin-direct access (no Strava required), correctness, and price. Do not try to out-coach Runna or out-chart intervals.icu.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ LANDSCAPE ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <div>
+        <h2>The landscape, in four lanes</h2>
+        <p class="sec-sub">GymCraft touches four different markets at once. Each has an entrenched leader. The verdict chip on each card is GymCraft's position against that competitor.</p>
+      </div>
+    </div>
+
+    <!-- lane 1 -->
+    <div class="lane-label">Lane A · Endurance analytics platforms</div>
+    <div class="cards">
+      <article class="card">
+        <div class="card-top"><span class="card-name">intervals.icu</span><span class="card-price">Free · donation</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Fitness/fatigue (CTL/ATL), power curves, per-interval analysis — the metrics TrainingPeaks charges $20/mo for, given away free. The self-coached athlete's default.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Deeper and free on the running-analytics axis. GymCraft cannot win here. <b>Do not fight it.</b></span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip threat">Out-analytics'd</span></span></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-top"><span class="card-name">Runalyze</span><span class="card-price">Freemium</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Enormous metric set (TRIMP, VO2max, race predictions), open-source ethos, community-tuned accuracy. Metrics "other platforms charge premium prices for."</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Same commodity metrics, more of them, free. Its weakness is UX and no coaching layer — that gap is not yours to exploit cheaply.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip threat">Out-analytics'd</span></span></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-top"><span class="card-name">TrainingPeaks</span><span class="card-price">~$20/mo</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Industry standard for coached athletes. 70k+ plans sold, 35+ federation partnerships, the coach marketplace. A business platform, not a solo tool.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Different buyer (coaches and their clients). Not a direct rival — and not a market a hobby product should enter.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip parity">Different buyer</span></span></div>
+        </div>
+      </article>
+    </div>
+
+    <!-- lane 2 -->
+    <div class="lane-label">Lane B · AI running coaches</div>
+    <div class="cards">
+      <article class="card">
+        <div class="card-top"><span class="card-name">Runna</span><span class="card-price">$19.99/mo</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Best-polished plans, push to most watches, adaptive. <b>Owned by Strava since 2025</b> — now backed by the largest distribution channel in the sport.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Better funded, better distributed, running-only. Your counter is hybrid scope and a fraction of the price.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip threat">Better resourced</span></span></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-top"><span class="card-name">Athletica</span><span class="card-price">~$15/mo</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Built by exercise scientists (Laursen methodology), tri/ultra-friendly, plain-language Q&A against your own training history.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Its conversational Q&A overlaps directly with "Explain my run" — but with a physiology brand behind it. Credibility gap favours them.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip parity">Feature overlap</span></span></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-top"><span class="card-name">TrainAsONE</span><span class="card-price">$15–25/mo</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Deepest adaptive ML: plans re-plan daily on completed workouts, handle missed sessions, support multiple race goals at once.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">GymCraft generates a plan; it does not <em>adapt daily</em>. This is the clearest running-side feature gap to be honest about.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip parity">Deeper adaptation</span></span></div>
+        </div>
+      </article>
+    </div>
+
+    <!-- lane 3 -->
+    <div class="lane-label">Lane C · The platform owner</div>
+    <div class="cards">
+      <article class="card">
+        <div class="card-top"><span class="card-name">Strava · Athlete Intelligence + MCP</span><span class="card-price">~$12/mo</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">One-way generative-AI activity summaries (out of beta) across pace, HR, power and Relative Effort, plus a "Say More" detail level. Conversational Q&A exists only <em>outside</em> the app via the <b>Strava→Claude MCP connector (June 2026)</b>. No weekly coach report. Owns Runna. Owns the social graph.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Overlaps "Explain my run" partially (auto-summaries), but does <b>not</b> replicate interactive in-app workout Q&A or a coach-style weekly report. The strategic risk is trajectory — it holds the data and owns Runna. Defence: Garmin-direct sync without Strava, gym programming, and a lifetime price.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip threat">Existential watch-item</span></span></div>
+        </div>
+      </article>
+    </div>
+
+    <!-- lane 4 -->
+    <div class="lane-label">Lane D · Gym &amp; hybrid apps</div>
+    <div class="cards">
+      <article class="card">
+        <div class="card-top"><span class="card-name">Fitbod</span><span class="card-price">$15.99/mo</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Best-in-class gym adaptation: recovery-aware, auto progressive overload, equipment-flexible. Changes tomorrow's session from today's log. No free tier.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Gym-only. Its adaptive engine is stronger than GymCraft's plan generator — but it knows nothing about your running load. The hybrid seam is where you differ.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip parity">Deeper, but siloed</span></span></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-top"><span class="card-name">Edge</span><span class="card-price">Subscription</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">The one true hybrid: one plan spanning run + strength + HIIT + mobility, balanced so lifting supports running. Purpose-built, not bolted together. <b>Your closest positioning rival.</b></span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">Owns the "runners who lift" story on the plan side. But it is plan-first, not Garmin-analytics-first, and carries no load engine. Watch it closely.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip threat">Direct on positioning</span></span></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-top"><span class="card-name">Garmin Connect</span><span class="card-price">Free w/ watch</span></div>
+        <div class="card-body">
+          <div class="card-row"><span class="k">Strength</span><span class="v">Native training load and recovery across all sports, free if you own the watch. The default your users already have open.</span></div>
+          <div class="card-row"><span class="k">vs GymCraft</span><span class="v mut">"Free and already installed" is the hardest competitor. GymCraft must be clearly better at interpretation and cross-sport coaching, not just re-displaying Garmin's numbers.</span></div>
+          <div class="card-row"><span class="k">Verdict</span><span class="v"><span class="chip threat">Free incumbent</span></span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ WIN / EXPOSE ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <div>
+        <h2>Where GymCraft actually wins — and where it is exposed</h2>
+        <p class="sec-sub">Honest inventory. The left column is defensible today. The right column is where the market is moving against a one-person product.</p>
+      </div>
+    </div>
+    <div class="split">
+      <div class="col win">
+        <h3><span class="tag">Real edge</span></h3>
+        <ul>
+          <li><b>Hybrid in one app</b><span>Gym plans <em>and</em> running load in a single opinionated product. Almost nobody occupies this cleanly — Fitbod is gym-only, Runna is run-only, Garmin does not coach.</span></li>
+          <li><b>Garmin-direct, no Strava tax</b><span>You sync Garmin activities without routing through Strava. As Strava absorbs the AI-coaching layer, "works without Strava" becomes a genuine positioning wedge.</span></li>
+          <li><b>Price no subscriber can match</b><span>€4/mo, €36/yr, or <b>€25 lifetime</b> against a market of $15–20/mo. Lifetime pricing is a story competitors structurally cannot copy.</span></li>
+          <li><b>Weekly report + in-app run Q&A</b><span>Strava has no coach-style weekly report, and its "ask about a workout" only works by leaving for Claude. Both of your AI surfaces live inside the app — a real, current gap in the incumbent.</span></li>
+          <li><b>Correctness as a feature</b><span>All-modality load vs running-only volume, "walks are not training," honest metric definitions. Rigor most apps blur. Marketable trust.</span></li>
+        </ul>
+      </div>
+      <div class="col expose">
+        <h3><span class="tag">Exposed</span></h3>
+        <ul>
+          <li><b>Commodity analytics</b><span>TRIMP / ACWR / monotony / strain are free on intervals.icu and Runalyze and native on Garmin. Not a differentiator on their own.</span></li>
+          <li><b>AI narrative is being commoditized</b><span>Strava's auto-summaries and the Claude MCP route point at where the platform is heading. Not there yet in-app, but the direction erodes your AI story over time.</span></li>
+          <li><b>No daily adaptation</b><span>TrainAsONE and Fitbod re-plan from what you did yesterday. GymCraft generates, then goes static. The gap runners will notice most.</span></li>
+          <li><b>Solo-project fragility</b><span>Two external services (AI proxy, Garmin curl_cffi) and one Garmin WAF change from breaking sync. Bigger rivals absorb that; you carry it alone.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DIRECTION ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <div>
+        <h2>Recommended direction</h2>
+        <p class="sec-sub">Ranked for a cost-recovery hobby product with one maintainer. Play to the seams competitors cannot or will not cover. Tiers: do now, do next, hold.</p>
+      </div>
+    </div>
+    <div class="recs">
+      <div class="rec">
+        <div class="rec-body">
+          <h3>Own "the runner who lifts"</h3>
+          <p>Make the hybrid the headline, not a feature. Show how gym load and running load share one recovery budget — the exact cross-sport view Fitbod, Runna and intervals.icu each miss. This is your only defensible category.</p>
+        </div>
+        <span class="rec-tier now">Do now</span>
+      </div>
+      <div class="rec">
+        <div class="rec-body">
+          <h3>Sell "no Strava required"</h3>
+          <p>As Strava becomes the AI-coaching gatekeeper, make Garmin-direct access an explicit promise. Target athletes who resent the platform lock-in or its price. Free positioning, costs nothing to state.</p>
+        </div>
+        <span class="rec-tier now">Do now</span>
+      </div>
+      <div class="rec">
+        <div class="rec-body">
+          <h3>Close the adaptation gap, narrowly</h3>
+          <p>Do not build TrainAsONE. Do add one honest loop: next week's plan reacts to last week's actual load and ACWR status. "Your plan adjusts to what you did" is a claim you cannot currently make.</p>
+        </div>
+        <span class="rec-tier next">Do next</span>
+      </div>
+      <div class="rec">
+        <div class="rec-body">
+          <h3>Make correctness the brand</h3>
+          <p>Turn the domain rigor into visible trust: explain <em>why</em> a walk is not training, why load is all-modality. In a market of hand-wavy AI summaries, defensible honesty is a differentiator a solo dev can actually own.</p>
+        </div>
+        <span class="rec-tier next">Do next</span>
+      </div>
+      <div class="rec">
+        <div class="rec-body">
+          <h3>Do not chase analytics depth or a social feed</h3>
+          <p>Every hour spent matching intervals.icu's charts or Strava's graph is lost. You cannot win either and do not need to. Compete on scope, price, and trust instead.</p>
+        </div>
+        <span class="rec-tier hold">Hold</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <b>The one-sentence strategy:</b> GymCraft is not a better running analyzer or a better AI coach — those races are lost to free tools and the platform owner. It is the honest, affordable, Garmin-native home for the amateur who both lifts and runs. Everything on the roadmap should make that sentence more true.
+    </div>
+  </section>
+
+  <!-- ============ SOURCES ============ -->
+  <footer>
+    <div class="src-title">Sources</div>
+    <ul>
+      <li><a href="https://appsforstrava.com/blog/intervals-icu-vs-trainingpeaks">intervals.icu vs TrainingPeaks (2026)</a></li>
+      <li><a href="https://coachbox.app/en/compare/intervals-icu-vs-trainingpeaks">Coachbox — intervals.icu vs TrainingPeaks</a></li>
+      <li><a href="https://www.gneta.app/blog/garmin-data-analysis-tools-2026">Gneta — Garmin data analysis tools 2026</a></li>
+      <li><a href="https://therunninggenie.com/blog/best-ai-running-coach-apps">Running Genie — best AI running coach apps 2026</a></li>
+      <li><a href="https://coachleo.ai/best-ai-running-coach">CoachLeo — best AI running coach comparison</a></li>
+      <li><a href="https://therunninggenie.com/blog/adaptive-marathon-training-plan-apps-compared">Running Genie — adaptive marathon plan apps</a></li>
+      <li><a href="https://press.strava.com/articles/stravas-athlete-intelligence-translates-workout-data-into-simple-and">Strava press — Athlete Intelligence</a></li>
+      <li><a href="https://support.strava.com/en-us/articles/15401531-strava-mcp-connector">Strava — MCP Connector</a></li>
+      <li><a href="https://therunninggenie.com/blog/strava-athlete-intelligence-vs-ai-coaches">Running Genie — Athlete Intelligence vs AI coaches</a></li>
+      <li><a href="https://the5krunner.com/2025/11/17/strava-relative-effort-guide-tss-2025/">the5krunner — Strava Relative Effort / TRIMP</a></li>
+      <li><a href="https://fitbod.me/blog/best-ai-fitness-apps-2026-the-complete-guide-to-ai-powered-muscle-building-apps/">Fitbod — best AI fitness apps 2026</a></li>
+      <li><a href="https://www.sensai.fit/blog/best-ai-fitness-apps-2026-fitbod-freeletics-future-trainiac-alternatives">Sensai — Fitbod/Freeletics/Caliber tested</a></li>
+      <li><a href="https://www.findyouredge.app/news/best-hybrid-workout-apps-2026-comparison">Find Your Edge — hybrid workout apps 2026</a></li>
+      <li><a href="https://www.jefit.com/blog/hybrid-training-the-complete-guide-to-combining-strength-cardio-mobility-in-2026">Jefit — hybrid training guide 2026</a></li>
+    </ul>
+    <div class="meta">Field report compiled Aug 2026 from public web sources. Pricing and ownership facts as reported by cited third parties; verify before external use. Competitive judgement is GymCraft-internal analysis.</div>
+  </footer>
+
+</div>
