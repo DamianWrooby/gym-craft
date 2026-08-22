@@ -20,3 +20,8 @@ docs
 .cursor
 .agents
 CLAUDE.md
+
+# AI-authored working docs / scratch analysis — keep local, never push
+CONTEXT.md
+SECURITY_*.md
+scratchpad-*
