@@ -1,6 +1,11 @@
 import { db } from '$lib/database';
 import { error, redirect } from '@sveltejs/kit';
-import type { ActivitySample, ActivitySplit } from '$lib/server/garmin/fetch-activity-detail';
+import type {
+    ActivityDynamics,
+    ActivitySample,
+    ActivitySplit,
+    RoutePoint,
+} from '$lib/server/garmin/fetch-activity-detail';
 
 export const load = async ({ params, locals }: { params: { activityId: string }; locals: App.Locals }) => {
     const userId = locals.user?.id;
@@ -32,14 +37,20 @@ export const load = async ({ params, locals }: { params: { activityId: string };
             activityName: activity.activityName,
             startTime: activity.startTime.toISOString(),
             durationSec: activity.durationSec,
+            movingDurationSec: activity.movingDurationSec,
             distanceM: activity.distanceM,
+            calories: activity.calories,
             averageHr: activity.averageHr,
             maxHr: activity.maxHr,
             averageSpeed: activity.averageSpeed,
+            maxSpeed: activity.maxSpeed,
             averageCadence: activity.averageCadence,
+            maxCadence: activity.maxCadence,
             avgStrideLength: activity.avgStrideLength,
             elevationGainM: activity.elevationGainM,
             elevationLossM: activity.elevationLossM,
+            moderateMinutes: activity.moderateMinutes,
+            vigorousMinutes: activity.vigorousMinutes,
             trimpLoad: activity.trimpLoad,
             hrZoneSeconds:
                 activity.hrZone1Sec != null
@@ -55,6 +66,8 @@ export const load = async ({ params, locals }: { params: { activityId: string };
                 ? {
                       splits: activity.detail.splits as unknown as ActivitySplit[],
                       samples: activity.detail.samples as unknown as ActivitySample[],
+                      route: (activity.detail.route as unknown as RoutePoint[]) ?? [],
+                      dynamics: (activity.detail.dynamics as unknown as ActivityDynamics) ?? null,
                   }
                 : null,
         },
