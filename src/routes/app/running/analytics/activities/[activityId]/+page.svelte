@@ -10,7 +10,13 @@
     import SplitsTable from '$lib/components/activity-detail/SplitsTable.svelte';
     import HrPaceOverlayChart from '$lib/components/activity-detail/HrPaceOverlayChart.svelte';
     import AskAiPanel from '$lib/components/activity-detail/AskAiPanel.svelte';
+    import HrZoneBar from '$lib/components/activity-detail/HrZoneBar.svelte';
+    import ElevationChart from '$lib/components/activity-detail/ElevationChart.svelte';
+    import RunningDynamicsCards from '$lib/components/activity-detail/RunningDynamicsCards.svelte';
+    import RouteThumbnail from '$lib/components/activity-detail/RouteThumbnail.svelte';
     import StatCard from '$lib/components/stat-card/StatCard.svelte';
+    import { computeAerobicDecoupling } from '$lib/utils/decoupling';
+    import { isRunningTypeKey, activityTypeSupportsAiCoach } from '$lib/utils/activity-type';
     import { formatPaceOrSpeed } from '$lib/utils/pace';
     import { makeToast } from '$lib/utils/toasts.js';
     import { validateGarminLoginFormData } from '$lib/utils/form-validation';
@@ -38,6 +44,13 @@
     let detail = activity.detail;
     let detailLoading = false;
     let detailError: string | null = null;
+
+    // `isRunning` gates blocks that are INTRINSICALLY running (stride length, running dynamics,
+    // pace label, decoupling). `canAskAi` gates the AI coach — a POLICY that will widen to other
+    // modalities later, so it goes through the dedicated flip-point, never `isRunning`.
+    $: isRunning = isRunningTypeKey(activity.activityType);
+    $: canAskAi = activityTypeSupportsAiCoach(activity.activityType);
+    $: decoupling = detail && isRunning ? computeAerobicDecoupling(detail.samples) : null;
 
     async function loadDetail(password?: string) {
         if (detailLoading) return;
@@ -139,15 +152,62 @@
     <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
         <StatCard label="Distance" value={formatDistance(activity.distanceM)} />
         <StatCard label="Duration" value={formatDuration(activity.durationSec)} />
-        <StatCard label="Avg pace / speed" value={formatPaceOrSpeed(activity.averageSpeed, activity.activityType)} />
+        <StatCard
+            label="Avg {isRunning ? 'pace' : 'speed'}"
+            value={formatPaceOrSpeed(activity.averageSpeed, activity.activityType)} />
         <StatCard label="Avg HR" value={activity.averageHr != null ? `${activity.averageHr} bpm` : '—'} />
+        <StatCard label="Max HR" value={activity.maxHr != null ? `${activity.maxHr} bpm` : '—'} />
+        <StatCard
+            label="Training load"
+            value={activity.trimpLoad != null ? `${Math.round(activity.trimpLoad)}` : '—'} />
+        <StatCard label="Calories" value={activity.calories != null ? `${activity.calories} kcal` : '—'} />
+        <StatCard
+            label="Elevation"
+            value={activity.elevationGainM != null ? `↑${Math.round(activity.elevationGainM)} m` : '—'} />
+        {#if activity.movingDurationSec != null && activity.movingDurationSec < activity.durationSec}
+            <StatCard label="Stopped time" value={formatDuration(activity.durationSec - activity.movingDurationSec)} />
+        {/if}
+        {#if isRunning && activity.avgStrideLength != null}
+            <StatCard label="Stride length" value={`${activity.avgStrideLength.toFixed(2)} m`} />
+        {/if}
+        {#if decoupling != null}
+            <StatCard label="Aerobic decoupling" value={`${decoupling}%`} />
+        {/if}
     </section>
+
+    {#if activity.hrZoneSeconds}
+        <section class="mb-10">
+            <h2 class="h3 font-semibold mb-3">Heart-rate zones</h2>
+            <HrZoneBar zones={activity.hrZoneSeconds} />
+        </section>
+    {/if}
 
     {#if detail}
         <section class="mb-10">
             <h2 class="h3 font-semibold mb-3">HR & pace over time</h2>
             <HrPaceOverlayChart samples={detail.samples} />
         </section>
+
+        {#if isRunning && detail.dynamics}
+            <section class="mb-10">
+                <h2 class="h3 font-semibold mb-3">Running dynamics</h2>
+                <RunningDynamicsCards dynamics={detail.dynamics} />
+            </section>
+        {/if}
+
+        {#if detail.samples.some((s) => s.elevationM != null)}
+            <section class="mb-10">
+                <h2 class="h3 font-semibold mb-3">Elevation</h2>
+                <ElevationChart samples={detail.samples} />
+            </section>
+        {/if}
+
+        {#if detail.route.length > 0}
+            <section class="mb-10">
+                <h2 class="h3 font-semibold mb-3">Route</h2>
+                <RouteThumbnail route={detail.route} />
+            </section>
+        {/if}
 
         <section class="mb-10">
             <h2 class="h3 font-semibold mb-3">Splits</h2>
@@ -173,7 +233,9 @@
         </aside>
     {/if}
 
-    <section class="mb-6">
-        <AskAiPanel userId={user.id} activityDbId={activity.id} />
-    </section>
+    {#if canAskAi}
+        <section class="mb-6">
+            <AskAiPanel userId={user.id} activityDbId={activity.id} />
+        </section>
+    {/if}
 </Card>
