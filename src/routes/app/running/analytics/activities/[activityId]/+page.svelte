@@ -10,10 +10,11 @@
     import SplitsTable from '$lib/components/activity-detail/SplitsTable.svelte';
     import HrPaceOverlayChart from '$lib/components/activity-detail/HrPaceOverlayChart.svelte';
     import AskAiPanel from '$lib/components/activity-detail/AskAiPanel.svelte';
-    import HrZoneBar from '$lib/components/activity-detail/HrZoneBar.svelte';
+    import HrZoneDonut from '$lib/components/training-report/HrZoneDonut.svelte';
     import ElevationChart from '$lib/components/activity-detail/ElevationChart.svelte';
     import RunningDynamicsCards from '$lib/components/activity-detail/RunningDynamicsCards.svelte';
     import RouteThumbnail from '$lib/components/activity-detail/RouteThumbnail.svelte';
+    import SplitsBarChart from '$lib/components/activity-detail/SplitsBarChart.svelte';
     import StatCard from '$lib/components/stat-card/StatCard.svelte';
     import { computeAerobicDecoupling } from '$lib/utils/decoupling';
     import { isRunningTypeKey, activityTypeSupportsAiCoach } from '$lib/utils/activity-type';
@@ -23,6 +24,7 @@
     import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
     import { resolveBackTarget } from '$lib/utils/back-target';
     import type { User } from '@/models/user/user.model';
+    import type { GarminActivityHrZones } from '@/models/garmin/activity.model';
 
     export let data;
 
@@ -51,6 +53,22 @@
     $: isRunning = isRunningTypeKey(activity.activityType);
     $: canAskAi = activityTypeSupportsAiCoach(activity.activityType);
     $: decoupling = detail && isRunning ? computeAerobicDecoupling(detail.samples) : null;
+
+    // The HrZoneDonut (shared with the weekly report) needs per-zone percents; the row only
+    // stores seconds, so derive them here.
+    $: hrZonePercents = activity.hrZoneSeconds ? toZonePercents(activity.hrZoneSeconds) : null;
+
+    function toZonePercents(z: GarminActivityHrZones): GarminActivityHrZones {
+        const total = z.zone1 + z.zone2 + z.zone3 + z.zone4 + z.zone5;
+        const pct = (v: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
+        return {
+            zone1: pct(z.zone1),
+            zone2: pct(z.zone2),
+            zone3: pct(z.zone3),
+            zone4: pct(z.zone4),
+            zone5: pct(z.zone5),
+        };
+    }
 
     async function loadDetail(password?: string) {
         if (detailLoading) return;
@@ -141,12 +159,17 @@
         </button>
     </div>
 
-    <header class="mb-8">
-        <div class="flex items-center gap-3 mb-2">
-            <ActivityTypeIcon typeKey={activity.activityType} size={28} />
-            <h1 class="h2 text-xl font-bold m-0">{activity.activityName ?? formatType(activity.activityType)}</h1>
+    <header class="mb-8 flex items-start justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3 mb-2">
+                <ActivityTypeIcon typeKey={activity.activityType} size={28} />
+                <h1 class="h2 text-xl font-bold m-0">{activity.activityName ?? formatType(activity.activityType)}</h1>
+            </div>
+            <p class="text-sm opacity-70">{formatDate(activity.startTime)} · {formatType(activity.activityType)}</p>
         </div>
-        <p class="text-sm opacity-70">{formatDate(activity.startTime)} · {formatType(activity.activityType)}</p>
+        {#if detail && detail.route.length > 0}
+            <RouteThumbnail route={detail.route} />
+        {/if}
     </header>
 
     <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
@@ -178,7 +201,7 @@
     {#if activity.hrZoneSeconds}
         <section class="mb-10">
             <h2 class="h3 font-semibold mb-3">Heart-rate zones</h2>
-            <HrZoneBar zones={activity.hrZoneSeconds} />
+            <HrZoneDonut hrZoneSeconds={activity.hrZoneSeconds} {hrZonePercents} />
         </section>
     {/if}
 
@@ -202,10 +225,10 @@
             </section>
         {/if}
 
-        {#if detail.route.length > 0}
+        {#if detail.splits.length > 0}
             <section class="mb-10">
-                <h2 class="h3 font-semibold mb-3">Route</h2>
-                <RouteThumbnail route={detail.route} />
+                <h2 class="h3 font-semibold mb-3">Split pace</h2>
+                <SplitsBarChart splits={detail.splits} activityType={activity.activityType} />
             </section>
         {/if}
 

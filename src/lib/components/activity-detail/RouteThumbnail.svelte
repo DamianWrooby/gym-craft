@@ -5,25 +5,23 @@
     export let route: RoutePoint[];
     export let trimRadiusM = 200;
 
+    // Compact header decoration: a small, non-interactive polyline. Start/end are trimmed so the
+    // athlete's home location is never drawn. Deliberately not a map — no pan, zoom, or basemap.
     $: trimmed = trimRoute(route, trimRadiusM);
-    $: ({ d, width, height } = routeToSvgPath(trimmed, 320));
+    $: ({ d, width, height } = routeToSvgPath(trimmed, 120));
 </script>
 
 {#if d}
-    <div
-        class="rounded-xl border border-surface-300 dark:border-surface-700 p-4 bg-surface-100 dark:bg-surface-800 flex justify-center">
-        <svg
-            viewBox="-8 -8 {width + 16} {height + 16}"
-            class="w-full max-w-md h-auto"
-            role="img"
-            aria-label="Activity route (start and end trimmed for privacy)">
-            <path
-                {d}
-                class="fill-none stroke-primary-500"
-                stroke-width="2.5"
-                stroke-linejoin="round"
-                stroke-linecap="round" />
-        </svg>
-    </div>
-    <p class="text-xs opacity-60 mt-1">Start and end trimmed to protect your home location.</p>
+    <svg
+        viewBox="-6 -6 {width + 12} {height + 12}"
+        class="h-16 w-auto max-w-[8rem] shrink-0 opacity-80"
+        role="img"
+        aria-label="Activity route (start and end trimmed for privacy)">
+        <path
+            {d}
+            class="fill-none stroke-primary-500"
+            stroke-width="3"
+            stroke-linejoin="round"
+            stroke-linecap="round" />
+    </svg>
 {/if}
