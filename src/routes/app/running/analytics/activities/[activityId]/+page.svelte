@@ -159,17 +159,15 @@
         </button>
     </div>
 
-    <header class="mb-8 flex items-start justify-between gap-4">
-        <div>
-            <div class="flex items-center gap-3 mb-2">
-                <ActivityTypeIcon typeKey={activity.activityType} size={28} />
-                <h1 class="h2 text-xl font-bold m-0">{activity.activityName ?? formatType(activity.activityType)}</h1>
-            </div>
-            <p class="text-sm opacity-70">{formatDate(activity.startTime)} · {formatType(activity.activityType)}</p>
+    <header class="mb-8">
+        <div class="flex items-center flex-wrap gap-x-3 gap-y-1 mb-2">
+            <ActivityTypeIcon typeKey={activity.activityType} size={28} />
+            <h1 class="h2 text-xl font-bold m-0">{activity.activityName ?? formatType(activity.activityType)}</h1>
+            {#if detail && detail.route.length > 0}
+                <RouteThumbnail route={detail.route} />
+            {/if}
         </div>
-        {#if detail && detail.route.length > 0}
-            <RouteThumbnail route={detail.route} />
-        {/if}
+        <p class="text-sm opacity-70">{formatDate(activity.startTime)} · {formatType(activity.activityType)}</p>
     </header>
 
     <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
