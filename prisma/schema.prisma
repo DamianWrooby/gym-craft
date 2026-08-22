@@ -214,12 +214,15 @@ model Activity {
 }
 
 model ActivityDetail {
-    activityId String   @id
-    splits     Json
-    samples    Json
-    raw        Json?
-    fetchedAt  DateTime @default(now())
-    Activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+    activityId    String   @id
+    splits        Json
+    samples       Json
+    route         Json?
+    dynamics      Json?
+    schemaVersion Int      @default(1)
+    raw           Json?
+    fetchedAt     DateTime @default(now())
+    Activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 }
 
 model AiUsage {
