@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isRunningActivity, partitionRunningActivities, isRunningTypeKey, activityTypeSupportsAiCoach } from './activity-type';
+import {
+    isRunningActivity,
+    partitionRunningActivities,
+    isRunningTypeKey,
+    activityTypeSupportsAiCoach,
+} from './activity-type';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 
 function makeActivity(typeKey: string, activityId = 1): GarminActivity {

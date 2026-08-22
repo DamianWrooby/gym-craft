@@ -12,7 +12,11 @@
     ] as const;
 
     $: total = ZONE_META.reduce((sum, z) => sum + (zones[z.key] ?? 0), 0);
-    $: segments = ZONE_META.map((z) => ({ ...z, sec: zones[z.key] ?? 0, pct: total > 0 ? ((zones[z.key] ?? 0) / total) * 100 : 0 }));
+    $: segments = ZONE_META.map((z) => ({
+        ...z,
+        sec: zones[z.key] ?? 0,
+        pct: total > 0 ? ((zones[z.key] ?? 0) / total) * 100 : 0,
+    }));
 
     function fmt(sec: number): string {
         const m = Math.floor(sec / 60);
@@ -23,10 +27,7 @@
 
 {#if total > 0}
     <div class="flex flex-col gap-2">
-        <div
-            class="flex w-full h-5 rounded-full overflow-hidden"
-            role="img"
-            aria-label="Heart rate zone distribution">
+        <div class="flex w-full h-5 rounded-full overflow-hidden" role="img" aria-label="Heart rate zone distribution">
             {#each segments as seg (seg.key)}
                 {#if seg.pct > 0}
                     <div class="{seg.cls} h-full" style="width: {seg.pct}%" title="{seg.label}: {fmt(seg.sec)}" />

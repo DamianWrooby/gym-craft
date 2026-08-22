@@ -8,9 +8,7 @@ import type { ActivitySample } from '$lib/server/garmin/fetch-activity-detail';
  * to the running modality per CONTEXT.md.
  */
 export function computeAerobicDecoupling(samples: ActivitySample[]): number | null {
-    const usable = samples.filter(
-        (s) => s.heartRate != null && s.heartRate > 0 && s.speed != null && s.speed > 0,
-    );
+    const usable = samples.filter((s) => s.heartRate != null && s.heartRate > 0 && s.speed != null && s.speed > 0);
     if (usable.length < 4) return null;
 
     const mid = Math.floor(usable.length / 2);
