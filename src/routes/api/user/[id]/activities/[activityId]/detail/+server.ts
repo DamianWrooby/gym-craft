@@ -26,7 +26,7 @@ export async function POST({
             startTime: true,
             durationSec: true,
             distanceM: true,
-            detail: { select: { splits: true, samples: true } },
+            detail: { select: { splits: true, samples: true, route: true, dynamics: true, schemaVersion: true } },
         },
     });
 
