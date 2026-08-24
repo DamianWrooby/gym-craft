@@ -155,16 +155,21 @@ enum GoalType {
 }
 
 model TrainingReport {
-    id          String     @id @default(uuid())
-    userId      String
-    type        ReportType
-    periodStart String     @db.VarChar(10)
-    periodEnd   String     @db.VarChar(10)
-    metrics     Json
-    summary     String     @db.Text
-    goalContext Json
-    createdAt   DateTime   @default(now())
-    User        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id              String     @id @default(uuid())
+    userId          String
+    type            ReportType
+    periodStart     String     @db.VarChar(10)
+    periodEnd       String     @db.VarChar(10)
+    metrics         Json
+    summary         String     @db.Text
+    goalContext     Json
+    createdAt       DateTime   @default(now())
+    // Denormalized from metrics.loadProfile for cheap list/chart reads (ADR 0006).
+    // Nullable: loadProfile is absent when computeLoadProfile throws at generation.
+    acwrStatus      String?
+    weeklyTotalLoad Float?
+    monotonyIsHigh  Boolean?
+    User            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, type, periodStart])
 }

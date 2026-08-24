@@ -7,12 +7,15 @@
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
     import GenerateReportModal from '$lib/components/training-report/GenerateReportModal.svelte';
-    import { ArrowLeftIcon } from 'svelte-feather-icons';
+    import LoadBarChart from '$lib/components/training-report/LoadBarChart.svelte';
+    import { ArrowLeftIcon, AlertTriangleIcon } from 'svelte-feather-icons';
     import { formatReportPeriod } from '$lib/utils/report-format';
+    import { statusStyle, statusLabel } from '$lib/utils/load-status';
     import { makeToast, makeUpgradeToast } from '$lib/utils/toasts';
     import { to } from 'await-to-js';
     import { TIER_LIMITS } from '@/constants/subscription.constants';
     import type { User } from '@/models/user/user.model';
+    import type { WeekCell } from '$lib/server/reports/week-timeline';
     import type { GoalType } from '@prisma/client';
 
     type ReportSummary = {
@@ -21,6 +24,9 @@
         periodEnd: string;
         summaryPreview: string;
         createdAt: string;
+        acwrStatus: string | null;
+        weeklyTotalLoad: number | null;
+        monotonyIsHigh: boolean | null;
     };
 
     type RunningGoalSummary = {
@@ -41,6 +47,7 @@
 
     const user: User = $page.data.user;
     const reports: ReportSummary[] = $page.data.reports;
+    const timeline: WeekCell[] = $page.data.timeline;
     const monthlyReportCount: number = $page.data.monthlyReportCount;
     const hasProfile: boolean = $page.data.hasProfile;
     const goals: RunningGoalSummary[] = $page.data.goals;
@@ -68,7 +75,7 @@
         }
     }
 
-    function openGenerateModal() {
+    function openGenerateModal(initialPeriodStart: string | null = null) {
         if (!hasProfile) {
             makeToast(toastStore, 'Please set up your athlete profile first', 'variant-filled-warning');
             goto('/app/profile');
@@ -79,7 +86,7 @@
             return;
         }
 
-        const component: ModalComponent = { ref: GenerateReportModal, props: { goals } };
+        const component: ModalComponent = { ref: GenerateReportModal, props: { goals, initialPeriodStart } };
         const modal: ModalSettings = {
             type: 'component',
             component,
@@ -235,12 +242,21 @@
             </div>
         {/if}
 
+        {#if reports.length > 0 || timeline.some((c) => c.state === 'gap')}
+            <div class="mb-6">
+                <LoadBarChart
+                    {timeline}
+                    on:open={(e) => goto(`/app/running/analytics/reports/${e.detail.reportId}`)}
+                    on:generate={(e) => openGenerateModal(e.detail.periodStart)} />
+            </div>
+        {/if}
+
         <div class="flex justify-center mb-6">
             <button
                 type="button"
                 class="btn variant-filled-primary"
                 disabled={!canGenerate || generating}
-                on:click={openGenerateModal}>
+                on:click={() => openGenerateModal()}>
                 {generating ? 'Generating…' : 'Generate new report'}
             </button>
         </div>
@@ -257,17 +273,32 @@
                     <li>
                         <button
                             type="button"
-                            class="w-full text-left rounded-xl border border-surface-300 dark:border-surface-700 p-4 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+                            class="w-full text-left rounded-xl border border-surface-300 dark:border-surface-700 border-l-4 {statusStyle(
+                                report.acwrStatus,
+                            ).accent} {statusStyle(report.acwrStatus).card} p-4 transition-colors"
                             on:click={() => goto(`/app/running/analytics/reports/${report.id}`)}>
-                            <div class="flex justify-between items-baseline">
+                            <div class="flex justify-between items-baseline gap-2">
                                 <h3 class="font-semibold">
                                     Week of {formatReportPeriod(report.periodStart, report.periodEnd)}
                                 </h3>
-                                <span class="text-xs opacity-60">
+                                <span class="text-xs opacity-60 whitespace-nowrap">
                                     {new Date(report.createdAt).toLocaleDateString()}
                                 </span>
                             </div>
-                            <p class="text-sm opacity-80 mt-1">{report.summaryPreview}</p>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <span class="chip {statusStyle(report.acwrStatus).chip} text-xs">
+                                    {statusLabel(report.acwrStatus)}
+                                    {#if report.weeklyTotalLoad != null}
+                                        · load {report.weeklyTotalLoad}
+                                    {/if}
+                                </span>
+                                {#if report.monotonyIsHigh}
+                                    <span class="chip variant-soft-warning text-xs inline-flex items-center gap-1">
+                                        <AlertTriangleIcon size="12" /> High monotony
+                                    </span>
+                                {/if}
+                            </div>
+                            <p class="text-sm opacity-80 mt-2">{report.summaryPreview}</p>
                         </button>
                     </li>
                 {/each}
