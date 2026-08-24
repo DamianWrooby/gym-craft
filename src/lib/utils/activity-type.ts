@@ -17,6 +17,17 @@ export function isRunningTypeKey(typeKey: string | null | undefined): boolean {
     return RUNNING_TYPE_KEYS.has(typeKey) || typeKey.includes('running');
 }
 
+const WALKING_TYPE_KEYS = new Set(['walking', 'casual_walking', 'speed_walking']);
+
+/**
+ * Walking is not training: Garmin's Move IQ auto-creates walk records the athlete never
+ * started (see CONTEXT.md "Training activity"). Hiking is training and is NOT matched here.
+ */
+export function isWalkingTypeKey(typeKey: string | null | undefined): boolean {
+    if (!typeKey) return false;
+    return WALKING_TYPE_KEYS.has(typeKey) || typeKey.includes('walking');
+}
+
 /**
  * THE single flip-point for which activities may use the "Ask AI" coach.
  * Today the coach persona is running-specific (see explain-activity.ts SYSTEM_PROMPT),

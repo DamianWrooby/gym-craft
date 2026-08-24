@@ -12,6 +12,9 @@
         priority: number;
     }> = [];
 
+    /** Pre-select a specific week (its Monday) — used when filling a gap from the load timeline. */
+    export let initialPeriodStart: string | null = null;
+
     const modalStore = getModalStore();
 
     function defaultMonday(): string {
@@ -24,7 +27,7 @@
         return addDays(cursor, -7);
     }
 
-    let periodStart = defaultMonday();
+    let periodStart = initialPeriodStart && isMonday(initialPeriodStart) ? initialPeriodStart : defaultMonday();
     $: periodEnd = addDays(periodStart, 6);
 
     const primaryGoal = goals.find((g) => g.priority === 1) ?? goals[0];

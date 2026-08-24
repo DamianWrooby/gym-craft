@@ -396,7 +396,10 @@ export async function getRunningGoalsByIds(
  * `summary`; both show a short preview of it. So the list item carries a computed
  * `summaryPreview`, never the full @db.Text — see getWeeklyReports.
  */
-export type WeeklyReportListItem = Pick<TrainingReport, 'id' | 'periodStart' | 'periodEnd' | 'createdAt'> & {
+export type WeeklyReportListItem = Pick<
+    TrainingReport,
+    'id' | 'periodStart' | 'periodEnd' | 'createdAt' | 'acwrStatus' | 'weeklyTotalLoad' | 'monotonyIsHigh'
+> & {
     summaryPreview: string;
 };
 
@@ -413,7 +416,18 @@ export async function getWeeklyReports(userId: string): Promise<WeeklyReportList
         // page, which loads its own row via getReportById. Selecting them here meant up to
         // 52 of each were fetched, cached and serialised to the browser on both
         // /running/analytics and /running/analytics/reports with no consumer.
-        select: { id: true, periodStart: true, periodEnd: true, summary: true, createdAt: true },
+        // `acwrStatus` / `weeklyTotalLoad` are the cheap scalars denormalized out of
+        // metrics.loadProfile (ADR 0006) so the border colour and load chart never read the blob.
+        select: {
+            id: true,
+            periodStart: true,
+            periodEnd: true,
+            summary: true,
+            createdAt: true,
+            acwrStatus: true,
+            weeklyTotalLoad: true,
+            monotonyIsHigh: true,
+        },
     });
     // Both list surfaces render only a preview of `summary` (a full LLM-written report
     // held in @db.Text). Compute it here so the full text is never cached or shipped to
@@ -425,6 +439,22 @@ export async function getWeeklyReports(userId: string): Promise<WeeklyReportList
     }));
     cache.set(key, items);
     return items;
+}
+
+/**
+ * Minimal activity rows for the load timeline's "did they train this week?" signal
+ * (CONTEXT.md "Report gap"). Bounded by the caller's `since` (the 12-week window),
+ * so uncached: it is a small, already-windowed read.
+ */
+export async function getTimelineActivities(
+    userId: string,
+    since: Date,
+): Promise<Array<{ startTime: Date; activityType: string }>> {
+    return db.activity.findMany({
+        where: { userId, startTime: { gte: since } },
+        select: { startTime: true, activityType: true },
+        orderBy: { startTime: 'asc' },
+    });
 }
 
 export async function getReportById(reportId: string, userId: string): Promise<TrainingReport | null> {
@@ -471,6 +501,11 @@ export interface PersistTrainingReportInput {
     metrics: Prisma.InputJsonValue;
     summary: string;
     goalContext: Prisma.InputJsonValue;
+    // Denormalized from metrics.loadProfile for cheap list/chart reads (ADR 0006).
+    // Null when the report has no load profile.
+    acwrStatus?: string | null;
+    weeklyTotalLoad?: number | null;
+    monotonyIsHigh?: boolean | null;
 }
 
 /**
@@ -487,7 +522,18 @@ export async function persistTrainingReport(
     options: { consumeSlot: boolean } = { consumeSlot: true },
 ): Promise<TrainingReport> {
     const { userId, type, periodStart, periodEnd, metrics, summary, goalContext } = input;
-    const reportPayload = { userId, type, periodStart, periodEnd, metrics, summary, goalContext };
+    const reportPayload = {
+        userId,
+        type,
+        periodStart,
+        periodEnd,
+        metrics,
+        summary,
+        goalContext,
+        acwrStatus: input.acwrStatus ?? null,
+        weeklyTotalLoad: input.weeklyTotalLoad ?? null,
+        monotonyIsHigh: input.monotonyIsHigh ?? null,
+    };
     const monthKey = currentMonthStartIso();
 
     const report = await db.$transaction(async (tx) => {

@@ -54,6 +54,16 @@ export function toIsoDate(d: Date): string {
     return d.toISOString().slice(0, 10);
 }
 
+/** The Monday (UTC) of the ISO week containing `yyyymmdd`. */
+export function mondayOf(yyyymmdd: string): string {
+    if (!isValidDateString(yyyymmdd)) {
+        throw new Error(`Invalid date string: ${yyyymmdd}`);
+    }
+    let cursor = yyyymmdd;
+    while (!isMonday(cursor)) cursor = addDays(cursor, -1);
+    return cursor;
+}
+
 export function currentMonthStartIso(date: Date = new Date()): string {
     const y = date.getUTCFullYear();
     const m = String(date.getUTCMonth() + 1).padStart(2, '0');

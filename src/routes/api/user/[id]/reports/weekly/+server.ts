@@ -133,6 +133,10 @@ export async function POST({
         periodEnd,
         metrics: metricsJson,
         goalContext: goalContextJson,
+        // Denormalized alongside the JSON blob so list/chart reads never touch it (ADR 0006).
+        acwrStatus: metrics.loadProfile?.acwrStatus ?? null,
+        weeklyTotalLoad: metrics.loadProfile?.weeklyTotalLoad ?? null,
+        monotonyIsHigh: metrics.loadProfile?.monotonyIsHigh ?? null,
     };
 
     if (metrics.flags.noActivities) {
