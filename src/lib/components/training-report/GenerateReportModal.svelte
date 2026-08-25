@@ -2,7 +2,7 @@
     import { getModalStore } from '@skeletonlabs/skeleton';
     import { goto } from '$app/navigation';
     import { GOAL_TYPE_LABELS, REPORT_NOTES_MAX_LENGTH } from '@/constants/training-report.constants';
-    import { addDays, isMonday } from '$lib/utils/iso-week';
+    import { addDays, isMonday, mondayOf, toIsoDate } from '$lib/utils/iso-week';
     import type { GoalType } from '@prisma/client';
 
     export let goals: Array<{
@@ -18,13 +18,8 @@
     const modalStore = getModalStore();
 
     function defaultMonday(): string {
-        const today = new Date();
-        const todayStr = today.toISOString().slice(0, 10);
-        // Walk back until we hit a Monday last week.
-        let cursor = todayStr;
-        while (!isMonday(cursor)) cursor = addDays(cursor, -1);
-        // That was this week's Monday — go back 7 more to last week's Monday.
-        return addDays(cursor, -7);
+        // This week's Monday, then back 7 to last week's Monday (the default report period).
+        return addDays(mondayOf(toIsoDate(new Date())), -7);
     }
 
     let periodStart = initialPeriodStart && isMonday(initialPeriodStart) ? initialPeriodStart : defaultMonday();

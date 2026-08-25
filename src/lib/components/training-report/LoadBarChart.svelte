@@ -3,6 +3,7 @@
     import { PlusIcon } from 'svelte-feather-icons';
     import type { WeekCell } from '$lib/server/reports/week-timeline';
     import { statusStyle, statusLabel, STATUS_LABEL } from '$lib/utils/load-status';
+    import { formatReportPeriod } from '$lib/utils/report-format';
 
     /** Newest-first, as built by buildWeekTimeline. */
     export let timeline: WeekCell[] = [];
@@ -35,7 +36,7 @@
     }
 
     function weekTitle(cell: WeekCell): string {
-        const range = `${shortLabel(cell.periodStart)}–${shortLabel(cell.periodEnd)}`;
+        const range = formatReportPeriod(cell.periodStart, cell.periodEnd);
         if (cell.state === 'report') {
             return `${range} · Load ${cell.weeklyTotalLoad ?? '—'} · ${statusLabel(cell.acwrStatus)}`;
         }
@@ -51,7 +52,7 @@
         }
     }
 
-    const legend = Object.entries(STATUS_LABEL) as Array<[keyof typeof STATUS_LABEL, string]>;
+    const legend = Object.entries(STATUS_LABEL);
 </script>
 
 <div class="card p-4">
@@ -71,13 +72,14 @@
         <div class="flex items-end gap-1.5 min-w-[36rem]">
             {#each weeks as cell (cell.periodStart)}
                 {@const style = statusStyle(cell.acwrStatus)}
+                {@const title = weekTitle(cell)}
                 <button
                     type="button"
                     class="group flex-1 flex flex-col items-center focus:outline-none"
                     class:cursor-pointer={cell.state !== 'empty'}
                     class:cursor-default={cell.state === 'empty'}
-                    title={weekTitle(cell)}
-                    aria-label={weekTitle(cell)}
+                    {title}
+                    aria-label={title}
                     disabled={cell.state === 'empty'}
                     on:click={() => onCellClick(cell)}>
                     <div class="w-full h-48 flex flex-col justify-end">
