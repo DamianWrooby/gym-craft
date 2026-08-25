@@ -1,6 +1,5 @@
 import { addDays, mondayOf, toIsoDate } from '$lib/utils/iso-week';
 import { isWalkingTypeKey } from '$lib/utils/activity-type';
-import type { AcwrStatus } from '$lib/server/analytics/load/interpret';
 
 /**
  * A single Monday–Sunday cell on the load timeline (CONTEXT.md "Load timeline").
@@ -19,7 +18,7 @@ export interface WeekCell {
     periodEnd: string;
     state: WeekCellState;
     reportId: string | null;
-    acwrStatus: AcwrStatus | null;
+    acwrStatus: string | null;
     weeklyTotalLoad: number | null;
     monotonyIsHigh: boolean | null;
 }
@@ -77,7 +76,7 @@ export function buildWeekTimeline(params: {
                 periodEnd,
                 state: 'report',
                 reportId: report.id,
-                acwrStatus: (report.acwrStatus as AcwrStatus | null) ?? null,
+                acwrStatus: report.acwrStatus,
                 weeklyTotalLoad: report.weeklyTotalLoad,
                 monotonyIsHigh: report.monotonyIsHigh,
             };

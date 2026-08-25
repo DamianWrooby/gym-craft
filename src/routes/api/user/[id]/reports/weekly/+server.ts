@@ -19,6 +19,7 @@ import { partitionRunningActivities } from '$lib/utils/activity-type';
 import { getLimit } from '@/constants/subscription.constants';
 import type { AthleteProfile, Prisma, RunningGoal } from '@prisma/client';
 import type { MetricsBundle } from '$lib/server/analytics/types';
+import { deriveLoadColumns } from '$lib/server/reports/load-columns';
 
 const EMPTY_WEEK_SUMMARY = 'No activities were recorded for this period — no review generated.';
 
@@ -134,9 +135,7 @@ export async function POST({
         metrics: metricsJson,
         goalContext: goalContextJson,
         // Denormalized alongside the JSON blob so list/chart reads never touch it (ADR 0006).
-        acwrStatus: metrics.loadProfile?.acwrStatus ?? null,
-        weeklyTotalLoad: metrics.loadProfile?.weeklyTotalLoad ?? null,
-        monotonyIsHigh: metrics.loadProfile?.monotonyIsHigh ?? null,
+        ...deriveLoadColumns(metrics.loadProfile),
     };
 
     if (metrics.flags.noActivities) {

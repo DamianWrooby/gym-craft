@@ -270,12 +270,11 @@
         {:else}
             <ul class="space-y-3">
                 {#each reports as report (report.id)}
+                    {@const style = statusStyle(report.acwrStatus)}
                     <li>
                         <button
                             type="button"
-                            class="w-full text-left rounded-xl border border-surface-300 dark:border-surface-700 border-l-4 {statusStyle(
-                                report.acwrStatus,
-                            ).accent} {statusStyle(report.acwrStatus).card} p-4 transition-colors"
+                            class="w-full text-left rounded-xl border border-surface-300 dark:border-surface-700 border-l-4 {style.accent} {style.card} p-4 transition-colors"
                             on:click={() => goto(`/app/running/analytics/reports/${report.id}`)}>
                             <div class="flex justify-between items-baseline gap-2">
                                 <h3 class="font-semibold">
@@ -286,7 +285,7 @@
                                 </span>
                             </div>
                             <div class="flex flex-wrap items-center gap-2 mt-2">
-                                <span class="chip {statusStyle(report.acwrStatus).chip} text-xs">
+                                <span class="chip {style.chip} text-xs">
                                     {statusLabel(report.acwrStatus)}
                                     {#if report.weeklyTotalLoad != null}
                                         · load {report.weeklyTotalLoad}
