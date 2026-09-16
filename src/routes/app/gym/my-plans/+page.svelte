@@ -156,6 +156,7 @@
     <h2 class="h2 text-center text-xl py-10">Workouts</h2>
     <div class="md:w-3/4 m-auto pb-8">
         {#if tableRows?.length}
+            <CtaButton url="/app/gym/create-plan" text="Generate new plan" />
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
                 {#each tableRows as plan, index}
                     <li
