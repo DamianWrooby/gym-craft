@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Avatar } from '@skeletonlabs/skeleton';
+    import { Avatar, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
     import { page } from '$app/stores';
     import type { User } from '@/models/user/user.model';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
@@ -8,6 +8,23 @@
 
     $: firstLetter = user?.name[0].toUpperCase();
     $: isActive = (path: string) => $page.url.pathname.startsWith(path);
+
+    const modalStore = getModalStore();
+    let logoutForm: HTMLFormElement;
+
+    function confirmLogout() {
+        const modal: ModalSettings = {
+            type: 'confirm',
+            title: 'Log out',
+            body: 'Are you sure you want to log out?',
+            buttonTextConfirm: 'Log out',
+            response: (confirmed: boolean) => {
+                // form.submit() skips the submit event, so this does not re-open the modal.
+                if (confirmed) logoutForm.submit();
+            },
+        };
+        modalStore.trigger(modal);
+    }
 </script>
 
 <nav class="flex items-center text-surface-500 font-semibold whitespace-nowrap">
@@ -43,7 +60,7 @@
             <span class="hidden sm:inline">Running</span>
         </a>
         <span class="hidden sm:block text-surface-300 select-none">|</span>
-        <form action="/app/logout" method="POST">
+        <form action="/app/logout" method="POST" bind:this={logoutForm} on:submit|preventDefault={confirmLogout}>
             <button class="px-2 sm:px-4 hover:text-tertiary-500" type="submit">Log out</button>
         </form>
     {/if}
