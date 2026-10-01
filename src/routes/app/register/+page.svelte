@@ -26,6 +26,9 @@
     let isFormDirty = false;
     let isFormFilled = false;
 
+    $: isPasswordComplex = validatePasswordComplexity(formData.password);
+    $: passwordsMatch = formData.password === formData.confirmPassword;
+
     function validateForm() {
         isFormValid =
             validatePasswordComplexity(formData.password) &&
@@ -156,7 +159,7 @@
                 </label>
             </div>
             {#if form?.termsOfUse}
-                <p class="text-error-500">You must accept the terms of use to proceed</p>
+                <p class="px-1 max-w-sm m-auto text-error-500">You must accept the terms of use to proceed</p>
             {/if}
             <div class="px-1 py-2 max-w-sm m-auto">
                 <label class="flex items-center space-x-2">
@@ -173,12 +176,21 @@
                 </label>
             </div>
             {#if form?.invalidEntry}
-                <p class="text-error-500">One of the fields has incorrect value</p>
-            {:else if isFormDirty && !isFormValid && isFormFilled}
-                <p class="text-error-500 pb-2 w-72 max-w-sm m-auto">
-                    Password should have at least 8 characters and contain upper and lower case, numeric, and special
-                    character. Passwords should match.
+                <p class="px-1 pt-2 max-w-sm m-auto text-error-500" role="alert">
+                    One of the fields has incorrect value
                 </p>
+            {:else if isFormDirty && !isFormValid && isFormFilled}
+                <ul class="px-1 pt-2 max-w-sm m-auto text-error-500 text-sm space-y-1" role="alert">
+                    {#if !isPasswordComplex}
+                        <li>
+                            Password must have at least 8 characters, with upper and lower case letters, a number, and a
+                            special character.
+                        </li>
+                    {/if}
+                    {#if !passwordsMatch}
+                        <li>Passwords do not match.</li>
+                    {/if}
+                </ul>
             {/if}
 
             <div class="text-center pt-5">
