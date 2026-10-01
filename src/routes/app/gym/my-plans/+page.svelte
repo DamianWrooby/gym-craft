@@ -76,8 +76,8 @@
                 body,
             });
             if (!response.ok) {
-                const { error } = await response.json();
-                makeToast(toastStore, error, 'variant-filled-error');
+                const { message } = await response.json();
+                makeToast(toastStore, message, 'variant-filled-error');
                 plan.name = initialName;
             }
         } catch (error) {
@@ -135,8 +135,9 @@
                 method: 'DELETE',
             });
             if (!response.ok) {
-                const { error } = await response.json();
-                makeToast(toastStore, error, 'variant-filled-error');
+                const { message } = await response.json();
+                makeToast(toastStore, message, 'variant-filled-error');
+                return;
             }
             makeToast(toastStore, 'Selected plan has been removed', 'variant-filled-warning');
             plans = (await fetchPlans(user.id)) || [];
