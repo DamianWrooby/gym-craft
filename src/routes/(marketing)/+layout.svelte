@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { setupViewTransitions } from '$lib/utils/view-transitions';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
     import { initializeStores } from '@skeletonlabs/skeleton';
@@ -14,6 +15,7 @@
     const currentDate = new Date();
 
     initializeStores();
+    setupViewTransitions();
 
     const closeCookieBanner = () => {
         setCookie('cookiesConsentAccepted', 'true', 100);
