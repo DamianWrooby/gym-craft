@@ -38,7 +38,7 @@
 <header class="card-header text-center text-xl">Goals and objectives</header>
 <section class="p-4 w-full">
     <div class="flex flex-row gap-x-4 py-4">
-        <label class="label pb-2 grow">
+        <div class="label pb-2 grow">
             <div>What are your fitness goals?</div>
             <div class="space-y-2">
                 {#each goalsOptions as option}
@@ -48,7 +48,7 @@
                     </label>
                 {/each}
             </div>
-        </label>
+        </div>
     </div>
     {#if data.mainGoals['other']}
         <div class="flex flex-row gap-x-4 py-4">
