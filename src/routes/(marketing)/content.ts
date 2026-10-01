@@ -100,7 +100,7 @@ export const faqItems = [
     },
     {
         title: 'Is there a paid plan?',
-        content: `There is an optional Supporter tier — €4 a month, €36 a year, or €25 once for lifetime access. It raises the AI limits to ${SUPPORTER.weeklyReportsPerMonth} weekly reports and ${SUPPORTER.gymPlansPerMonth} gym plans a month plus ${SUPPORTER.explainRunsPerDay} run explanations a day, uses a more capable AI model, extends the Garmin history import from ${FREE.garminBackfillDays} to ${SUPPORTER.garminBackfillDays} days, and unlocks report export. GymCraft is a hobby project — the tier exists to cover its running costs, not to lock away the basics.`,
+        content: `There is an optional Supporter tier — €4 a month or €36 a year. It raises the AI limits to ${SUPPORTER.weeklyReportsPerMonth} weekly reports and ${SUPPORTER.gymPlansPerMonth} gym plans a month plus ${SUPPORTER.explainRunsPerDay} run explanations a day, uses a more capable AI model, extends the Garmin history import from ${FREE.garminBackfillDays} to ${SUPPORTER.garminBackfillDays} days, and unlocks report export. GymCraft is a hobby project — the tier exists to cover its running costs, not to lock away the basics.`,
     },
     {
         title: 'Do I need a Garmin watch?',
