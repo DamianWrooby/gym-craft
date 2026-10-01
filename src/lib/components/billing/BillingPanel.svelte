@@ -45,8 +45,8 @@
     }
 </script>
 
-<div class="mt-8 border rounded border-solid border-surface-500 p-5">
-    <h3 class="h3 mb-2">Subscription</h3>
+<section class="rounded-container-token border border-surface-500/40 p-5" aria-labelledby="subscription-heading">
+    <h3 id="subscription-heading" class="h3 mb-2">Subscription</h3>
     <p class="mb-4">
         Current plan:
         <span class="font-bold text-secondary-400">{tier === 'SUPPORTER' ? 'Supporter' : 'Free'}</span>
@@ -80,4 +80,4 @@
             </button>
         </div>
     {/if}
-</div>
+</section>
