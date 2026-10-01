@@ -1,4 +1,5 @@
 <script lang="ts">
+    import SiteFooter from '$lib/components/site-footer/SiteFooter.svelte';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
     import { initializeStores } from '@skeletonlabs/skeleton';
@@ -10,8 +11,6 @@
     import Banner from '$lib/components/banner/Banner.svelte';
     import { setCookie, getCookie } from '$lib/utils/cookies';
     import { cookieBannerOpened } from '@/stores';
-
-    const currentDate = new Date();
 
     initializeStores();
 
@@ -64,14 +63,7 @@
     <slot />
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
-        <div class="hidden sm:block bg-primary-500 font-thin text-center py-2 font-semibold">
-            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span> - Your AI powered personal trainer by
-            <a href="https://github.com/DamianWrooby" target="_blank" rel="noopener noreferrer"
-                ><span class="text-surface-200 hover:text-surface-300 font-semibold">Wrooby</span></a>
-        </div>
-        <div class="block sm:hidden bg-primary-500 font-thin text-center py-2 font-semibold">
-            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span>
-        </div>
+        <SiteFooter />
     </svelte:fragment>
 </AppShell>
 
