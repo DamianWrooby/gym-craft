@@ -7,7 +7,7 @@ import {
     incrementMonthlyGymPlanCount,
     updateGeneratedPlansNumber,
 } from '$lib/prisma/prisma';
-import { createResponse } from '$lib/utils/response';
+import { apiError, createResponse, readJson } from '$lib/utils/response';
 import { getAuthenticatedUser } from '$lib/server/auth';
 import { getLimit } from '@/constants/subscription.constants';
 import { to } from 'await-to-js';
@@ -15,8 +15,9 @@ import type { RequestEvent } from './$types';
 
 export async function POST(event: RequestEvent): Promise<Response> {
     const user = getAuthenticatedUser(event);
-    const body = await event.request.json();
-    const { plan }: { plan: Plan } = body;
+    const body = await readJson<{ plan?: Plan }>(event.request);
+    const plan = body?.plan;
+    if (!plan) return apiError(400, 'Plan is required');
     const userId = user.id;
     const tier = event.locals.user.subscriptionTier;
     const monthlyCap = getLimit(tier, 'gymPlansPerMonth');
@@ -27,22 +28,22 @@ export async function POST(event: RequestEvent): Promise<Response> {
     let monthlyCount = 0;
     if (monthlyCap !== null) {
         const [countError, count] = await to(getMonthlyGymPlanCount(userId));
-        if (countError) return createResponse(400, { message: 'Cannot retrieve information about generated plans' });
+        if (countError) return apiError(400, 'Cannot retrieve information about generated plans');
         monthlyCount = count ?? 0;
         if (monthlyCount >= monthlyCap) {
-            return createResponse(400, { message: 'You have reached the limit of generated plans' });
+            return apiError(400, 'You have reached the limit of generated plans');
         }
     } else {
         const [plansMetaError, results] = await to(
             Promise.all([getGeneralPlanLimit(), getGeneratedPlansNumber(userId)]),
         );
         if (plansMetaError) {
-            return createResponse(400, { message: 'Cannot retrieve information about generated plans' });
+            return apiError(400, 'Cannot retrieve information about generated plans');
         }
         const [generalPlanLimit, currentPlansNumber] = results ?? [0, -1];
         generatedPlansNumber = currentPlansNumber;
         if (currentPlansNumber === -1 || currentPlansNumber >= generalPlanLimit) {
-            return createResponse(400, { message: 'You have reached the limit of generated plans' });
+            return apiError(400, 'You have reached the limit of generated plans');
         }
     }
 
@@ -59,7 +60,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
     };
 
     const [addPlanError, savedPlan] = await to(addPlan(userId, newPlan));
-    if (addPlanError) return createResponse(400, { message: 'Cannot save the  plan in the database' });
+    if (addPlanError) return apiError(400, 'Cannot save the  plan in the database');
 
     // Both counters advance: generatedPlansNumber remains the lifetime stat (and the
     // number a canceled supporter falls back to); AiUsage tracks the monthly slot.
