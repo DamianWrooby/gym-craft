@@ -1,7 +1,7 @@
 <script lang="ts">
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
-    import { ArrowLeftIcon } from 'svelte-feather-icons';
+    import { ArrowLeftIcon, InfoIcon, XIcon } from 'svelte-feather-icons';
     import Card from '$lib/components/card/Card.svelte';
     import DownloadAsPdf from '$lib/components/download-as-pdf/DownloadAsPdf.svelte';
     import PlanDescription from '$lib/components/plan-description/PlanDescription.svelte';
@@ -26,6 +26,7 @@
     let workoutToSend: GeneratedWorkout;
     let planContainer: HTMLElement | null = null;
     let garminLoading: string | null;
+    let uploadedWorkoutName: string | null = null;
 
     type LoginFormData = { email: string; password: string };
     type EmailVerificationResponse = { email: string | false };
@@ -189,6 +190,7 @@
 
     function handleWorkoutUploadSuccess(email?: string) {
         makeToast(toastStore, 'Workout uploaded successfully', 'variant-filled-success');
+        uploadedWorkoutName = workoutToSend.workoutName;
         if (email) saveGarminEmail(email);
     }
 
@@ -221,6 +223,26 @@
         {/if}
     </div>
     {#if plan}
+        {#if uploadedWorkoutName}
+            <aside class="alert variant-ghost-success mb-5" role="status">
+                <InfoIcon class="shrink-0" />
+                <div class="alert-message">
+                    <p>
+                        <strong>{uploadedWorkoutName}</strong> is now in your Garmin Connect account. You can edit, reschedule,
+                        or delete it in the Garmin Connect app. Changes made there do not sync back to GymCraft.
+                    </p>
+                </div>
+                <div class="alert-actions">
+                    <button
+                        type="button"
+                        class="btn-icon btn-icon-sm"
+                        aria-label="Dismiss"
+                        on:click={() => (uploadedWorkoutName = null)}>
+                        <XIcon size="16" />
+                    </button>
+                </div>
+            </aside>
+        {/if}
         <div class="mb-5">
             <PlanDescription {garminLoading} {plan} on:sendToGarminClicked={openConfirmationModal} />
         </div>
