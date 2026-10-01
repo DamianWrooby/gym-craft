@@ -9,7 +9,7 @@
     const toastStore = getToastStore();
     let loading = false;
 
-    async function startCheckout(plan: 'monthly' | 'annual' | 'lifetime') {
+    async function startCheckout(plan: 'monthly' | 'annual') {
         loading = true;
         try {
             const res = await fetch('/api/stripe/checkout', {
@@ -77,13 +77,6 @@
                 disabled={loading}
                 on:click={() => startCheckout('annual')}>
                 €36 / year
-            </button>
-            <button
-                type="button"
-                class="btn variant-soft-secondary"
-                disabled={loading}
-                on:click={() => startCheckout('lifetime')}>
-                €25 lifetime
             </button>
         </div>
     {/if}

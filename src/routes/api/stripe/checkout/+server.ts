@@ -4,14 +4,13 @@ import { createResponse } from '$lib/utils/response';
 import { billingEnabled } from '$lib/utils/billing-flag';
 import { appConfig } from '@/constants/app.constants';
 import { PUBLIC_APP_ENV } from '$env/static/public';
-import { STRIPE_PRICE_ANNUAL, STRIPE_PRICE_LIFETIME, STRIPE_PRICE_MONTHLY } from '$env/static/private';
+import { STRIPE_PRICE_ANNUAL, STRIPE_PRICE_MONTHLY } from '$env/static/private';
 
-type PlanKey = 'monthly' | 'annual' | 'lifetime';
+type PlanKey = 'monthly' | 'annual';
 
-const PLANS: Record<PlanKey, { price: string; mode: 'subscription' | 'payment' }> = {
+const PLANS: Record<PlanKey, { price: string; mode: 'subscription' }> = {
     monthly: { price: STRIPE_PRICE_MONTHLY, mode: 'subscription' },
     annual: { price: STRIPE_PRICE_ANNUAL, mode: 'subscription' },
-    lifetime: { price: STRIPE_PRICE_LIFETIME, mode: 'payment' },
 };
 
 export async function POST({ request, locals }: { request: Request; locals: App.Locals }): Promise<Response> {
