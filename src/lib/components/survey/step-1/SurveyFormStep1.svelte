@@ -47,9 +47,9 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
         <label class="label">
             <div>Height</div>
-            <div class="flex items-center gap-2">
+            <div class="relative">
                 <input
-                    class="input w-full"
+                    class="input w-full pr-12"
                     title="Your height"
                     type="number"
                     required
@@ -57,14 +57,14 @@
                     min="50"
                     max="250"
                     bind:value={data.height} />
-                <span class="text-sm opacity-75">cm</span>
+                <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm opacity-75">cm</span>
             </div>
         </label>
         <label class="label">
             <div>Weight</div>
-            <div class="flex items-center gap-2">
+            <div class="relative">
                 <input
-                    class="input w-full"
+                    class="input w-full pr-12"
                     title="Your weight"
                     type="number"
                     required
@@ -72,7 +72,7 @@
                     min="30"
                     max="350"
                     bind:value={data.weight} />
-                <span class="text-sm opacity-75">kg</span>
+                <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm opacity-75">kg</span>
             </div>
         </label>
     </div>
