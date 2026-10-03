@@ -113,5 +113,6 @@
         "titleBar.inactiveBackground": "#d4163c99",
         "titleBar.inactiveForeground": "#e7e7e799"
     },
+    "workbench.experimental.modernUI": false,
     "peacock.color": "#D4163C"
 }
