@@ -21,20 +21,20 @@
 </script>
 
 <header class="card-header text-center text-xl">Personal information</header>
-<section class="md:p-4 w-full">
-    <div class="flex flex-row gap-x-4 py-4">
-        <label class="label pb-2 grow">
+<section class="p-4 w-full">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+        <label class="label">
             <div>Sex</div>
-            <select class="select w-9/12 md:w-1/2" title="Sex selection" bind:value={data.sex} required aria-required>
+            <select class="select w-full" title="Sex selection" bind:value={data.sex} required aria-required>
                 {#each Object.values(sexOptions) as option}
                     <option value={option.value}>{option.label}</option>
                 {/each}
             </select>
         </label>
-        <label class="label pb-2 grow">
+        <label class="label">
             <div>Age</div>
             <input
-                class="input w-9/12 md:w-1/2"
+                class="input w-full"
                 title="Type your age"
                 type="number"
                 required
@@ -44,30 +44,36 @@
                 bind:value={data.age} />
         </label>
     </div>
-    <div class="flex flex-row gap-x-4 py-4">
-        <label class="label pb-2 grow">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+        <label class="label">
             <div>Height</div>
-            <input
-                class="input w-9/12 md:w-1/2"
-                title="Your height"
-                type="number"
-                required
-                aria-required
-                min="50"
-                max="250"
-                bind:value={data.height} /> cm
+            <div class="relative">
+                <input
+                    class="input w-full pr-12"
+                    title="Your height"
+                    type="number"
+                    required
+                    aria-required
+                    min="50"
+                    max="250"
+                    bind:value={data.height} />
+                <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm opacity-75">cm</span>
+            </div>
         </label>
-        <label class="label pb-2 grow">
+        <label class="label">
             <div>Weight</div>
-            <input
-                class="input w-9/12 md:w-1/2"
-                title="Your weight"
-                type="number"
-                required
-                aria-required
-                min="30"
-                max="350"
-                bind:value={data.weight} /> kg
+            <div class="relative">
+                <input
+                    class="input w-full pr-12"
+                    title="Your weight"
+                    type="number"
+                    required
+                    aria-required
+                    min="30"
+                    max="350"
+                    bind:value={data.weight} />
+                <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm opacity-75">kg</span>
+            </div>
         </label>
     </div>
     <div class="flex flex-row gap-x-4 py-4">
