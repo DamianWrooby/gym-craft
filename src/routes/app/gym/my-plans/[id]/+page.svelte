@@ -16,6 +16,7 @@
     import { sanitizeObject } from '$lib/utils/sanitize';
     import { workoutProperties } from '@/constants/workout.constants';
     import { validateGarminLoginFormData, isValidEmailFormat } from '$lib/utils/form-validation';
+    import { isInvalidTokenResponse } from '$lib/garmin/invalid-token';
     const modalStore = getModalStore();
     const modalComponent: ModalComponent = { ref: GarminLoginForm };
 
@@ -134,21 +135,17 @@
         );
 
         if (error || !response || !response.ok) {
+            let payload: { code?: unknown; message?: unknown } | null = null;
             let message = 'Unknown error';
-            try {
-                if (response) {
-                    const data = await response.json();
-                    message = data?.message ?? message;
-                } else if (error instanceof Error) {
-                    message = error.message;
-                }
-            } catch (jsonErr) {
-                message = 'Error parsing JSON response';
+            if (response) {
+                payload = await response.json().catch(() => null);
+                message = typeof payload?.message === 'string' ? payload.message : message;
+            } else if (error instanceof Error) {
+                message = error.message;
             }
 
-            handleGarminPyConnectError(message, error);
-
-            if (typeof message === 'string' && message.includes('No valid token found')) {
+            // An unusable stored token is fixable: ask for the Garmin password instead of failing.
+            if (isInvalidTokenResponse(response?.status, payload)) {
                 makeToast(
                     toastStore,
                     'Invalid token <br> Please log in to your Garmin account',
@@ -156,8 +153,10 @@
                 );
                 garminLoading = workoutToSend.dayOfWeek;
                 openGarminLoginModal();
+                return;
             }
 
+            handleGarminPyConnectError(message, error);
             return;
         }
 
