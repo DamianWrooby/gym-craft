@@ -16,6 +16,8 @@
     import { sanitizeObject } from '$lib/utils/sanitize';
     import { workoutProperties } from '@/constants/workout.constants';
     import { validateGarminLoginFormData, isValidEmailFormat } from '$lib/utils/form-validation';
+    import { isInvalidTokenResponse } from '$lib/garmin/invalid-token';
+    import { authenticateGarmin } from '$lib/garmin/authenticate';
     const modalStore = getModalStore();
     const modalComponent: ModalComponent = { ref: GarminLoginForm };
 
@@ -109,7 +111,23 @@
             return;
         }
 
-        await sendWorkoutToGarmin(password, email);
+        // The upload route no longer takes a password: it only uses the stored session token.
+        // Store the email, exchange the password for a fresh session, then retry the upload.
+        const emailSaved = await saveGarminEmail(email);
+        if (!emailSaved) {
+            makeToast(toastStore, 'Cannot save your Garmin email <br> Please try again', 'variant-filled-error');
+            garminLoading = null;
+            return;
+        }
+
+        const auth = await authenticateGarmin(userId, password);
+        if (!auth.ok) {
+            makeToast(toastStore, auth.message || 'Garmin login failed', 'variant-filled-error');
+            garminLoading = null;
+            return;
+        }
+
+        await sendWorkoutToGarmin();
     }
 
     async function sendToGarminEmailOnly(email: string) {
@@ -121,7 +139,7 @@
         await sendWorkoutToGarmin();
     }
 
-    async function sendWorkoutToGarmin(password?: string, emailToSave?: string) {
+    async function sendWorkoutToGarmin() {
         const workout = sanitizeObject(workoutToSend, workoutProperties);
         const apiUrl = `/api/user/${userId}/garmin/upload-workout`;
 
@@ -129,26 +147,22 @@
             fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ workout, password }),
+                body: JSON.stringify({ workout }),
             }),
         );
 
         if (error || !response || !response.ok) {
+            let payload: { code?: unknown; message?: unknown } | null = null;
             let message = 'Unknown error';
-            try {
-                if (response) {
-                    const data = await response.json();
-                    message = data?.message ?? message;
-                } else if (error instanceof Error) {
-                    message = error.message;
-                }
-            } catch (jsonErr) {
-                message = 'Error parsing JSON response';
+            if (response) {
+                payload = await response.json().catch(() => null);
+                message = typeof payload?.message === 'string' ? payload.message : message;
+            } else if (error instanceof Error) {
+                message = error.message;
             }
 
-            handleGarminPyConnectError(message, error);
-
-            if (typeof message === 'string' && message.includes('No valid token found')) {
+            // An unusable stored token is fixable: ask for the Garmin password instead of failing.
+            if (isInvalidTokenResponse(response?.status, payload)) {
                 makeToast(
                     toastStore,
                     'Invalid token <br> Please log in to your Garmin account',
@@ -156,15 +170,17 @@
                 );
                 garminLoading = workoutToSend.dayOfWeek;
                 openGarminLoginModal();
+                return;
             }
 
+            handleGarminPyConnectError(message, error);
             return;
         }
 
         const { status } = await response.json();
 
         if (status === 'success') {
-            handleWorkoutUploadSuccess(emailToSave);
+            handleWorkoutUploadSuccess();
             garminLoading = null;
         }
     }
@@ -187,12 +203,11 @@
         garminLoading = null;
     }
 
-    function handleWorkoutUploadSuccess(email?: string) {
+    function handleWorkoutUploadSuccess() {
         makeToast(toastStore, 'Workout uploaded successfully', 'variant-filled-success');
-        if (email) saveGarminEmail(email);
     }
 
-    async function saveGarminEmail(email: string) {
+    async function saveGarminEmail(email: string): Promise<boolean> {
         const [error, apiResponse] = await to(
             fetch(`/api/user/${userId}/garmin/save-email`, {
                 method: 'POST',
@@ -201,9 +216,10 @@
         );
 
         if (error || !apiResponse.ok) {
-            console.error('Error when saving email <br> Please try again later');
+            console.error('Error when saving Garmin email');
+            return false;
         }
-        garminLoading = null;
+        return true;
     }
 
     function isValidLoginFormData(data: unknown): data is LoginFormData {
