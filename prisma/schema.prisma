@@ -26,7 +26,6 @@ model User {
     stripeSubscriptionId String?
     subscriptionStatus   String?
     currentPeriodEnd     DateTime?
-    lifetimeSupporter    Boolean             @default(false)
     plans                Plan[]
     verificationTokens   VerificationToken[]
     garminData           GarminData?
