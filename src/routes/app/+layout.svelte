@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { setupViewTransitions } from '$lib/utils/view-transitions';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
     import Seo from '$lib/components/seo/Seo.svelte';
@@ -37,6 +38,7 @@
     };
 
     initializeStores();
+    setupViewTransitions();
     initializePopups();
 
     onMount(() => {
