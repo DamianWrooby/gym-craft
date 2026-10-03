@@ -51,7 +51,7 @@
     }
 
     function formatDate(date: Date): string {
-        return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+        return date.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
     }
 
     function generateTableRows(plans: Plan[]): MappedPlan[] {
