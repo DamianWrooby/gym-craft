@@ -1,4 +1,5 @@
 <script lang="ts">
+    import PlanJobWatcher from '$lib/components/plan-job-watcher/PlanJobWatcher.svelte';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
     import Seo from '$lib/components/seo/Seo.svelte';
@@ -50,6 +51,7 @@
 
 <Modal />
 <Toast position={'br'} />
+<PlanJobWatcher />
 <NavProgress />
 
 <AppShell>
