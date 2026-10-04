@@ -35,7 +35,7 @@ describe('SurveyFormStep6', () => {
 
     it('marks select-all checked when every option is already selected', () => {
         const data = emptyEquipment();
-        Object.keys(data).forEach((key) => ((data as Record<string, boolean>)[key] = true));
+        (Object.keys(data) as (keyof EquipmentModel)[]).forEach((key) => (data[key] = true));
         render(SurveyFormStep6, { props: { data } });
         expect(screen.getByLabelText('Select all')).toBeChecked();
     });

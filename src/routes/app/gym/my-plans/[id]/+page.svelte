@@ -206,6 +206,7 @@
 
     function handleWorkoutUploadSuccess() {
         makeToast(toastStore, 'Workout uploaded successfully', 'variant-filled-success');
+        uploadedWorkoutName = workoutToSend.workoutName;
     }
 
     async function saveGarminEmail(email: string): Promise<boolean> {
