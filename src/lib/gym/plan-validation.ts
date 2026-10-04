@@ -19,19 +19,22 @@ export function correctPlan(plan: Plan): Plan {
         return !!exercises && exercises.has(step.exerciseName);
     };
 
-    // Ensure if category and exerciseName are null if stepType is cooldown, rest or recovery
+    // Passive steps (cooldown, rest, recovery) carry no exercise; an active step with a known
+    // category but an unknown exercise gets that category's first exercise. Repeat blocks are
+    // repaired recursively, since validation checks their nested steps too.
+    const repair = (step: WorkoutStep): void => {
+        if (isPassiveStep(step) && (step.category || step.exerciseName)) {
+            step.category = null;
+            step.exerciseName = null;
+        }
+        if (!isPassiveStep(step) && categoryCorrect(step) && !exerciseNameCorrect(step)) {
+            step.exerciseName = exerciseMap.get(step.category!)?.values().next().value || null;
+        }
+        step.workoutSteps?.forEach(repair);
+    };
+
     plan.workouts.forEach((workout: GeneratedWorkout) => {
-        workout.workoutSegments.forEach((segment: WorkoutSegment) => {
-            segment.workoutSteps.forEach((step: WorkoutStep) => {
-                if (isPassiveStep(step) && (step.category || step.exerciseName)) {
-                    step.category = null;
-                    step.exerciseName = null;
-                }
-                if (!isPassiveStep(step) && categoryCorrect(step) && !exerciseNameCorrect(step)) {
-                    step.exerciseName = exerciseMap.get(step.category!)?.values().next().value || null;
-                }
-            });
-        });
+        workout.workoutSegments.forEach((segment: WorkoutSegment) => segment.workoutSteps.forEach(repair));
     });
     return plan;
 }
