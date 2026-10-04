@@ -24,3 +24,14 @@ export const makeUpgradeToast = (toastStore: ToastStore, message: string) => {
     };
     toastStore.trigger(toast);
 };
+
+// Background plan job finished while the user was on another page. Longer timeout so the
+// link is actually clickable.
+export const makePlanReadyToast = (toastStore: ToastStore, planUrl: string) => {
+    const toast: ToastSettings = {
+        message: `Your training plan is ready<br><a href="${planUrl}" class="anchor font-semibold">Open the plan →</a>`,
+        background: 'variant-filled-success',
+        timeout: 10000,
+    };
+    toastStore.trigger(toast);
+};
