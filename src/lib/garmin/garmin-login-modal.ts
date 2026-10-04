@@ -22,3 +22,16 @@ export function triggerGarminLoginModal(
     };
     modalStore.trigger(modal);
 }
+
+/**
+ * Promise form of the login modal, for `withGarminLogin`: resolves the credentials, or null when
+ * the user cancels.
+ */
+export function askGarminCredentials(
+    modalStore: ModalStore,
+    options: { body: string; confirmText?: string },
+): Promise<{ email: string; password: string } | null> {
+    return new Promise((resolve) => {
+        triggerGarminLoginModal(modalStore, { ...options, response: (value) => resolve(value || null) });
+    });
+}

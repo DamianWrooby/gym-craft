@@ -9,13 +9,12 @@
     import ActivityRow from '$lib/components/activity-list/ActivityRow.svelte';
     import SkeletonBlock from '$lib/components/loading/skeleton-block/SkeletonBlock.svelte';
     import { makeToast } from '$lib/utils/toasts';
-    import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import { isSyncStale } from '$lib/utils/sync-staleness';
     import { formatReportPeriod } from '$lib/utils/report-format';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
     import { TIER_LIMITS } from '@/constants/subscription.constants';
-    import { authenticateGarmin } from '$lib/garmin/authenticate';
-    import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
+    import { withGarminLogin } from '$lib/garmin/garmin-login';
+    import { askGarminCredentials } from '$lib/garmin/garmin-login-modal';
     import type { User } from '@/models/user/user.model';
     import type { DashboardPageData } from './+page.server';
 
@@ -28,8 +27,9 @@
     let syncing = false;
     /** Only set while a multi-window backfill is running — a single-call sync has nothing to count. */
     let syncProgress: string | null = null;
-    // Garmin session token; refreshed in-place when the user re-authenticates via the modal.
+    // Garmin session and email; replaced in place when the user signs in again via the modal.
     let sessionToken: string | null = data.garminSessionToken;
+    let garminEmail: string | null = data.garminEmail;
 
     const STATUS_LABEL: Record<string, string> = {
         undertraining: 'Undertraining',
@@ -57,16 +57,26 @@
         if (syncing) return;
         syncing = true;
         try {
-            const result = await runProxySync({
-                userId: user.id,
-                garminEmail: data.garminEmail,
-                sessionToken,
-                syncState: { backfillComplete: !data.needsInitialSync, lastSyncedAt: data.lastSyncedAt },
-                backfillDays: TIER_LIMITS[user.subscriptionTier].garminBackfillDays,
-                onProgress: (completed, total) => {
-                    syncProgress = total > 1 ? `${completed} of ${total} periods imported…` : null;
+            const result = await withGarminLogin(
+                user.id,
+                (login) => {
+                    if (login) ({ sessionToken, email: garminEmail } = login);
+                    return runProxySync({
+                        userId: user.id,
+                        garminEmail,
+                        sessionToken,
+                        syncState: { backfillComplete: !data.needsInitialSync, lastSyncedAt: data.lastSyncedAt },
+                        backfillDays: TIER_LIMITS[user.subscriptionTier].garminBackfillDays,
+                        onProgress: (completed, total) => {
+                            syncProgress = total > 1 ? `${completed} of ${total} periods imported…` : null;
+                        },
+                    });
                 },
-            });
+                () =>
+                    askGarminCredentials(modalStore, {
+                        body: 'Provide credentials to connect to your Garmin Connect account and refresh activities.',
+                    }),
+            );
 
             if (result.ok) {
                 if (opts.notify) {
@@ -94,18 +104,7 @@
                 );
                 return;
             }
-            if (result.code === 'INVALID_TOKEN') {
-                openGarminLoginModal();
-                return;
-            }
-            if (result.code === 'GARMIN_EMAIL_NOT_CONFIGURED') {
-                makeToast(
-                    toastStore,
-                    'Garmin email not configured <br> Please set up Garmin integration in your account settings',
-                    'variant-filled-warning',
-                );
-                return;
-            }
+            if (result.code === 'LOGIN_CANCELLED') return;
             if (result.code === 'STALE_STATE') {
                 await invalidateAll();
                 return;
@@ -124,31 +123,6 @@
             syncing = false;
             syncProgress = null;
         }
-    }
-
-    function openGarminLoginModal() {
-        triggerGarminLoginModal(modalStore, {
-            body: 'Provide credentials to connect to your Garmin Connect account and refresh activities.',
-            response: handleGarminLoginResponse,
-        });
-    }
-
-    async function handleGarminLoginResponse(loginFormData: GarminLoginResponse) {
-        if (!loginFormData) return;
-        if (validateGarminLoginFormData(loginFormData)) {
-            makeToast(toastStore, 'Invalid form data', 'variant-filled-error');
-            return;
-        }
-        // Exchange the password for a session token, then retry the sync with it.
-        syncing = true;
-        const auth = await authenticateGarmin(user.id, loginFormData.password);
-        syncing = false;
-        if (!auth.ok) {
-            makeToast(toastStore, auth.message || 'Garmin login failed', 'variant-filled-error');
-            return;
-        }
-        sessionToken = auth.sessionToken;
-        await runSync({ blocking: true, notify: true });
     }
 
     function formatRelative(iso: string | null): string {
