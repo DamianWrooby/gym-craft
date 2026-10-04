@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { setupViewTransitions } from '$lib/utils/view-transitions';
     import SiteFooter from '$lib/components/site-footer/SiteFooter.svelte';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
@@ -13,6 +14,7 @@
     import { cookieBannerOpened } from '@/stores';
 
     initializeStores();
+    setupViewTransitions();
 
     const closeCookieBanner = () => {
         setCookie('cookiesConsentAccepted', 'true', 100);

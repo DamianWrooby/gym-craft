@@ -1,5 +1,6 @@
 <script lang="ts">
     import PlanJobWatcher from '$lib/components/plan-job-watcher/PlanJobWatcher.svelte';
+    import { setupViewTransitions } from '$lib/utils/view-transitions';
     import SiteFooter from '$lib/components/site-footer/SiteFooter.svelte';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
@@ -38,6 +39,7 @@
     };
 
     initializeStores();
+    setupViewTransitions();
     initializePopups();
 
     onMount(() => {
