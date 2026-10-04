@@ -110,7 +110,7 @@
         </label>
     </div>
     <div class="flex flex-row gap-x-4 py-4">
-        <label class="label pb-2 grow">
+        <div class="label pb-2 grow">
             <div>Mark the days on which you can train</div>
             <div class="space-y-2">
                 {#each trainingDays as option}
@@ -120,6 +120,6 @@
                     </label>
                 {/each}
             </div>
-        </label>
+        </div>
     </div>
 </section>
