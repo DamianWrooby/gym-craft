@@ -34,7 +34,6 @@ export async function updateUser(event: RequestEvent) {
             email: true,
             subscriptionStatus: true,
             currentPeriodEnd: true,
-            lifetimeSupporter: true,
         },
     });
 
@@ -42,7 +41,6 @@ export async function updateUser(event: RequestEvent) {
 
     const { id, username, role, generatedPlansNumber, emailVerified, marketingAgreement, email } = user;
     const subscriptionTier = resolveTier({
-        lifetimeSupporter: user.lifetimeSupporter,
         subscriptionStatus: user.subscriptionStatus,
         currentPeriodEnd: user.currentPeriodEnd,
     });
