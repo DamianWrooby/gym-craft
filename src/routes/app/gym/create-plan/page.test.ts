@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, screen } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 
 // Mocks for SvelteKit environment and dependencies
 vi.mock('$app/stores', () => {
@@ -22,9 +22,13 @@ vi.mock('@skeletonlabs/skeleton', () => {
 vi.mock('$lib/utils/toasts', () => ({ makeToast: vi.fn(), makeUpgradeToast: vi.fn() }));
 import { makeToast } from '$lib/utils/toasts';
 
-// Loading store used in the component
-vi.mock('@/stores', () => ({ loadingState: writable(false) }));
-import { loadingState } from '@/stores';
+// The page shows the loader while the plan job runs.
+vi.mock('$lib/gym/plan-job', async () => {
+    const { writable } = await import('svelte/store');
+    return { planJobRunning: writable(false), startPlanJob: vi.fn() };
+});
+import { planJobRunning } from '$lib/gym/plan-job';
+const jobRunning = planJobRunning as unknown as Writable<boolean>;
 
 // Keep real component for Loader/SurveyForm; no behavior needed for this test
 import CreatePlanPage from './+page.svelte';
@@ -35,11 +39,11 @@ describe('create-plan +page.svelte', () => {
         vi.clearAllMocks();
         sessionStorage.clear();
         (pageStore as any).set({ data: { user: { session: 'sess', plansLeft: 1 } } });
-        loadingState.set(false);
+        jobRunning.set(false);
     });
 
-    it('shows Loader when loadingState is true and hides survey form', async () => {
-        loadingState.set(true);
+    it('shows Loader while the plan job runs and hides survey form', async () => {
+        jobRunning.set(true);
 
         const { getByTestId } = render(CreatePlanPage);
 
@@ -52,9 +56,9 @@ describe('create-plan +page.svelte', () => {
         ).not.toBeInTheDocument();
     });
 
-    it('shows SurveyForm when loadingState is false and hides loader', async () => {
+    it('shows SurveyForm when no plan job runs and hides loader', async () => {
         (pageStore as any).set({ data: { user: { session: 'sess', plansLeft: 1 } } });
-        loadingState.set(false);
+        jobRunning.set(false);
 
         const { getAllByText } = render(CreatePlanPage);
 
