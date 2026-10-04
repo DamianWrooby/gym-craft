@@ -2,7 +2,7 @@ import { to } from 'await-to-js';
 import { appConfig } from '@/constants/app.constants';
 import { isProduction } from '$lib/utils/environment';
 import { resolveSyncWindow, type SyncMode, type SyncStateSnapshot } from '$lib/garmin/sync-window';
-import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
+import { classifyGarminFailure } from '$lib/garmin/garmin-failure';
 import { refreshGarminSession } from '$lib/garmin/refresh-session';
 import { splitDateRange } from '$lib/garmin/date-chunks';
 
@@ -138,19 +138,16 @@ function classifyProxyFailure(
 ): { code: RunProxySyncErrorCode; message: string } {
     const message = typeof payload.message === 'string' ? payload.message : undefined;
 
-    // A throttle is not a credential failure. Reading it as one sends the athlete to a password
-    // prompt whose cold login is the most throttled path there is, which deepens the throttle.
-    if (status === 429 || payload.code === 'RATE_LIMITED') {
-        return { code: 'RATE_LIMITED', message: message ?? 'Garmin is rate limiting requests' };
+    switch (classifyGarminFailure(status, payload)) {
+        case 'RATE_LIMITED':
+            return { code: 'RATE_LIMITED', message: message ?? 'Garmin is rate limiting requests' };
+        case 'INVALID_TOKEN':
+            return { code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
+        case 'TIMEOUT':
+            return { code: 'GARMIN_TIMEOUT', message: message ?? 'Garmin service timed out' };
+        default:
+            return { code: 'PROXY_ERROR', message: message ?? 'Garmin service error' };
     }
-    if (status === 401 || payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
-        return { code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
-    }
-    // 504 is the proxy giving up on Garmin after 120s — transient, and worth retrying.
-    if (status === 504) {
-        return { code: 'GARMIN_TIMEOUT', message: message ?? 'Garmin service timed out' };
-    }
-    return { code: 'PROXY_ERROR', message: message ?? 'Garmin service error' };
 }
 
 /**

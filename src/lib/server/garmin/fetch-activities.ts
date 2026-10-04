@@ -1,6 +1,6 @@
 import { to } from 'await-to-js';
 import { mapGarminActivities } from './activity-mapper';
-import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
+import { classifyGarminFailure } from '$lib/garmin/garmin-failure';
 import { garminApiUrl, garminBearerHeaders } from './config';
 import { withGarminSession, type GarminAttemptErrorCode, type GarminAttemptResult } from './with-garmin-session';
 import type { GarminActivity, GarminActivityRaw } from '@/models/garmin/activity.model';
@@ -88,7 +88,7 @@ export function classifyGarminStatus(
     payload: { code?: string } | null,
     message: string,
 ): GarminAttemptErrorCode {
-    if (status === 429 || payload?.code === 'RATE_LIMITED') return 'RATE_LIMITED';
-    if (status === 401 || isInvalidTokenMessage(message)) return 'INVALID_TOKEN';
+    const kind = classifyGarminFailure(status, { code: payload?.code, message });
+    if (kind === 'RATE_LIMITED' || kind === 'INVALID_TOKEN') return kind;
     return 'GARMIN_SERVICE_ERROR';
 }
