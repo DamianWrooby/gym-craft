@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { readApiError } from '$lib/utils/api-error';
     import Seo from '$lib/components/seo/Seo.svelte';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
@@ -58,8 +59,7 @@
                 method: 'GET',
             });
             if (!response.ok) {
-                const res = await response.json();
-                throw new Error(res.message);
+                throw new Error((await readApiError(response, 'Cannot fetch plans')).message);
             }
             const res: { plans: Plan[] } = await response.json();
             return res.plans;

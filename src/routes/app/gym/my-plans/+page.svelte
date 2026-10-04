@@ -7,6 +7,7 @@
     import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
     import { Edit2Icon, CheckIcon, XIcon, TrashIcon, EyeIcon } from 'svelte-feather-icons';
     import { makeToast } from '$lib/utils/toasts.js';
+    import { readApiError } from '$lib/utils/api-error';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { appConfig } from '@/constants/app.constants';
     import type { Plan } from '@/models/plan/plan.model';
@@ -76,7 +77,7 @@
                 body,
             });
             if (!response.ok) {
-                const { message } = await response.json();
+                const { message } = await readApiError(response, 'Cannot save the name');
                 makeToast(toastStore, message, 'variant-filled-error');
                 plan.name = initialName;
             }
@@ -117,8 +118,7 @@
                 method: 'GET',
             });
             if (!response.ok) {
-                const res = await response.json();
-                throw new Error(res.message);
+                throw new Error((await readApiError(response, 'Cannot fetch plans')).message);
             }
             const res: { plans: Plan[] } = await response.json();
             return res.plans;
@@ -135,7 +135,7 @@
                 method: 'DELETE',
             });
             if (!response.ok) {
-                const { message } = await response.json();
+                const { message } = await readApiError(response, 'Cannot delete plan');
                 makeToast(toastStore, message, 'variant-filled-error');
                 return;
             }

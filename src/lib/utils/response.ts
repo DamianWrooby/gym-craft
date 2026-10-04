@@ -19,8 +19,9 @@ export const createResponse = (status: number, data: ResponseData) => json(data,
  *    `getAuthenticatedUser()` / `assertOwnership()` in `$lib/server/auth`.
  * 4. Form actions keep using SvelteKit's `fail()`; this helper is for `+server.ts` only.
  * 5. Read JSON bodies with `readJson()` so a malformed body is a 400, not a 500.
+ * 6. Clients read failures with `readApiError()` from `$lib/utils/api-error`.
  *
- * Migrated so far: `src/routes/api/plans/**`. Other routes still use ad-hoc
+ * Migrated so far: `src/routes/api/plans/**` and its clients (my-plans, analytics, plan job). Other routes still use ad-hoc
  * try/catch; migrate them one route group per PR.
  */
 export const apiError = (status: number, message: string, code?: string) =>

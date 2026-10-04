@@ -6,6 +6,7 @@ import type { Plan } from '@models/plan/plan.model';
 import type { SurveyFormModel } from '@/models/survey/survey-form.model';
 import { generatePlan, isRetryableCode, type GeneratePlanErrorCode } from './generate-plan';
 import { correctPlan, isValidPlan } from './plan-validation';
+import { readApiError } from '$lib/utils/api-error';
 
 /*
  * Plan generation as a client-side background job (#281).
@@ -82,13 +83,9 @@ async function runPlanJob(proxyUrl: string, session: string, formData: SurveyFor
         fetch(appConfig.plansApiUrl, { method: 'POST', body: JSON.stringify({ plan: attempt.plan }) }),
     );
     if (saveError || !response?.ok) {
-        const body = response ? await response.json().catch(() => null) : null;
-        return {
-            status: 'failed',
-            code: 'SAVE_FAILED',
-            message: body?.message ?? saveError?.message ?? 'Cannot save the plan',
-            formData,
-        };
+        const fallback = saveError?.message ?? 'Cannot save the plan';
+        const { message } = response ? await readApiError(response, fallback) : { message: fallback };
+        return { status: 'failed', code: 'SAVE_FAILED', message, formData };
     }
 
     const { generatedPlan } = await response.json();
