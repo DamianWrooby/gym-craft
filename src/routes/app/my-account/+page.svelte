@@ -73,36 +73,50 @@
 </script>
 
 <Card>
-    <h2 class="h2 text-center text-xl py-10">Manage your account</h2>
-    <p>
-        Name: <span class="text-secondary-400 font-bold">{user.name}</span>
-        {#if user.subscriptionTier === 'SUPPORTER'}
-            <SupporterBadge />
-        {/if}
-    </p>
-    <p>Generated plans number: {user.generatedPlansNumber}</p>
-    <p>Plans left: {user.plansLeft}</p>
-    <BillingPanel tier={user.subscriptionTier} />
-    <div class="flex justify-center mt-8">
-        <a href="/app/profile" class="btn variant-soft-primary">
-            <span>Edit athlete profile &amp; running goals</span>
-            <span aria-hidden="true">→</span>
-        </a>
-    </div>
-    <div class="relative flex flex-col justify-center mt-8 border rounded border-solid border-red-500">
-        <div class="absolute top-0">
-            <p class="text-red-500 font-thin pl-1">Danger zone</p>
-        </div>
-        {#if !deleteAccountFormOpened}
-            <div class="flex justify-center p-5">
+    <h2 class="h2 text-center text-xl pb-8">Manage your account</h2>
+
+    <div class="flex flex-col gap-6 max-w-2xl mx-auto">
+        <section class="rounded-container-token border border-surface-500/40 p-5" aria-labelledby="account-heading">
+            <div class="flex items-center gap-3 mb-4">
+                <h3 id="account-heading" class="h3">Account</h3>
+                {#if user.subscriptionTier === 'SUPPORTER'}
+                    <SupporterBadge />
+                {/if}
+            </div>
+            <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
+                <dt class="opacity-75">Name</dt>
+                <dd class="font-bold text-secondary-400 break-all">{user.name}</dd>
+                {#if user.email}
+                    <dt class="opacity-75">Email</dt>
+                    <dd class="break-all">{user.email}</dd>
+                {/if}
+                <dt class="opacity-75">Generated plans</dt>
+                <dd>{user.generatedPlansNumber}</dd>
+                <dt class="opacity-75">Plans left</dt>
+                <dd>{user.plansLeft}</dd>
+            </dl>
+            <a href="/app/profile" class="btn variant-soft-primary mt-5">
+                <span>Edit athlete profile &amp; running goals</span>
+                <span aria-hidden="true">→</span>
+            </a>
+        </section>
+
+        <BillingPanel tier={user.subscriptionTier} />
+
+        <section class="rounded-container-token border border-error-500/60 p-5" aria-labelledby="danger-heading">
+            <h3 id="danger-heading" class="h3 text-error-500 mb-2">Danger zone</h3>
+            <p class="mb-4 text-sm opacity-75">
+                Deleting your account removes all your GymCraft data. You cannot undo this.
+            </p>
+            {#if !deleteAccountFormOpened}
                 <button type="button" class="btn variant-filled-error" on:click={() => openDeleteAccountPanel()}>
                     <span>Delete my account</span>
                 </button>
-            </div>
-        {:else}
-            <section class="flex justify-center" transition:slide={{ duration: 200 }}>
-                <DeleteAccountForm data={formData} onSubmit={() => deleteAccount()} loading={isDeletionProcessed} />
-            </section>
-        {/if}
+            {:else}
+                <div transition:slide={{ duration: 200 }}>
+                    <DeleteAccountForm data={formData} onSubmit={() => deleteAccount()} loading={isDeletionProcessed} />
+                </div>
+            {/if}
+        </section>
     </div>
 </Card>

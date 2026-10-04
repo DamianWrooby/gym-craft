@@ -1,39 +1,28 @@
 import { updatePlanName, deletePlan } from '$lib/prisma/prisma';
-import { createResponse } from '$lib/utils/response';
+import { apiError, createResponse, readJson } from '$lib/utils/response';
 import { getAuthenticatedUser } from '$lib/server/auth';
-import type { Plan } from '@prisma/client';
+import { to } from 'await-to-js';
 import type { RequestEvent } from './$types';
 
 export async function POST(event: RequestEvent): Promise<Response> {
     const user = getAuthenticatedUser(event);
-    const body = await event.request.json();
+    if (!event.params.id) return apiError(404, 'Plan not found');
 
-    if (!event.params.id) {
-        return createResponse(404, { message: 'Plan not found' });
-    }
+    const body = await readJson<{ name?: unknown }>(event.request);
+    if (typeof body?.name !== 'string' || !body.name.trim()) return apiError(400, 'Plan name is required');
 
-    try {
-        await updatePlanName(event.params.id, body.name, user.id);
-    } catch (error) {
-        return createResponse(502, { message: 'Database error' });
-    }
+    const [dbError] = await to(updatePlanName(event.params.id, body.name, user.id));
+    if (dbError) return apiError(502, 'Database error');
 
     return createResponse(200, { success: true });
 }
 
 export async function DELETE(event: RequestEvent): Promise<Response> {
     const user = getAuthenticatedUser(event);
-    let removedPlan: Plan;
+    if (!event.params.id) return apiError(404, 'Plan not found');
 
-    if (!event.params.id) {
-        return createResponse(404, { message: 'Plan not found' });
-    }
-
-    try {
-        removedPlan = await deletePlan(event.params.id, user.id);
-    } catch (error) {
-        return createResponse(502, { message: 'Database error' });
-    }
+    const [dbError, removedPlan] = await to(deletePlan(event.params.id, user.id));
+    if (dbError || !removedPlan) return apiError(502, 'Database error');
 
     return createResponse(200, removedPlan);
 }

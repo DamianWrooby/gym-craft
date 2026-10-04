@@ -51,7 +51,7 @@
     }
 
     function formatDate(date: Date): string {
-        return `${date.toDateString()} ${date.toLocaleTimeString()}`;
+        return date.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
     }
 
     function generateTableRows(plans: Plan[]): MappedPlan[] {
@@ -76,8 +76,8 @@
                 body,
             });
             if (!response.ok) {
-                const { error } = await response.json();
-                makeToast(toastStore, error, 'variant-filled-error');
+                const { message } = await response.json();
+                makeToast(toastStore, message, 'variant-filled-error');
                 plan.name = initialName;
             }
         } catch (error) {
@@ -135,8 +135,9 @@
                 method: 'DELETE',
             });
             if (!response.ok) {
-                const { error } = await response.json();
-                makeToast(toastStore, error, 'variant-filled-error');
+                const { message } = await response.json();
+                makeToast(toastStore, message, 'variant-filled-error');
+                return;
             }
             makeToast(toastStore, 'Selected plan has been removed', 'variant-filled-warning');
             plans = (await fetchPlans(user.id)) || [];
@@ -157,6 +158,14 @@
     <div class="md:w-3/4 m-auto pb-8">
         {#if tableRows?.length}
             <CtaButton url="/app/gym/create-plan" text="Generate new plan" />
+            <div
+                class="hidden md:flex px-4 pb-2 text-xs uppercase tracking-wide text-surface-500 dark:text-tertiary-500"
+                aria-hidden="true">
+                <span class="w-1/12">#</span>
+                <span class="w-4/12 pl-3">Name</span>
+                <span class="w-3/12">Created</span>
+                <span class="w-4/12"></span>
+            </div>
             <ul class="list border rounded-2xl border-surface-900 dark:border-surface-500">
                 {#each tableRows as plan, index}
                     <li
@@ -185,7 +194,7 @@
                                 </button>
                             {/if}
                         </div>
-                        <span class="w-3/12 text-sm">{plan.createdAt}</span>
+                        <span class="w-3/12 text-sm" title="Created">{plan.createdAt}</span>
                         <div class="w-4/12 flex flex-row justify-end items-center">
                             <button type="button" class="p-2" on:click={() => showPlan(plan)}>
                                 <EyeIcon
