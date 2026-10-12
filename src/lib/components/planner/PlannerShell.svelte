@@ -83,12 +83,26 @@
         letter-spacing: 0.15em;
         font-size: 0.8rem;
     }
-    .gc-planner :global(input),
+    /* Checkboxes keep the forms plugin's check-mark image, so they only set background-color. */
+    .gc-planner :global(input:not([type='checkbox']):not([type='radio'])),
     .gc-planner :global(select) {
         background: #020617;
         border: 1px solid rgba(148, 163, 184, 0.35);
         color: #e2e8f0;
         padding: 0.35rem 0.5rem;
         border-radius: 0.2rem;
+    }
+    .gc-planner :global(input[type='checkbox']) {
+        width: 1.1rem;
+        height: 1.1rem;
+        background-color: #020617;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        border-radius: 0.2rem;
+        color: #38bdf8;
+        cursor: pointer;
+    }
+    .gc-planner :global(input[type='checkbox']:checked) {
+        background-color: #38bdf8;
+        border-color: #38bdf8;
     }
 </style>
