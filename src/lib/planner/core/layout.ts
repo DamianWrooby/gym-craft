@@ -276,7 +276,7 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
             ? start
             : recentVolume.metresPerWeek > 0 && recentVolume.minutesPerWeek > 0
               ? (start * recentVolume.minutesPerWeek) / recentVolume.metresPerWeek
-              : Infinity;
+              : (start / 1000) * (LEAD_IN.easyPaceSecPerKmWithoutHistory.value / 60);
     const leadInStart =
         recentVolume.minutesPerWeek > 0 ? recentVolume.minutesPerWeek : LEAD_IN.startMinutesWithoutHistory.value;
 

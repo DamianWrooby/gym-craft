@@ -21,6 +21,9 @@ export interface PlanViewWeek {
     inHorizonDays: number;
     generation: 'PENDING' | 'GENERATED' | 'FAILED';
     isCutback: boolean;
+    isTaper: boolean;
+    /** The time trial scheduled in this week, when no anchor existed at layout. */
+    timeTrialDistanceM: number | null;
     volumeTarget: number;
     volumeUnit: VolumeUnit;
     strengthSessionTarget: number;

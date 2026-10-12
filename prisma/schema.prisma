@@ -136,6 +136,10 @@ model PlanWeek {
     outlookFactor         Float?
     generation            WeekGeneration @default(PENDING)
     isCutback             Boolean        @default(false)
+    // Taper weeks count as recovery for the cutback cap (ADR 0021).
+    isTaper               Boolean        @default(false)
+    // Set on the week holding the time trial when no anchor existed at layout (ADR 0020).
+    timeTrialDistanceM    Int?
     volumeTarget          Int
     volumeUnit            VolumeUnit
     strengthSessionTarget Int

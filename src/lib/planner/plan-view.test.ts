@@ -7,6 +7,8 @@ const week = (startDate: string, endDate: string, generation: 'PENDING' | 'GENER
     inHorizonDays: 7,
     generation,
     isCutback: false,
+    isTaper: false,
+    timeTrialDistanceM: null,
     volumeTarget: 200,
     volumeUnit: 'MINUTES' as const,
     strengthSessionTarget: 2,
@@ -53,6 +55,23 @@ describe('toPlanView', () => {
         expect(v.phases[1].weekIndexes).toEqual([1, 2]);
         expect(v.currentWeekIndex).toBe(1);
         expect(v.school.name).toBe('Daniels');
+    });
+
+    it('carries taper and time-trial facts through to the view', () => {
+        const withTrial: StoredPlan = {
+            ...plan,
+            phases: [
+                {
+                    ...plan.phases[0],
+                    weeks: [{ ...plan.phases[0].weeks[0], isTaper: true, timeTrialDistanceM: 5000 }],
+                },
+                plan.phases[1],
+            ],
+        };
+        expect(toPlanView(withTrial, [], '2026-10-12').weeks[0]).toMatchObject({
+            isTaper: true,
+            timeTrialDistanceM: 5000,
+        });
     });
 
     it('has no current week outside the horizon', () => {

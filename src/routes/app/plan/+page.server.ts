@@ -37,6 +37,8 @@ export const load = async ({ locals }: { locals: App.Locals }): Promise<{ plan: 
                     inHorizonDays: w.inHorizonDays,
                     generation: w.generation,
                     isCutback: w.isCutback,
+                    isTaper: w.isTaper,
+                    timeTrialDistanceM: w.timeTrialDistanceM,
                     volumeTarget: w.volumeTarget,
                     volumeUnit: w.volumeUnit,
                     strengthSessionTarget: w.strengthSessionTarget,

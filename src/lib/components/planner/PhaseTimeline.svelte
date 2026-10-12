@@ -37,18 +37,23 @@
                             data-generation={week.generation}
                             on:click={() => dispatch('select', index)}
                             class="relative flex-1 min-w-[0.6rem] rounded-sm transition hover:-translate-y-0.5
-                                {week.isCutback ? 'h-5' : 'h-8'}
+                                {week.isCutback ? 'h-5' : week.isTaper ? 'h-6' : 'h-8'}
                                 {week.generation === 'FAILED'
                                 ? 'bg-red-500 animate-pulse'
                                 : phaseColor(phase.source, phase.ordinal)}
                                 {week.generation === 'PENDING' ? 'opacity-35 border border-dashed border-white/40' : ''}
                                 {selected === index ? 'ring-2 ring-sky-300' : ''}"
-                            aria-label="Week {index + 1}{week.isCutback ? ', cutback' : ''}{week.generation ===
-                            'PENDING'
+                            aria-label="Week {index + 1}{week.isCutback ? ', cutback' : ''}{week.isTaper
+                                ? ', taper'
+                                : ''}{week.timeTrialDistanceM ? ', time trial' : ''}{week.generation === 'PENDING'
                                 ? ', not yet written'
                                 : week.generation === 'FAILED'
                                   ? ', failed'
                                   : ', written'}{fixture ? `, tune-up: ${fixture.name ?? 'race'}` : ''}">
+                            {#if week.timeTrialDistanceM}
+                                <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px]" aria-hidden="true"
+                                    >⏱</span>
+                            {/if}
                             {#if fixture}
                                 <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px]" aria-hidden="true"
                                     >⚑</span>
@@ -70,6 +75,8 @@
         <span><span class="inline-block w-2 h-2 bg-rose-600 opacity-35 mr-1" />not yet written</span>
         <span><span class="inline-block w-2 h-2 bg-red-500 mr-1" />failed</span>
         <span>▁ cutback</span>
+        <span>▂ taper</span>
+        <span>⏱ time trial</span>
         <span>⚑ tune-up</span>
     </div>
 </section>

@@ -3,15 +3,7 @@ import { currentMonthStartIso } from '$lib/utils/iso-week';
 import { reportSummaryPreview } from '$lib/utils/report-format';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
-import type {
-    AthleteProfile,
-    GymPlan as Plan,
-    Prisma,
-    ReportType,
-    RunningGoal,
-    TrainingReport,
-    User,
-} from '@prisma/client';
+import type { AthleteProfile, GymPlan, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
 import type { NewPlan } from '../../models/plan/plan.model';
 import bcrypt from 'bcrypt';
 
@@ -48,7 +40,7 @@ export async function getUserBySession(session: string): Promise<Pick<User, 'id'
     return user;
 }
 
-export async function addPlan(userId: string, plan: NewPlan): Promise<Plan> {
+export async function addPlan(userId: string, plan: NewPlan): Promise<GymPlan> {
     const createdPlan = await db.gymPlan.create({
         data: {
             ...plan,
@@ -59,7 +51,7 @@ export async function addPlan(userId: string, plan: NewPlan): Promise<Plan> {
     return createdPlan;
 }
 
-export async function deletePlan(planId: string, userId: string): Promise<Plan> {
+export async function deletePlan(planId: string, userId: string): Promise<GymPlan> {
     const plan = await db.gymPlan.findUnique({
         where: { id: planId },
     });
@@ -137,11 +129,11 @@ export async function updatePlanName(planId: string, newName: string, userId: st
     cache.del(`plans_${userId}`);
 }
 
-export async function getPlans(userId: string): Promise<Plan[] | Error> {
+export async function getPlans(userId: string): Promise<GymPlan[] | Error> {
     const cacheKey = `plans_${userId}`;
     const cachedPlans = cache.get(cacheKey);
 
-    if (cachedPlans) return cachedPlans as Plan[];
+    if (cachedPlans) return cachedPlans as GymPlan[];
     if (!userId) return fail('User not found');
 
     const plans = await db.gymPlan.findMany({
@@ -152,7 +144,7 @@ export async function getPlans(userId: string): Promise<Plan[] | Error> {
     return plans;
 }
 
-export async function getPlan(planId: string, userId: string): Promise<Plan | null> {
+export async function getPlan(planId: string, userId: string): Promise<GymPlan | null> {
     return await db.gymPlan.findUnique({
         where: { userId: userId, id: planId },
     });

@@ -3,7 +3,6 @@ import { db } from '$lib/database';
 import { addDays } from '$lib/utils/iso-week';
 import type { Prisma } from '@prisma/client';
 import type { NewPlanRecord, PlanningContext } from './build-plan';
-import type { RaceResultInput } from './validation';
 
 export class ActivePlanExistsError extends Error {
     constructor() {
@@ -86,6 +85,9 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord): Pro
                                         endDate: asDate(w.endDate),
                                         inHorizonDays: w.inHorizonDays,
                                         isCutback: w.isCutback,
+                                        isTaper: w.isTaper,
+                                        timeTrialDistanceM:
+                                            layout.timeTrial?.weekIndex === w.index ? layout.timeTrial.distanceM : null,
                                         volumeTarget: w.volumeTarget,
                                         volumeUnit: w.volumeUnit,
                                         strengthSessionTarget: w.strengthSessionTarget,
@@ -116,16 +118,3 @@ export async function getActivePlan(userId: string) {
 }
 
 export type ActivePlan = NonNullable<Awaited<ReturnType<typeof getActivePlan>>>;
-
-export async function listRaceResults(userId: string) {
-    return db.raceResult.findMany({ where: { userId }, orderBy: { date: 'desc' } });
-}
-
-export async function createRaceResult(userId: string, input: RaceResultInput) {
-    return db.raceResult.create({ data: { ...input, userId, date: asDate(input.date) } });
-}
-
-export async function deleteRaceResult(userId: string, id: string): Promise<boolean> {
-    const { count } = await db.raceResult.deleteMany({ where: { id, userId } });
-    return count > 0;
-}

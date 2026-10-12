@@ -8,6 +8,8 @@ export const LEAD_IN = {
     startMinutesWithoutHistory: judged(90, 'Minutes per week when the athlete has no recent running.'),
     weeklyIncrease: judged(0.1, 'The ≤ 10 %/week convention; no primary source endorses it.'),
     cutbackDepth: judged(0.2),
+    /** Converts a distance school's start volume to lead-in minutes when the athlete has no pace history. */
+    easyPaceSecPerKmWithoutHistory: judged(390, 'A conservative 6:30/km easy pace.'),
 };
 
 /** At most this many consecutive loading weeks where the school places no sourced cadence (ADRs 0021, 0025). */

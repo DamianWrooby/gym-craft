@@ -32,7 +32,9 @@
 
     <div>
         <div class="text-xs uppercase tracking-widest text-slate-500">Phase</div>
-        <div class="font-semibold text-slate-100">{phase.name}{week.isCutback ? ' · cutback week' : ''}</div>
+        <div class="font-semibold text-slate-100">
+            {phase.name}{week.isCutback ? ' · cutback week' : ''}{week.isTaper ? ' · taper week' : ''}
+        </div>
         <p class="text-sm text-slate-300">{phase.intent}</p>
     </div>
 
@@ -47,6 +49,11 @@
         </div>
     </dl>
 
+    {#if week.timeTrialDistanceM}
+        <p class="text-sm text-sky-300">
+            ⏱ Time trial: {week.timeTrialDistanceM / 1000} km this week. Enter the result to anchor your paces.
+        </p>
+    {/if}
     {#each fixtures as fixture}
         <p class="text-sm text-amber-300">⚑ Tune-up: {fixture.name ?? 'race'} on {fixture.date}</p>
     {/each}

@@ -85,6 +85,18 @@ describe('layoutHorizon: lead-in bands', () => {
         expect(l.weeks).toHaveLength(weeks);
     });
 
+    it('caps a lead-in before a distance school at its start volume when there is no running history', () => {
+        // Daniels start without history: 0.5 × 64 360 m = 32 180 m ≈ 209 min at the judged easy pace.
+        const l = layout({
+            school: daniels,
+            endDate: endForWeeks(40),
+            recentVolume: { minutesPerWeek: 0, metresPerWeek: 0 },
+        });
+        const leadIn = l.weeks.filter((w) => w.phaseOrdinal === 0);
+        expect(leadIn.length).toBeGreaterThan(10);
+        expect(Math.max(...leadIn.map((w) => w.volumeTarget))).toBe(210);
+    });
+
     it("labels the lead-in as GymCraft's and shaped to fit the school", () => {
         const lead = layout({ endDate: endForWeeks(20) }).phases[0];
         expect(lead).toMatchObject({ source: 'LEAD_IN', volumeUnit: 'MINUTES' });

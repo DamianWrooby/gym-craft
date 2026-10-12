@@ -87,7 +87,8 @@ describe('POST /api/user/[id]/plan', () => {
         expect(phases.map((p: { name: string }) => p.name)).toEqual(['Aerobic', 'Taper']);
         const weeks = phases.flatMap((p: { weeks: { create: unknown[] } }) => p.weeks.create);
         expect(weeks).toHaveLength(16);
-        expect(weeks[0]).toMatchObject({ userId, inHorizonDays: 7, volumeUnit: 'MINUTES' });
+        expect(weeks[0]).toMatchObject({ userId, inHorizonDays: 7, volumeUnit: 'MINUTES', timeTrialDistanceM: null });
+        expect(weeks.map((w: { isTaper: boolean }) => w.isTaper).slice(-3)).toEqual([false, true, true]);
 
         expect(tx.athleteProfile.update).toHaveBeenCalledWith({
             where: { userId },
@@ -141,6 +142,15 @@ describe('POST /api/user/[id]/plan', () => {
         expect(response.status).toBe(422);
         expect((await response.json()).message).toContain('needs at least 9 weeks');
         expect(db.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('stores the time trial on its week when no anchor exists', async () => {
+        await post({ ...validBody, raceResults: [] });
+        const weeks = tx.plan.create.mock.calls[0][0].data.phases.create.flatMap(
+            (p: { weeks: { create: unknown[] } }) => p.weeks.create,
+        );
+        expect(weeks[0]).toMatchObject({ timeTrialDistanceM: 5000 });
+        expect(weeks.filter((w: { timeTrialDistanceM: number | null }) => w.timeTrialDistanceM)).toHaveLength(1);
     });
 
     it('takes the end date from the body for an undated goal', async () => {
