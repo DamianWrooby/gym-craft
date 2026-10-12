@@ -11,6 +11,7 @@ import type { CreatePlanInput, RaceResultInput } from './validation';
 export interface ContextGoal {
     id: string;
     goalType: string;
+    targetEventName: string | null;
     targetEventDate: Date | null;
     targetDistanceM: number | null;
     archivedAt: Date | null;
