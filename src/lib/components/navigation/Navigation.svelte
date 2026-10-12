@@ -3,6 +3,7 @@
     import { page } from '$app/stores';
     import type { User } from '@/models/user/user.model';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
+    import { CalendarIcon } from 'svelte-feather-icons';
 
     export let user: User;
 
@@ -44,6 +45,13 @@
                 background="bg-tertiary-900"
                 border="border-2 border-surface-300-600-token hover:!border-tertiary-500"
                 width="w-8" />
+        </a>
+        <a
+            class="px-3 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
+            class:text-tertiary-500={isActive('/app/plan')}
+            href="/app/plan">
+            <CalendarIcon size="18" />
+            <span class="hidden sm:inline">Plan</span>
         </a>
         <a
             class="px-3 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
