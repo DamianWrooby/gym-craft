@@ -57,6 +57,8 @@ CREATE TABLE "PlanWeek" (
     "outlookFactor" DOUBLE PRECISION,
     "generation" "WeekGeneration" NOT NULL DEFAULT 'PENDING',
     "isCutback" BOOLEAN NOT NULL DEFAULT false,
+    "isTaper" BOOLEAN NOT NULL DEFAULT false,
+    "timeTrialDistanceM" INTEGER,
     "volumeTarget" INTEGER NOT NULL,
     "volumeUnit" "VolumeUnit" NOT NULL,
     "strengthSessionTarget" INTEGER NOT NULL,
