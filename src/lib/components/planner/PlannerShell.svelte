@@ -25,6 +25,24 @@
         box-shadow: 0 0 24px rgba(225, 29, 72, 0.08);
         clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
     }
+    /* A selectable card: dimmed until chosen. */
+    .gc-planner :global(.gc-choice) {
+        filter: saturate(0.25) brightness(0.8);
+        transition:
+            filter 150ms ease,
+            border-color 150ms ease;
+    }
+    .gc-planner :global(.gc-choice:hover:not(:disabled)) {
+        filter: saturate(0.6) brightness(0.9);
+    }
+    .gc-planner :global(.gc-choice[aria-pressed='true']) {
+        filter: none;
+        border-color: #38bdf8;
+        border-left-color: #38bdf8;
+        box-shadow:
+            0 0 24px rgba(56, 189, 248, 0.35),
+            inset 0 0 0 1px #38bdf8;
+    }
     .gc-planner :global(.gc-stat) {
         background: rgba(2, 6, 23, 0.6);
         border: 1px solid rgba(56, 189, 248, 0.25);
