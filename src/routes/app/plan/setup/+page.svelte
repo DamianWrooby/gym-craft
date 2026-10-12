@@ -253,7 +253,8 @@
                 {#each data.goals as g}
                     <button
                         type="button"
-                        class="gc-panel p-4 text-left {state.goalId === g.id ? 'ring-2 ring-sky-400' : ''}"
+                        class="gc-panel gc-choice p-4 text-left"
+                        aria-pressed={state.goalId === g.id}
                         on:click={() => chooseGoal(g)}>
                         <div class="font-bold text-lg">{g.name ?? g.goalType.replace('_', ' ').toLowerCase()}</div>
                         <div class="text-sm text-slate-400">
@@ -283,9 +284,8 @@
                     <button
                         type="button"
                         disabled={!!filtered}
-                        class="gc-panel p-5 text-left space-y-2 disabled:opacity-40 {state.schoolId === s.id
-                            ? 'ring-2 ring-sky-400'
-                            : ''}"
+                        class="gc-panel gc-choice p-5 text-left space-y-2 disabled:opacity-40"
+                        aria-pressed={state.schoolId === s.id}
                         on:click={() => chooseSchool(s.id)}>
                         {#if recommended}
                             <div class="text-[11px] uppercase tracking-[0.25em] text-sky-300">
