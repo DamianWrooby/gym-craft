@@ -377,7 +377,7 @@
                                         <span class="text-xs text-slate-400">· {p.intent}</span>
                                     {/if}
                                 </span>
-                                <span class="text-slate-400">{p.weekCount} wk</span>
+                                <span class="text-slate-400">{p.weekCount} {p.weekCount === 1 ? 'week' : 'weeks'}</span>
                             </li>
                         {/each}
                     </ol>
