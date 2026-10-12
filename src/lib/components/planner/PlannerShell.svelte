@@ -27,6 +27,8 @@
     }
     /* A selectable card: dimmed until chosen. */
     .gc-planner :global(.gc-choice) {
+        /* The cut corner cannot carry the selection border, so choice cards stay square. */
+        clip-path: none;
         filter: saturate(0.25) brightness(0.8);
         transition:
             filter 150ms ease,
