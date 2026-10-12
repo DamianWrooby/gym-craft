@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { goto } from '$app/navigation';
+    import { goto, invalidateAll } from '$app/navigation';
     import { page } from '$app/stores';
     import PlannerShell from '$lib/components/planner/PlannerShell.svelte';
+    import RunningGoalForm from '$lib/components/running-goal/RunningGoalForm.svelte';
     import { readApiError } from '$lib/utils/api-error';
     import { addDays } from '$lib/utils/iso-week';
     import { SCHOOLS, getSchool } from '$lib/planner/schools/catalogue';
@@ -64,6 +65,9 @@
     let stepIndex = 0;
     let submitting = false;
     let submitError: string | null = null;
+    let addingGoal = false;
+    let savingGoal = false;
+    let goalError: string | null = null;
     let newResult = { date: '', distanceM: 5000, time: '' };
     let resultError: string | null = null;
 
@@ -109,6 +113,27 @@
 
     function chooseGoal(g: Goal) {
         state = { ...state, goalId: g.id, goalDate: g.date, endDate: null, compression: null };
+    }
+
+    async function addGoal(e: CustomEvent<Record<string, unknown>>) {
+        savingGoal = true;
+        goalError = null;
+        const response = await fetch(`/api/user/${$page.data.user.id}/running-goals`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(e.detail),
+        });
+        if (!response.ok) {
+            goalError = (await readApiError(response, 'The goal was not saved. Try again.')).message;
+            savingGoal = false;
+            return;
+        }
+        const { data: created } = (await response.json()) as { data: { id: string } };
+        await invalidateAll();
+        savingGoal = false;
+        addingGoal = false;
+        const fresh = ready?.goals.find((g) => g.id === created.id);
+        if (fresh) chooseGoal(fresh);
     }
 
     function chooseSchool(id: (typeof SCHOOLS)[number]['id']) {
@@ -221,11 +246,8 @@
         <h1 class="text-3xl font-black tracking-wide">{STEP_TITLES[step]}</h1>
 
         {#if step === 'goal'}
-            {#if data.goals.length === 0}
-                <section class="gc-panel p-5 space-y-3">
-                    <p>You have no goals yet. Add one on your profile, then come back.</p>
-                    <a class="gc-ghost inline-block" href="/app/profile">Add a goal</a>
-                </section>
+            {#if data.goals.length === 0 && !addingGoal}
+                <p class="text-slate-400">You have no goals yet. Add one to start your plan.</p>
             {/if}
             <div class="grid gap-3 sm:grid-cols-2">
                 {#each data.goals as g}
@@ -241,6 +263,18 @@
                     </button>
                 {/each}
             </div>
+            {#if addingGoal}
+                <section class="gc-panel p-5 space-y-3">
+                    <h2 class="font-bold">New goal</h2>
+                    <RunningGoalForm
+                        saving={savingGoal}
+                        on:save={addGoal}
+                        on:cancel={() => ((addingGoal = false), (goalError = null))} />
+                    {#if goalError}<p class="text-rose-400 text-sm">{goalError}</p>{/if}
+                </section>
+            {:else}
+                <button type="button" class="gc-ghost" on:click={() => (addingGoal = true)}>+ Add a goal</button>
+            {/if}
         {:else if step === 'school'}
             <div class="grid gap-3 sm:grid-cols-2">
                 {#each SCHOOLS as s}
