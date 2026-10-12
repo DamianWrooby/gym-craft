@@ -2,6 +2,8 @@
     import { goto, invalidateAll } from '$app/navigation';
     import { page } from '$app/stores';
     import PlannerShell from '$lib/components/planner/PlannerShell.svelte';
+    import SchoolDetailsModal from '$lib/components/planner/SchoolDetailsModal.svelte';
+    import type { SchoolDefinition } from '$lib/planner/schools/types';
     import RunningGoalForm from '$lib/components/running-goal/RunningGoalForm.svelte';
     import { readApiError } from '$lib/utils/api-error';
     import { addDays } from '$lib/utils/iso-week';
@@ -66,6 +68,7 @@
     let submitting = false;
     let submitError: string | null = null;
     let addingGoal = false;
+    let detailsSchool: SchoolDefinition | null = null;
     let savingGoal = false;
     let goalError: string | null = null;
     let newResult = { date: '', distanceM: 5000, time: '' };
@@ -281,24 +284,33 @@
                 {#each SCHOOLS as s}
                     {@const filtered = recommendation.filtered.find((f) => f.schoolId === s.id)}
                     {@const recommended = recommendation.recommended?.schoolId === s.id}
-                    <button
-                        type="button"
-                        disabled={!!filtered}
-                        class="gc-panel gc-choice p-5 text-left space-y-2 disabled:opacity-40"
-                        aria-pressed={state.schoolId === s.id}
-                        on:click={() => chooseSchool(s.id)}>
-                        {#if recommended}
-                            <div class="text-[11px] uppercase tracking-[0.25em] text-sky-300">
-                                ★ Recommended · {recommendation.recommended?.reason}
-                            </div>
-                        {/if}
-                        <div class="text-xl font-black">{s.name}</div>
-                        <div class="text-sm text-rose-300">{s.tagline}</div>
-                        <p class="text-sm text-slate-300">{s.lore}</p>
-                        {#if filtered}<p class="text-sm text-amber-300">Not available: {filtered.reason}</p>{/if}
-                    </button>
+                    <div class="flex flex-col gap-1">
+                        <button
+                            type="button"
+                            disabled={!!filtered}
+                            class="gc-panel gc-choice p-5 text-left space-y-2 disabled:opacity-40 flex-1"
+                            aria-pressed={state.schoolId === s.id}
+                            on:click={() => chooseSchool(s.id)}>
+                            {#if recommended}
+                                <div class="text-[11px] uppercase tracking-[0.25em] text-sky-300">
+                                    ★ Recommended · {recommendation.recommended?.reason}
+                                </div>
+                            {/if}
+                            <div class="text-xl font-black">{s.name}</div>
+                            <div class="text-sm text-rose-300">{s.tagline}</div>
+                            <p class="text-sm text-slate-300">{s.lore}</p>
+                            {#if filtered}<p class="text-sm text-amber-300">Not available: {filtered.reason}</p>{/if}
+                        </button>
+                        <button
+                            type="button"
+                            class="self-start text-sm text-sky-300 underline underline-offset-4 hover:text-sky-200"
+                            on:click={() => (detailsSchool = s)}>
+                            What to expect →
+                        </button>
+                    </div>
                 {/each}
             </div>
+            <SchoolDetailsModal bind:school={detailsSchool} />
         {:else if step === 'horizon'}
             <section class="gc-panel p-5 space-y-4">
                 {#if state.goalDate}
