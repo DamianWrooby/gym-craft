@@ -3,6 +3,7 @@ import { toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile, getRunningGoals } from '$lib/prisma/prisma';
 import { getActivePlan } from '$lib/server/planner/repository';
 import { toPlanView, type PlanView } from '$lib/planner/plan-view';
+import type { PlanRationale } from '$lib/planner/core/explain';
 
 export const load = async ({ locals }: { locals: App.Locals }): Promise<{ plan: PlanView | null }> => {
     const userId = locals.user?.id;
@@ -23,6 +24,7 @@ export const load = async ({ locals }: { locals: App.Locals }): Promise<{ plan: 
             endDate: toIsoDate(plan.endDate),
             goalId: plan.goalId,
             goalName: plan.goal.targetEventName ?? plan.goal.goalType,
+            rationale: plan.rationale as unknown as PlanRationale | null,
             phases: plan.phases.map((p) => ({
                 ordinal: p.ordinal,
                 name: p.name,

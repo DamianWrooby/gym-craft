@@ -4,7 +4,9 @@ import { addDays, toIsoDate } from '$lib/utils/iso-week';
 import { isRunningTypeKey } from '$lib/utils/activity-type';
 import { getSchool } from '$lib/planner/schools/catalogue';
 import { deriveAnchor, type Anchor } from '$lib/planner/core/anchor';
-import { layoutHorizon, type Layout, type RecentVolume } from '$lib/planner/core/layout';
+import { horizonWeekCount, layoutHorizon, type Layout, type RecentVolume } from '$lib/planner/core/layout';
+import { recommendSchool } from '$lib/planner/core/recommend';
+import { explainPlan, type PlanRationale } from '$lib/planner/core/explain';
 import { WEEKDAYS } from '$lib/planner/wizard';
 import type { CreatePlanInput, RaceResultInput } from './validation';
 
@@ -42,6 +44,7 @@ export interface NewPlanRecord {
     hrZoneBounds: CreatePlanInput['hrZoneBounds'];
     raceResults: RaceResultInput[];
     layout: Layout;
+    rationale: PlanRationale;
 }
 
 export type BuildPlanResult =
@@ -62,6 +65,8 @@ export function recentRunningVolume(activities: ContextActivity[], today: string
     const weeks = RECENT_VOLUME_DAYS / 7;
     return { minutesPerWeek: Math.round(seconds / 60 / weeks), metresPerWeek: Math.round(metres / weeks) };
 }
+
+const goalTypeName = (goalType: string) => goalType.replace('_', ' ').toLowerCase();
 
 export function buildPlan(context: PlanningContext, input: CreatePlanInput, today: string): BuildPlanResult {
     const goal = context.goals.find((g) => g.id === input.goalId && !g.archivedAt);
@@ -89,17 +94,38 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
         today,
     });
 
+    const school = getSchool(input.schoolId);
+    const layoutGoal = { isRace: goal.goalType === 'RACE' && goalDate != null, distanceM: goal.targetDistanceM };
+    const recentVolume = recentRunningVolume(context.activities, today);
+    const runsPerWeek = WEEKDAYS.filter((d) => input.availability[d]).length;
     const result = layoutHorizon({
-        school: getSchool(input.schoolId),
+        school,
         startDate: today,
         endDate,
-        goal: { isRace: goal.goalType === 'RACE' && goalDate != null, distanceM: goal.targetDistanceM },
+        goal: layoutGoal,
         compression: input.compression ?? undefined,
-        recentVolume: recentRunningVolume(context.activities, today),
-        runsPerWeek: WEEKDAYS.filter((d) => input.availability[d]).length,
+        recentVolume,
+        runsPerWeek,
         anchorPresent: anchor != null,
     });
     if (!result.ok) return result;
+
+    const { recommended } = recommendSchool({
+        goal: layoutGoal,
+        horizonWeeks: horizonWeekCount(today, endDate),
+        anchorPresent: anchor != null,
+        recentMetresPerWeek: recentVolume.metresPerWeek,
+    });
+    const rationale = explainPlan({
+        school,
+        layout: result.layout,
+        goal: { name: goal.targetEventName ?? goalTypeName(goal.goalType), date: goalDate },
+        recommended,
+        anchor,
+        recentVolume,
+        runsPerWeek,
+        longRunDay: input.longRunDay,
+    });
 
     return {
         ok: true,
@@ -113,6 +139,7 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
             hrZoneBounds: input.hrZoneBounds,
             raceResults: input.raceResults,
             layout: result.layout,
+            rationale,
         },
     };
 }
