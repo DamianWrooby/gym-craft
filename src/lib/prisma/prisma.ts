@@ -3,7 +3,7 @@ import { currentMonthStartIso } from '$lib/utils/iso-week';
 import { reportSummaryPreview } from '$lib/utils/report-format';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
-import type { AthleteProfile, Plan, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
+import type { AthleteProfile, GymPlan, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
 import type { NewPlan } from '../../models/plan/plan.model';
 import bcrypt from 'bcrypt';
 
@@ -14,7 +14,7 @@ const runningGoalsKey = (userId: string, includeArchived: boolean) =>
     `running_goals_${includeArchived ? 'all' : 'active'}_${userId}`;
 const trainingReportsKey = (userId: string) => `training_reports_${userId}`;
 
-function invalidateAthleteProfile(userId: string): void {
+export function invalidateAthleteProfile(userId: string): void {
     cache.del(athleteProfileKey(userId));
 }
 
@@ -40,8 +40,8 @@ export async function getUserBySession(session: string): Promise<Pick<User, 'id'
     return user;
 }
 
-export async function addPlan(userId: string, plan: NewPlan): Promise<Plan> {
-    const createdPlan = await db.plan.create({
+export async function addPlan(userId: string, plan: NewPlan): Promise<GymPlan> {
+    const createdPlan = await db.gymPlan.create({
         data: {
             ...plan,
         },
@@ -51,8 +51,8 @@ export async function addPlan(userId: string, plan: NewPlan): Promise<Plan> {
     return createdPlan;
 }
 
-export async function deletePlan(planId: string, userId: string): Promise<Plan> {
-    const plan = await db.plan.findUnique({
+export async function deletePlan(planId: string, userId: string): Promise<GymPlan> {
+    const plan = await db.gymPlan.findUnique({
         where: { id: planId },
     });
 
@@ -65,7 +65,7 @@ export async function deletePlan(planId: string, userId: string): Promise<Plan> 
     }
 
     cache.del(`plans_${userId}`);
-    return await db.plan.delete({
+    return await db.gymPlan.delete({
         where: {
             id: planId,
         },
@@ -117,7 +117,7 @@ export async function getGeneralPlanLimit(): Promise<number> {
 }
 
 export async function updatePlanName(planId: string, newName: string, userId: string): Promise<void> {
-    const result = await db.plan.updateMany({
+    const result = await db.gymPlan.updateMany({
         where: { id: planId, userId },
         data: { name: newName },
     });
@@ -129,14 +129,14 @@ export async function updatePlanName(planId: string, newName: string, userId: st
     cache.del(`plans_${userId}`);
 }
 
-export async function getPlans(userId: string): Promise<Plan[] | Error> {
+export async function getPlans(userId: string): Promise<GymPlan[] | Error> {
     const cacheKey = `plans_${userId}`;
     const cachedPlans = cache.get(cacheKey);
 
-    if (cachedPlans) return cachedPlans as Plan[];
+    if (cachedPlans) return cachedPlans as GymPlan[];
     if (!userId) return fail('User not found');
 
-    const plans = await db.plan.findMany({
+    const plans = await db.gymPlan.findMany({
         where: { userId: userId },
     });
     cache.set(cacheKey, plans);
@@ -144,8 +144,8 @@ export async function getPlans(userId: string): Promise<Plan[] | Error> {
     return plans;
 }
 
-export async function getPlan(planId: string, userId: string): Promise<Plan | null> {
-    return await db.plan.findUnique({
+export async function getPlan(planId: string, userId: string): Promise<GymPlan | null> {
+    return await db.gymPlan.findUnique({
         where: { userId: userId, id: planId },
     });
 }

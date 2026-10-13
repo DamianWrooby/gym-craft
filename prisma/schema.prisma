@@ -26,7 +26,10 @@ model User {
     stripeSubscriptionId String?
     subscriptionStatus   String?
     currentPeriodEnd     DateTime?
+    gymPlans             GymPlan[]
     plans                Plan[]
+    planWeeks            PlanWeek[]
+    raceResults          RaceResult[]
     verificationTokens   VerificationToken[]
     garminData           GarminData?
     athleteProfile       AthleteProfile?
@@ -45,7 +48,9 @@ model Roles {
     User User[]
 }
 
-model Plan {
+// Legacy gym plan (a repeating week of Garmin-shaped workouts). Kept working until planner
+// slice 2 drops it (ADR 0017); renamed in Prisma only, the table is still "Plan".
+model GymPlan {
     id          String   @id @default(uuid())
     name        String
     description String
@@ -54,6 +59,117 @@ model Plan {
     updatedAt   DateTime @updatedAt
     userId      String
     User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@map("Plan")
+}
+
+// A bounded horizon working toward one goal (ADRs 0008, 0012). One ACTIVE plan per user,
+// enforced by a partial unique index in the migration. Table name avoids the legacy "Plan".
+model Plan {
+    id           String      @id @default(uuid())
+    userId       String
+    goalId       String
+    startDate    DateTime    @db.Date
+    endDate      DateTime    @db.Date
+    state        PlanState   @default(ACTIVE)
+    // { mon: true, tue: false, ... } — the availability map.
+    availability Json
+    // 0 = Monday … 6 = Sunday.
+    longRunDay   Int
+    // How the athlete's data shaped the layout (PlanRationale), frozen at creation.
+    rationale    Json?
+    createdAt    DateTime    @default(now())
+    updatedAt    DateTime    @updatedAt
+    User         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    goal         RunningGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+    phases       PlanPhase[]
+
+    @@index([userId, state])
+    @@map("HorizonPlan")
+}
+
+enum PlanState {
+    ACTIVE
+    COMPLETED
+    ABANDONED
+}
+
+model PlanPhase {
+    id         String      @id @default(uuid())
+    planId     String
+    key        String
+    name       String
+    ordinal    Int
+    startDate  DateTime    @db.Date
+    endDate    DateTime    @db.Date
+    intent     String
+    source     PhaseSource
+    // Training school id from the catalogue; stamped per phase so past phases keep theirs.
+    school     String
+    volumeUnit VolumeUnit
+    plan       Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+    weeks      PlanWeek[]
+
+    @@unique([planId, ordinal])
+}
+
+enum PhaseSource {
+    SCHOOL
+    LEAD_IN
+}
+
+enum VolumeUnit {
+    MINUTES
+    METRES
+}
+
+model PlanWeek {
+    id                    String         @id @default(uuid())
+    userId                String
+    phaseId               String
+    startDate             DateTime       @db.Date
+    endDate               DateTime       @db.Date
+    inHorizonDays         Int
+    // Struck once at the pull and frozen (ADR 0011); null until then.
+    recoveryBudget        Float?
+    chronicLoad           Float?
+    budgetStruckAt        DateTime?
+    outlookFactor         Float?
+    generation            WeekGeneration @default(PENDING)
+    isCutback             Boolean        @default(false)
+    // Taper weeks count as recovery for the cutback cap (ADR 0021).
+    isTaper               Boolean        @default(false)
+    // Set on the week holding the time trial when no anchor existed at layout (ADR 0020).
+    timeTrialDistanceM    Int?
+    volumeTarget          Int
+    volumeUnit            VolumeUnit
+    strengthSessionTarget Int
+    revision              Int            @default(0)
+    revisedAt             DateTime?
+    User                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    phase                 PlanPhase      @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+    @@index([userId, startDate])
+    @@index([phaseId])
+}
+
+enum WeekGeneration {
+    PENDING
+    GENERATED
+    FAILED
+}
+
+// Athlete-entered timed effort, 1500–42195 m (ADR 0010). Never inferred.
+model RaceResult {
+    id        String   @id @default(uuid())
+    userId    String
+    date      DateTime @db.Date
+    distanceM Int
+    timeSec   Int
+    label     String?  @db.VarChar(100)
+    createdAt DateTime @default(now())
+    User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
 }
@@ -141,6 +257,7 @@ model RunningGoal {
     createdAt       DateTime  @default(now())
     updatedAt       DateTime  @updatedAt
     User            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    plans           Plan[]
 
     @@index([userId])
 }
