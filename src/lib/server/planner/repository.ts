@@ -65,6 +65,7 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord): Pro
                     endDate: asDate(record.endDate),
                     availability: record.availability,
                     longRunDay: record.longRunDay,
+                    rationale: record.rationale as unknown as Prisma.InputJsonValue,
                     phases: {
                         create: layout.phases.map((p) => ({
                             key: p.key,

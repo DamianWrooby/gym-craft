@@ -89,6 +89,15 @@ describe('POST /api/user/[id]/plan', () => {
         expect(weeks).toHaveLength(16);
         expect(weeks[0]).toMatchObject({ userId, inHorizonDays: 7, volumeUnit: 'MINUTES', timeTrialDistanceM: null });
         expect(weeks.map((w: { isTaper: boolean }) => w.isTaper).slice(-3)).toEqual([false, true, true]);
+        expect(data.rationale.sections.map((s: { key: string }) => s.key)).toEqual([
+            'school',
+            'horizon',
+            'anchor',
+            'volume',
+            'recovery',
+            'week',
+        ]);
+        expect(data.rationale.sections[2].lines[0]).toBe('Your paces come from your 5 km on 2026-09-01 in 21:40.');
 
         expect(tx.athleteProfile.update).toHaveBeenCalledWith({
             where: { userId },

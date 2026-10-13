@@ -20,6 +20,7 @@ const plan: StoredPlan = {
     endDate: '2026-11-01',
     goalId: 'g1',
     goalName: 'City Half',
+    rationale: null,
     phases: [
         {
             ordinal: 0,

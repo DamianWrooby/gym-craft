@@ -3,6 +3,7 @@
     import PlanHeader from '$lib/components/planner/PlanHeader.svelte';
     import PhaseTimeline from '$lib/components/planner/PhaseTimeline.svelte';
     import WeekInspector from '$lib/components/planner/WeekInspector.svelte';
+    import PlanRationale from '$lib/components/planner/PlanRationale.svelte';
     import type { PlanView } from '$lib/planner/plan-view';
 
     export let data: { plan: PlanView | null };
@@ -17,6 +18,7 @@
 <PlannerShell>
     {#if plan && shown != null}
         <PlanHeader {plan} />
+        {#if plan.rationale}<PlanRationale rationale={plan.rationale} />{/if}
         <PhaseTimeline {plan} selected={shown} on:select={(e) => (selected = e.detail)} />
         <WeekInspector {plan} index={shown} />
     {:else}

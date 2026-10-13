@@ -77,6 +77,8 @@ model Plan {
     availability Json
     // 0 = Monday … 6 = Sunday.
     longRunDay   Int
+    // How the athlete's data shaped the layout (PlanRationale), frozen at creation.
+    rationale    Json?
     createdAt    DateTime    @default(now())
     updatedAt    DateTime    @updatedAt
     User         User        @relation(fields: [userId], references: [id], onDelete: Cascade)

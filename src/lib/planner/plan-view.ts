@@ -2,6 +2,7 @@
 import { tuneUpFixtures, type FixtureGoal, type TuneUpFixture } from './core/fixtures';
 import { getSchool, isSchoolId } from './schools/catalogue';
 import type { VolumeUnit } from './schools/types';
+import type { PlanRationale } from './core/explain';
 
 export interface PlanViewPhase {
     ordinal: number;
@@ -40,6 +41,8 @@ export interface PlanView {
     fixtures: TuneUpFixture[];
     /** Index of the week holding today; null before the start or after the end. */
     currentWeekIndex: number | null;
+    /** Null for plans created before the rationale was stored. */
+    rationale: PlanRationale | null;
 }
 
 export interface StoredPlan {
@@ -48,6 +51,7 @@ export interface StoredPlan {
     endDate: string;
     goalId: string;
     goalName: string;
+    rationale: PlanRationale | null;
     phases: {
         ordinal: number;
         name: string;
@@ -101,6 +105,7 @@ export function toPlanView(plan: StoredPlan, goals: FixtureGoal[], today: string
             weeks,
         }),
         currentWeekIndex: current && today >= plan.startDate && today <= plan.endDate ? current.index : null,
+        rationale: plan.rationale,
     };
 }
 
