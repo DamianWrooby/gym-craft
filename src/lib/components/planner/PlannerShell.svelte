@@ -1,9 +1,16 @@
 <script lang="ts">
     // Visual frame for the planner only (ADR 0018): cyberpunk direction in the GymCraft palette.
     export let fullscreen = false;
+
+    // A click anywhere on a date field opens the calendar, not only on its small icon.
+    function openDatePicker(e: MouseEvent) {
+        const target = e.target as HTMLInputElement;
+        if (target instanceof HTMLInputElement && target.type === 'date') target.showPicker?.();
+    }
 </script>
 
-<div class="gc-planner {fullscreen ? 'min-h-screen' : 'min-h-full'} px-4 py-6 md:px-8">
+<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+<div class="gc-planner {fullscreen ? 'min-h-screen' : 'min-h-full'} px-4 py-6 md:px-8" on:click={openDatePicker}>
     <div class="mx-auto max-w-5xl space-y-4">
         <slot />
     </div>
@@ -91,6 +98,11 @@
         color: #e2e8f0;
         padding: 0.35rem 0.5rem;
         border-radius: 0.2rem;
+    }
+    /* Dark color scheme makes the native calendar icon and popup readable on the dark field. */
+    .gc-planner :global(input[type='date']) {
+        color-scheme: dark;
+        cursor: pointer;
     }
     .gc-planner :global(input[type='checkbox']) {
         width: 1.1rem;

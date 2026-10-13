@@ -63,7 +63,7 @@
         { label: 'Half marathon', m: 21097, format: 'h:mm:ss', example: '1:45:00' },
         { label: 'Marathon', m: 42195, format: 'h:mm:ss', example: '3:45:00' },
     ];
-    const distanceLabel = (m: number) => DISTANCES.find((d) => d.m === m)?.label ?? `${m / 1000} km`;
+    const distanceLabel = (m: number) => DISTANCES.find((d) => d.m === m)?.label ?? `${(m / 1000).toFixed(1)} km`;
     $: newDistance = DISTANCES.find((d) => d.m === newResult.distanceM) ?? DISTANCES[1];
 
     let state = initialWizardState(data.profileMissing ? null : (data.zoneProposal?.zones ?? null));
@@ -475,9 +475,17 @@
                 </div>
                 {#if resultError}<p class="text-sm text-amber-300">{resultError}</p>{/if}
                 <p class="text-sm text-sky-300">
-                    {anchor
-                        ? `Paces anchor on your ${anchor.distanceM / 1000} km${anchor.stale ? ' (stale: enter a newer result)' : ''}.`
-                        : 'No anchor yet: a time trial will be scheduled.'}
+                    {#if !anchor}
+                        No result yet, so a time trial is scheduled. Your training paces come from it.
+                    {:else if anchor.provenance === 'RACE_RESULT'}
+                        Your training paces come from your {distanceLabel(anchor.distanceM)} on {anchor.date} in {formatTime(
+                            anchor.timeSec,
+                        )}.
+                    {:else}
+                        Your training paces come from your best recent Garmin run: {distanceLabel(anchor.distanceM)} on
+                        {anchor.date} in {formatTime(anchor.timeSec)}. Add a race result to use a real race effort.
+                    {/if}
+                    {#if anchor?.stale}This result is old: enter a newer one.{/if}
                 </p>
             </section>
         {:else if step === 'availability'}
