@@ -55,13 +55,16 @@
         age: 'Proposed from your age. This is a rough estimate: check it.',
     };
     const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // `example` is a typical finish time, shown as the placeholder in the right format.
     const DISTANCES = [
-        { label: '1500 m', m: 1500 },
-        { label: '5 km', m: 5000 },
-        { label: '10 km', m: 10000 },
-        { label: 'Half marathon', m: 21097 },
-        { label: 'Marathon', m: 42195 },
+        { label: '1500 m', m: 1500, format: 'm:ss', example: '6:30' },
+        { label: '5 km', m: 5000, format: 'mm:ss', example: '24:30' },
+        { label: '10 km', m: 10000, format: 'mm:ss', example: '52:00' },
+        { label: 'Half marathon', m: 21097, format: 'h:mm:ss', example: '1:45:00' },
+        { label: 'Marathon', m: 42195, format: 'h:mm:ss', example: '3:45:00' },
     ];
+    const distanceLabel = (m: number) => DISTANCES.find((d) => d.m === m)?.label ?? `${m / 1000} km`;
+    $: newDistance = DISTANCES.find((d) => d.m === newResult.distanceM) ?? DISTANCES[1];
 
     let state = initialWizardState(data.profileMissing ? null : (data.zoneProposal?.zones ?? null));
     let stepIndex = 0;
@@ -157,9 +160,12 @@
     }
 
     function parseTime(text: string): number | null {
-        const parts = text.trim().split(':').map(Number);
-        if (parts.some((p) => !Number.isFinite(p) || p < 0) || parts.length < 2 || parts.length > 3) return null;
-        return parts.reduce((total, p) => total * 60 + p, 0);
+        const parts = text.trim().split(':');
+        if (parts.length < 2 || parts.length > 3 || !parts.every((p) => /^\d+$/.test(p))) return null;
+        const nums = parts.map(Number);
+        // Minutes and seconds after the first field must stay below 60.
+        if (nums.slice(1).some((n) => n > 59)) return null;
+        return nums.reduce((total, n) => total * 60 + n, 0);
     }
 
     function addResult() {
@@ -169,7 +175,7 @@
             return;
         }
         if (!timeSec) {
-            resultError = 'Enter the time as mm:ss or h:mm:ss.';
+            resultError = `Enter the time as ${newDistance.format}, for example ${newDistance.example}.`;
             return;
         }
         state = {
@@ -431,12 +437,12 @@
                 <ul class="space-y-1">
                     {#each data.raceResults as r}
                         <li class="text-sm text-slate-400">
-                            {r.date} · {r.distanceM / 1000} km · {formatTime(r.timeSec)} (saved)
+                            {r.date} · {distanceLabel(r.distanceM)} · {formatTime(r.timeSec)} (saved)
                         </li>
                     {/each}
                     {#each state.raceResults as r, i}
                         <li class="text-sm flex gap-3">
-                            {r.date} · {r.distanceM / 1000} km · {formatTime(r.timeSec)}
+                            {r.date} · {distanceLabel(r.distanceM)} · {formatTime(r.timeSec)}
                             <button
                                 type="button"
                                 class="text-rose-400"
@@ -447,11 +453,24 @@
                     {/each}
                 </ul>
                 <div class="flex flex-wrap gap-2 items-end">
-                    <input type="date" max={data.today} bind:value={newResult.date} aria-label="Result date" />
-                    <select bind:value={newResult.distanceM} aria-label="Distance">
-                        {#each DISTANCES as d}<option value={d.m}>{d.label}</option>{/each}
-                    </select>
-                    <input placeholder="mm:ss" class="w-28" bind:value={newResult.time} aria-label="Time" />
+                    <label class="flex flex-col gap-1 text-xs text-slate-400">
+                        Date
+                        <input type="date" max={data.today} bind:value={newResult.date} />
+                    </label>
+                    <label class="flex flex-col gap-1 text-xs text-slate-400">
+                        Distance
+                        <select bind:value={newResult.distanceM}>
+                            {#each DISTANCES as d}<option value={d.m}>{d.label}</option>{/each}
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1 text-xs text-slate-400">
+                        Time ({newDistance.format})
+                        <input
+                            placeholder={newDistance.example}
+                            inputmode="numeric"
+                            class="w-28"
+                            bind:value={newResult.time} />
+                    </label>
                     <button type="button" class="gc-ghost" on:click={addResult}>Add</button>
                 </div>
                 {#if resultError}<p class="text-sm text-amber-300">{resultError}</p>{/if}
