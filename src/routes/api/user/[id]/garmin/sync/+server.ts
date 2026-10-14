@@ -88,6 +88,8 @@ async function persistFromClient(
                 mode: result.mode,
                 activitiesUpserted: result.activitiesUpserted,
                 lastSyncedAt: result.lastSyncedAt.toISOString(),
+                // The browser fetches these runs' detail via the proxy and posts it back (ADR 0027).
+                runsNeedingDetail: result.runsNeedingDetail,
             },
         });
     } catch (err) {

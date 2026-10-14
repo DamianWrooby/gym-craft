@@ -2,43 +2,51 @@ import { db } from '$lib/database';
 import { isRunningTypeKey } from '$lib/utils/activity-type';
 import { edwardsTrimp, zoneSecondsFromSamples, type HrSample } from '$lib/server/analytics/load/trimp';
 import { isValidZones, type HrZoneBound } from '$lib/planner/core/zones';
-import { ensureActivityDetail } from './ensure-activity-detail';
 
 /** Runs inside this window are scored against the athlete's zones; older history keeps Garmin's. */
 export const RESCORE_WINDOW_DAYS = 42;
-/** Detail fetches are slow Garmin round trips; cap them per sync so the request stays short. */
-export const MAX_DETAIL_FETCHES_PER_SYNC = 5;
-
-const detailSelect = { splits: true, samples: true, route: true, dynamics: true, schemaVersion: true } as const;
+export interface RebinResult {
+    scored: number;
+    /** Garmin IDs of window runs with no stored samples; the browser fetches their detail via the proxy. */
+    needsDetail: string[];
+}
 
 /**
  * Re-bins every run in the window still flagged `GARMIN_ZONES` against the athlete's own zones,
- * fetching `ActivityDetail` where it is missing. A run that cannot be scored keeps Garmin's load
- * and its flag, so the next sync retries it. Returns the number of runs re-scored.
+ * from stored samples only: no Garmin call, so it is safe inside a time-limited function. Runs
+ * without stored samples are returned for the browser to fetch (ADR 0027). A run that cannot be
+ * scored keeps Garmin's load and its flag, so the next sync retries it.
  */
-export async function rebinRunsAfterSync(userId: string, now = new Date()): Promise<number> {
+export async function rebinRunsAfterSync(userId: string, now = new Date()): Promise<RebinResult> {
     const zones = await profileZones(userId);
-    if (!zones) return 0;
+    if (!zones) return { scored: 0, needsDetail: [] };
 
     const candidates = await db.activity.findMany({
         where: { userId, zoneSource: 'GARMIN_ZONES', startTime: { gte: windowStart(now) } },
         orderBy: { startTime: 'desc' },
-        include: { detail: { select: detailSelect } },
+        select: { id: true, garminActivityId: true, activityType: true, detail: { select: { samples: true } } },
     });
 
-    let fetches = 0;
-    let scored = 0;
-    for (const activity of candidates) {
-        if (!isRunningTypeKey(activity.activityType)) continue;
-        if (!activity.detail) {
-            if (fetches >= MAX_DETAIL_FETCHES_PER_SYNC) continue;
-            fetches++;
+    const result: RebinResult = { scored: 0, needsDetail: [] };
+    for (const run of candidates) {
+        if (!isRunningTypeKey(run.activityType)) continue;
+        if (!run.detail) {
+            result.needsDetail.push(run.garminActivityId.toString());
+            continue;
         }
-        const detail = await ensureActivityDetail(userId, activity);
-        if (!detail.ok) continue;
-        if (await scoreFromSamples(activity.id, detail.detail.samples, zones)) scored++;
+        if (await scoreFromSamples(run.id, run.detail.samples as unknown as HrSample[], zones)) result.scored++;
     }
-    return scored;
+    return result;
+}
+
+/**
+ * Scores one run from freshly stored samples against the profile zones. Returns false (run keeps
+ * Garmin's load and flag) when the athlete has no confirmed zones or the samples carry no HR.
+ */
+export async function scoreRunFromSamples(userId: string, activityId: string, samples: HrSample[]): Promise<boolean> {
+    const zones = await profileZones(userId);
+    if (!zones) return false;
+    return scoreFromSamples(activityId, samples, zones);
 }
 
 /**

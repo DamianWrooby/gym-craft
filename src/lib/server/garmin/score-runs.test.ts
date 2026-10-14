@@ -6,18 +6,11 @@ const mocks = vi.hoisted(() => ({
         athleteProfile: { findUnique: vi.fn() },
         planWeek: { update: vi.fn(), updateMany: vi.fn() },
     },
-    ensureActivityDetail: vi.fn(),
 }));
 
 vi.mock('$lib/database', () => ({ db: mocks.db }));
-vi.mock('./ensure-activity-detail', () => ({ ensureActivityDetail: mocks.ensureActivityDetail }));
 
-import {
-    MAX_DETAIL_FETCHES_PER_SYNC,
-    rebinRunsAfterSync,
-    rescoreIfZonesChanged,
-    rescoreRunsForZoneChange,
-} from './score-runs';
+import { rebinRunsAfterSync, rescoreIfZonesChanged, rescoreRunsForZoneChange, scoreRunFromSamples } from './score-runs';
 
 const zones = [
     { zone: 1, lowerBpm: 100, upperBpm: 120 },
@@ -40,14 +33,13 @@ function run(id: string, overrides: Record<string, unknown> = {}) {
 afterEach(() => vi.clearAllMocks());
 
 describe('rebinRunsAfterSync', () => {
-    it('re-bins flagged runs in the 42-day window against the profile zones', async () => {
+    it('re-bins flagged runs with stored samples against the profile zones', async () => {
         mocks.db.athleteProfile.findUnique.mockResolvedValue({ hrZoneBounds: zones });
-        mocks.db.activity.findMany.mockResolvedValue([run('a1')]);
-        mocks.ensureActivityDetail.mockResolvedValue({ ok: true, detail: { samples } });
+        mocks.db.activity.findMany.mockResolvedValue([run('a1', { detail: { samples } })]);
 
-        const scored = await rebinRunsAfterSync('user-1', now);
+        const result = await rebinRunsAfterSync('user-1', now);
 
-        expect(scored).toBe(1);
+        expect(result).toEqual({ scored: 1, needsDetail: [] });
         const where = mocks.db.activity.findMany.mock.calls[0][0].where;
         expect(where.zoneSource).toBe('GARMIN_ZONES');
         expect(where.startTime.gte.toISOString()).toBe('2026-09-02T12:00:00.000Z');
@@ -57,55 +49,55 @@ describe('rebinRunsAfterSync', () => {
         });
     });
 
-    it('keeps the garmin-zones flag when the detail fetch fails, so the next sync retries', async () => {
+    it('returns runs without stored samples for the browser to fetch, with no cap', async () => {
         mocks.db.athleteProfile.findUnique.mockResolvedValue({ hrZoneBounds: zones });
-        mocks.db.activity.findMany.mockResolvedValue([run('a1')]);
-        mocks.ensureActivityDetail.mockResolvedValue({ ok: false, status: 502, code: 'X', message: 'down' });
+        const missing = Array.from({ length: 30 }, (_, i) => run(`m${i}`, { garminActivityId: BigInt(1000 + i) }));
+        mocks.db.activity.findMany.mockResolvedValue([run('ride', { activityType: 'cycling' }), ...missing]);
 
-        expect(await rebinRunsAfterSync('user-1', now)).toBe(0);
+        const result = await rebinRunsAfterSync('user-1', now);
+
+        expect(result.scored).toBe(0);
+        expect(result.needsDetail).toHaveLength(30);
+        expect(result.needsDetail[0]).toBe('1000');
         expect(mocks.db.activity.update).not.toHaveBeenCalled();
     });
 
-    it('keeps the flag when samples carry no heart rate', async () => {
+    it('keeps the flag when stored samples carry no heart rate', async () => {
         mocks.db.athleteProfile.findUnique.mockResolvedValue({ hrZoneBounds: zones });
-        mocks.db.activity.findMany.mockResolvedValue([run('a1')]);
-        mocks.ensureActivityDetail.mockResolvedValue({
-            ok: true,
-            detail: {
-                samples: [
-                    { timestampSec: 0, heartRate: null },
-                    { timestampSec: 60, heartRate: null },
-                ],
-            },
-        });
+        const noHr = [
+            { timestampSec: 0, heartRate: null },
+            { timestampSec: 60, heartRate: null },
+        ];
+        mocks.db.activity.findMany.mockResolvedValue([run('a1', { detail: { samples: noHr } })]);
 
-        expect(await rebinRunsAfterSync('user-1', now)).toBe(0);
+        expect(await rebinRunsAfterSync('user-1', now)).toEqual({ scored: 0, needsDetail: [] });
         expect(mocks.db.activity.update).not.toHaveBeenCalled();
     });
 
     it('does nothing without confirmed profile zones', async () => {
         mocks.db.athleteProfile.findUnique.mockResolvedValue({ hrZoneBounds: null });
 
-        expect(await rebinRunsAfterSync('user-1', now)).toBe(0);
+        expect(await rebinRunsAfterSync('user-1', now)).toEqual({ scored: 0, needsDetail: [] });
         expect(mocks.db.activity.findMany).not.toHaveBeenCalled();
     });
+});
 
-    it('skips non-runs and caps detail fetches per sync, but scores runs with stored detail', async () => {
+describe('scoreRunFromSamples', () => {
+    it('scores a run against the profile zones', async () => {
         mocks.db.athleteProfile.findUnique.mockResolvedValue({ hrZoneBounds: zones });
-        const missing = Array.from({ length: MAX_DETAIL_FETCHES_PER_SYNC + 2 }, (_, i) => run(`m${i}`));
-        mocks.db.activity.findMany.mockResolvedValue([
-            run('ride', { activityType: 'cycling' }),
-            ...missing,
-            run('cached', { detail: { samples } }),
-        ]);
-        mocks.ensureActivityDetail.mockResolvedValue({ ok: true, detail: { samples } });
 
-        const scored = await rebinRunsAfterSync('user-1', now);
+        expect(await scoreRunFromSamples('user-1', 'a1', samples)).toBe(true);
+        expect(mocks.db.activity.update).toHaveBeenCalledWith({
+            where: { id: 'a1' },
+            data: { trimpLoad: 20, loadMethod: 'EDWARDS', zoneSource: 'ATHLETE_ZONES' },
+        });
+    });
 
-        expect(scored).toBe(MAX_DETAIL_FETCHES_PER_SYNC + 1);
-        const ids = mocks.ensureActivityDetail.mock.calls.map((c) => c[1].id);
-        expect(ids).not.toContain('ride');
-        expect(ids).toContain('cached');
+    it('leaves the run on Garmin zones without confirmed profile zones', async () => {
+        mocks.db.athleteProfile.findUnique.mockResolvedValue(null);
+
+        expect(await scoreRunFromSamples('user-1', 'a1', samples)).toBe(false);
+        expect(mocks.db.activity.update).not.toHaveBeenCalled();
     });
 });
 
@@ -124,7 +116,6 @@ describe('rescoreRunsForZoneChange', () => {
         const scored = await rescoreRunsForZoneChange('user-1', newZones, now);
 
         expect(scored).toBe(1);
-        expect(mocks.ensureActivityDetail).not.toHaveBeenCalled();
         // 600 s now in zone 1: 10.
         expect(mocks.db.activity.update).toHaveBeenCalledWith({
             where: { id: 'a1' },

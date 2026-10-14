@@ -19,6 +19,8 @@ export interface SyncSummary {
     mode: SyncMode;
     activitiesUpserted: number;
     lastSyncedAt: string;
+    /** Garmin IDs of runs still on Garmin's zones with no stored samples (ADR 0027). */
+    runsNeedingDetail?: string[];
 }
 
 export type RunProxySyncResult =
@@ -38,6 +40,8 @@ export interface RunProxySyncArgs {
      * `total: 1` for an incremental sync, so callers need no special case.
      */
     onProgress?: (completed: number, total: number) => void;
+    /** Called after each run's detail is fetched and scored against the athlete's zones. */
+    onScoringProgress?: (completed: number, total: number) => void;
 }
 
 const GARMIN_WAKE_BUDGET_MS = 120_000;
@@ -250,5 +254,73 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
         return { ok: false, code, message };
     }
 
-    return { ok: true, summary: persist.payload.data as SyncSummary };
+    const summary = persist.payload.data as SyncSummary;
+    await scoreRunsNeedingDetail({
+        userId,
+        garminActivityIds: summary.runsNeedingDetail ?? [],
+        sessionToken: activeToken,
+        renewalTried,
+        onProgress: args.onScoringProgress,
+    });
+    return { ok: true, summary };
+}
+
+interface ScoreRunsArgs {
+    userId: string;
+    garminActivityIds: string[];
+    sessionToken: string;
+    renewalTried: boolean;
+    onProgress?: (completed: number, total: number) => void;
+}
+
+/**
+ * Third step of the sync (ADR 0027): for each new run still on Garmin's zones, fetch its detail
+ * through the proxy and post it back so the app scores it against the athlete's own zones. Runs
+ * in sequence because the Garmin microservice is a single free-tier instance.
+ *
+ * Best effort: the activities are already saved, so a failure never fails the sync. A run that
+ * fails keeps Garmin's load and its flag, and the next sync returns it again. A refused session
+ * gets the same single renewal as the windows; a second refusal stops the loop.
+ */
+async function scoreRunsNeedingDetail(args: ScoreRunsArgs): Promise<void> {
+    const { userId, garminActivityIds } = args;
+    if (garminActivityIds.length === 0) return;
+
+    const proxyUrl = isProduction()
+        ? appConfig.garminActivityDetailApiUrlPROD
+        : appConfig.garminActivityDetailApiUrlDEV;
+    let activeToken = args.sessionToken;
+    let renewalTried = args.renewalTried;
+
+    for (const [index, garminActivityId] of garminActivityIds.entries()) {
+        const requestDetail = () =>
+            postJson(
+                proxyUrl,
+                { activityId: Number(garminActivityId) },
+                { headers: { Authorization: `Bearer ${activeToken}` }, timeoutMs: PROXY_REQUEST_TIMEOUT_MS },
+            );
+
+        let proxy = await requestDetail();
+        if (!('error' in proxy) && !proxy.ok) {
+            if (classifyProxyFailure(proxy.status, proxy.payload).code === 'INVALID_TOKEN') {
+                if (renewalTried) return;
+                renewalTried = true;
+                const renewed = await refreshGarminSession(userId, activeToken);
+                if (!renewed.ok) return;
+                activeToken = renewed.sessionToken;
+                proxy = await requestDetail();
+            }
+        }
+
+        const detail = 'error' in proxy || !proxy.ok ? null : proxy.payload.data;
+        if (detail && typeof detail === 'object') {
+            const stored = await postJson(`/api/user/${userId}/garmin/activity-detail`, { garminActivityId, detail });
+            if ('error' in stored || !stored.ok) {
+                console.warn('[garmin-sync] could not score run', { garminActivityId });
+            }
+        } else {
+            console.warn('[garmin-sync] could not fetch run detail', { garminActivityId });
+        }
+        args.onProgress?.(index + 1, garminActivityIds.length);
+    }
 }

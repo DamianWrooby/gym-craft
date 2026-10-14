@@ -132,7 +132,7 @@ async function requestActivityDetail(
     return { ok: true, value: normalizeDetail(payload) };
 }
 
-function normalizeDetail(payload: Record<string, unknown>): ActivityDetailPayload {
+export function normalizeDetail(payload: Record<string, unknown>): ActivityDetailPayload {
     const splits = Array.isArray(payload.splits)
         ? (payload.splits as Record<string, unknown>[]).map((s, i) => normalizeSplit(s, i))
         : [];

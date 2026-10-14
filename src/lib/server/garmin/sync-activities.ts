@@ -9,7 +9,14 @@ import type { GarminActivity } from '@/models/garmin/activity.model';
 import type { Prisma } from '@prisma/client';
 
 export type SyncResult =
-    | { ok: true; mode: 'backfill' | 'incremental' | 'skipped'; activitiesUpserted: number; lastSyncedAt: Date }
+    | {
+          ok: true;
+          mode: 'backfill' | 'incremental' | 'skipped';
+          activitiesUpserted: number;
+          lastSyncedAt: Date;
+          /** Garmin IDs of runs still on Garmin's zones with no stored samples (ADR 0027). */
+          runsNeedingDetail: string[];
+      }
     | { ok: false; status: number; code: string; message: string };
 
 export async function syncUserActivities(userId: string, backfillDays: number): Promise<SyncResult> {
@@ -80,7 +87,7 @@ export async function persistActivities(
     backfillDays: number,
 ): Promise<SyncResult> {
     const upserted = await upsertActivities(userId, activities);
-    await rebinRuns(userId);
+    const runsNeedingDetail = await rebinRuns(userId);
     const now = new Date();
 
     if (mode === 'backfill') {
@@ -94,7 +101,7 @@ export async function persistActivities(
             update: { lastSyncedAt: now, oldestActivityAt, backfillComplete: true },
         });
 
-        return { ok: true, mode: 'backfill', activitiesUpserted: upserted, lastSyncedAt: now };
+        return { ok: true, mode: 'backfill', activitiesUpserted: upserted, lastSyncedAt: now, runsNeedingDetail };
     }
 
     await db.garminSyncState.update({
@@ -102,7 +109,7 @@ export async function persistActivities(
         data: { lastSyncedAt: now },
     });
 
-    return { ok: true, mode: 'incremental', activitiesUpserted: upserted, lastSyncedAt: now };
+    return { ok: true, mode: 'incremental', activitiesUpserted: upserted, lastSyncedAt: now, runsNeedingDetail };
 }
 
 async function upsertActivities(userId: string, activities: GarminActivity[]): Promise<number> {
@@ -140,11 +147,12 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
 }
 
 /** Re-binning is best effort: a failure leaves the flag set and never fails the sync. */
-async function rebinRuns(userId: string): Promise<void> {
+async function rebinRuns(userId: string): Promise<string[]> {
     try {
-        await rebinRunsAfterSync(userId);
+        return (await rebinRunsAfterSync(userId)).needsDetail;
     } catch (e) {
         console.error('Re-binning runs failed; the next sync retries', e);
+        return [];
     }
 }
 
