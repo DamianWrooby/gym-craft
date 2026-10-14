@@ -272,4 +272,87 @@ describe('runProxySync', () => {
 
         expect(result).toEqual({ ok: false, code: 'STALE_STATE', message: expect.any(String) });
     });
+
+    describe('scoring runs against athlete zones', () => {
+        const detail = { activityId: 7, samples: [{ timestampSec: 0, heartRate: 150 }] };
+        const summary = {
+            mode: 'incremental',
+            activitiesUpserted: 2,
+            lastSyncedAt: '2026-06-02T12:00:00.000Z',
+            runsNeedingDetail: ['7', '8'],
+        };
+        const incremental = { backfillComplete: true, lastSyncedAt: '2026-06-01T12:00:00.000Z' };
+
+        it('fetches each run detail via the proxy and posts it back to be scored', async () => {
+            fetchMock
+                .mockResolvedValueOnce(jsonResponse(200, { data: [] }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: summary }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: detail }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: { scored: true } }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: { ...detail, activityId: 8 } }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: { scored: true } }));
+            const onScoringProgress = vi.fn();
+
+            const result = await runProxySync({
+                userId,
+                garminEmail,
+                sessionToken,
+                syncState: incremental,
+                backfillDays: 30,
+                onScoringProgress,
+            });
+
+            expect(result).toEqual({ ok: true, summary });
+            expect(fetchMock.mock.calls[2][0]).toContain('/api/garmin-activity-detail');
+            expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({ activityId: 7 });
+            expect(fetchMock.mock.calls[2][1].headers.Authorization).toBe(`Bearer ${sessionToken}`);
+            expect(fetchMock.mock.calls[3][0]).toBe(`/api/user/${userId}/garmin/activity-detail`);
+            expect(JSON.parse(fetchMock.mock.calls[3][1].body)).toEqual({ garminActivityId: '7', detail });
+            expect(onScoringProgress).toHaveBeenLastCalledWith(2, 2);
+        });
+
+        it('skips a run whose detail fetch fails and keeps the sync successful', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            fetchMock
+                .mockResolvedValueOnce(jsonResponse(200, { data: [] }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: summary }))
+                .mockResolvedValueOnce(jsonResponse(502, { code: 'GARMIN_SERVICE_ERROR', message: 'down' }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: detail }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: { scored: true } }));
+
+            const result = await runProxySync({
+                userId,
+                garminEmail,
+                sessionToken,
+                syncState: incremental,
+                backfillDays: 30,
+            });
+
+            expect(result.ok).toBe(true);
+            expect(fetchMock).toHaveBeenCalledTimes(5);
+            expect(JSON.parse(fetchMock.mock.calls[4][1].body).garminActivityId).toBe('8');
+            warn.mockRestore();
+        });
+
+        it('stops scoring when the session is refused after a renewal was already used', async () => {
+            fetchMock
+                .mockResolvedValueOnce(jsonResponse(401, { code: 'INVALID_TOKEN', message: 'expired' }))
+                .mockResolvedValueOnce(jsonResponse(200, { status: 'success', sessionToken: 'sess-token-fresh' }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: [] }))
+                .mockResolvedValueOnce(jsonResponse(200, { data: summary }))
+                .mockResolvedValueOnce(jsonResponse(401, { code: 'INVALID_TOKEN', message: 'expired' }));
+
+            const result = await runProxySync({
+                userId,
+                garminEmail,
+                sessionToken,
+                syncState: incremental,
+                backfillDays: 30,
+            });
+
+            expect(result.ok).toBe(true);
+            expect(fetchMock).toHaveBeenCalledTimes(5);
+            expect(fetchMock.mock.calls[4][1].headers.Authorization).toBe('Bearer sess-token-fresh');
+        });
+    });
 });

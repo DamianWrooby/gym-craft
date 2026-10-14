@@ -65,26 +65,34 @@ export async function ensureActivityDetail(
         return { ok: false, status: fetched.status, code: fetched.code, message: fetched.message };
     }
 
+    await storeActivityDetail(activity.id, fetched.detail);
+
+    return { ok: true, detail: toPayload(activity, fetched.detail) };
+}
+
+/** Persists an activity's splits, samples, route and dynamics at the current schema version. */
+export async function storeActivityDetail(
+    activityId: string,
+    detail: Pick<ActivityDetailPayload, 'splits' | 'samples' | 'route' | 'dynamics'>,
+): Promise<void> {
     await db.activityDetail.upsert({
-        where: { activityId: activity.id },
+        where: { activityId },
         create: {
-            activityId: activity.id,
-            splits: fetched.detail.splits as unknown as Prisma.InputJsonValue,
-            samples: fetched.detail.samples as unknown as Prisma.InputJsonValue,
-            route: fetched.detail.route as unknown as Prisma.InputJsonValue,
-            dynamics: (fetched.detail.dynamics ?? Prisma.JsonNull) as unknown as Prisma.InputJsonValue,
+            activityId,
+            splits: detail.splits as unknown as Prisma.InputJsonValue,
+            samples: detail.samples as unknown as Prisma.InputJsonValue,
+            route: detail.route as unknown as Prisma.InputJsonValue,
+            dynamics: (detail.dynamics ?? Prisma.JsonNull) as unknown as Prisma.InputJsonValue,
             schemaVersion: CURRENT_DETAIL_SCHEMA_VERSION,
         },
         update: {
-            splits: fetched.detail.splits as unknown as Prisma.InputJsonValue,
-            samples: fetched.detail.samples as unknown as Prisma.InputJsonValue,
-            route: fetched.detail.route as unknown as Prisma.InputJsonValue,
-            dynamics: (fetched.detail.dynamics ?? Prisma.JsonNull) as unknown as Prisma.InputJsonValue,
+            splits: detail.splits as unknown as Prisma.InputJsonValue,
+            samples: detail.samples as unknown as Prisma.InputJsonValue,
+            route: detail.route as unknown as Prisma.InputJsonValue,
+            dynamics: (detail.dynamics ?? Prisma.JsonNull) as unknown as Prisma.InputJsonValue,
             schemaVersion: CURRENT_DETAIL_SCHEMA_VERSION,
         },
     });
-
-    return { ok: true, detail: toPayload(activity, fetched.detail) };
 }
 
 /** Projects the persisted activity metadata + splits/samples/route/dynamics into the wire payload shape. */
