@@ -1,4 +1,4 @@
-import { computeTrimp, type TrimpProfile } from './trimp';
+import { computeTrimp, trimpModality, type TrimpProfile } from './trimp';
 import { hrZoneSecondsFromRow, type HrZoneRow } from '$lib/utils/hr-zones';
 
 export type { TrimpProfile };
@@ -7,6 +7,7 @@ export interface TrimpSourceRow extends HrZoneRow {
     durationSec: number;
     averageHr: number | null;
     trimpLoad: number | null;
+    activityType?: string | null;
 }
 
 type WithTrimp<T extends TrimpSourceRow> = Omit<T, 'trimpLoad'> & { trimpLoad: number };
@@ -37,6 +38,7 @@ export function fillTrimpLoads<T extends TrimpSourceRow>(rows: T[], profile: Tri
                 restingHr: profile.restingHR,
                 maxHr: profile.maxHR,
                 sex: profile.sex ?? 'male',
+                modality: trimpModality(row.activityType),
             }),
         };
     });

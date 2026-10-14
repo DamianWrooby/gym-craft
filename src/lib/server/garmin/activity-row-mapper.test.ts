@@ -30,6 +30,8 @@ const row: Activity = {
     elevationGainM: 50,
     elevationLossM: 50,
     trimpLoad: 80,
+    loadMethod: 'EDWARDS',
+    zoneSource: 'ATHLETE_ZONES',
     raw: {},
     fetchedAt: new Date(),
 };
