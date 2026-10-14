@@ -5,15 +5,17 @@ import type { GarminActivity } from '@/models/garmin/activity.model';
 
 const mocks = vi.hoisted(() => ({
     db: {
-        activity: { upsert: vi.fn() },
+        activity: { upsert: vi.fn(), findMany: vi.fn(async () => [] as unknown[]), update: vi.fn() },
         athleteProfile: { findUnique: vi.fn() },
         garminSyncState: { update: vi.fn(), upsert: vi.fn() },
         $transaction: vi.fn(async (ops: unknown[]) => ops),
     },
+    ensureActivityDetail: vi.fn(),
 }));
 
 vi.mock('$lib/database', () => ({ db: mocks.db }));
 vi.mock('./fetch-activities', () => ({ fetchGarminActivities: vi.fn() }));
+vi.mock('./ensure-activity-detail', () => ({ ensureActivityDetail: mocks.ensureActivityDetail }));
 
 import { persistActivities } from './sync-activities';
 
@@ -92,5 +94,87 @@ describe('persistActivities', () => {
         expect(result.ok).toBe(true);
         const upsertArgs = mocks.db.activity.upsert.mock.calls[0][0];
         expect(upsertArgs.create.trimpLoad).toBe(60); // 30 min * 2
+    });
+
+    describe('re-binning runs against athlete zones', () => {
+        const zones = [
+            { zone: 1, lowerBpm: 100, upperBpm: 120 },
+            { zone: 2, lowerBpm: 121, upperBpm: 140 },
+            { zone: 3, lowerBpm: 141, upperBpm: 160 },
+            { zone: 4, lowerBpm: 161, upperBpm: 175 },
+            { zone: 5, lowerBpm: 176, upperBpm: 190 },
+        ];
+        const storedRun = { id: 'act-1', garminActivityId: BigInt(123456), activityType: 'running', detail: null };
+
+        it('writes a new run on Garmin zones, then re-bins it against the profile zones', async () => {
+            mocks.db.athleteProfile.findUnique
+                .mockResolvedValueOnce({ restingHR: 50, maxHR: 190, sex: 'MALE' })
+                .mockResolvedValueOnce({ hrZoneBounds: zones });
+            mocks.db.activity.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([storedRun]);
+            mocks.ensureActivityDetail.mockResolvedValueOnce({
+                ok: true,
+                detail: {
+                    samples: [
+                        { timestampSec: 0, heartRate: 150 },
+                        { timestampSec: 600, heartRate: 150 },
+                    ],
+                },
+            });
+
+            await persistActivities('user-1', [garminActivity], 'incremental', 0);
+
+            const upsertArgs = mocks.db.activity.upsert.mock.calls[0][0];
+            expect(upsertArgs.create.zoneSource).toBe('GARMIN_ZONES');
+            expect(upsertArgs.create.loadMethod).toBe('BANISTER');
+            // 600 s in the athlete's zone 3: 10 min x 3.
+            expect(mocks.db.activity.update).toHaveBeenCalledWith({
+                where: { id: 'act-1' },
+                data: { trimpLoad: 30, loadMethod: 'EDWARDS', zoneSource: 'ATHLETE_ZONES' },
+            });
+        });
+
+        it('keeps Garmin load and the garmin-zones flag when detail is unavailable, and retries next sync', async () => {
+            for (let attempt = 0; attempt < 2; attempt++) {
+                mocks.db.athleteProfile.findUnique
+                    .mockResolvedValueOnce({ restingHR: 50, maxHR: 190, sex: 'MALE' })
+                    .mockResolvedValueOnce({ hrZoneBounds: zones });
+                mocks.db.activity.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([storedRun]);
+                mocks.ensureActivityDetail.mockResolvedValueOnce({
+                    ok: false,
+                    status: 502,
+                    code: 'X',
+                    message: 'down',
+                });
+
+                const result = await persistActivities('user-1', [garminActivity], 'incremental', 0);
+                expect(result.ok).toBe(true);
+            }
+
+            expect(mocks.ensureActivityDetail).toHaveBeenCalledTimes(2);
+            expect(mocks.db.activity.update).not.toHaveBeenCalled();
+            expect(mocks.db.activity.upsert.mock.calls[1][0].update.zoneSource).toBe('GARMIN_ZONES');
+        });
+
+        it('does not overwrite a run already scored on athlete zones', async () => {
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+            mocks.db.activity.findMany.mockResolvedValueOnce([{ garminActivityId: BigInt(123456) }]);
+
+            await persistActivities('user-1', [garminActivity], 'incremental', 0);
+
+            const upsertArgs = mocks.db.activity.upsert.mock.calls[0][0];
+            expect(upsertArgs.update).not.toHaveProperty('trimpLoad');
+            expect(upsertArgs.update).not.toHaveProperty('zoneSource');
+            expect(upsertArgs.create.trimpLoad).toBe(60);
+        });
+
+        it('costs strength at the flat rate with no zone source', async () => {
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+            const lift = { ...garminActivity, activityType: { typeKey: 'strength_training' } } as GarminActivity;
+
+            await persistActivities('user-1', [lift], 'incremental', 0);
+
+            const upsertArgs = mocks.db.activity.upsert.mock.calls[0][0];
+            expect(upsertArgs.create).toMatchObject({ trimpLoad: 60, loadMethod: 'DURATION', zoneSource: null });
+        });
     });
 });

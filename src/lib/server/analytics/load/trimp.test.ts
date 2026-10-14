@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeTrimp, edwardsTrimp, banisterTrimp } from './trimp';
+import { computeTrimp, edwardsTrimp, banisterTrimp, scoreTrimp, trimpModality, zoneSecondsFromSamples } from './trimp';
 
 describe('edwardsTrimp', () => {
     it('returns 0 when all zones are 0', () => {
@@ -73,5 +73,80 @@ describe('computeTrimp dispatch', () => {
     it('falls back to duration-only when maxHr <= restingHr (invalid profile)', () => {
         const result = computeTrimp({ durationSec: 3600, averageHr: 150, restingHr: 200, maxHr: 180 });
         expect(result).toBe(120);
+    });
+});
+
+describe('modality', () => {
+    it('costs strength at the flat duration rate even with HR data', () => {
+        const score = scoreTrimp({
+            durationSec: 3600,
+            hrZoneSeconds: { zone1: 0, zone2: 0, zone3: 0, zone4: 0, zone5: 3600 },
+            averageHr: 170,
+            restingHr: 50,
+            maxHr: 190,
+            modality: 'strength',
+        });
+        expect(score).toEqual({ load: 120, method: 'DURATION' });
+    });
+
+    it('scores running and other modalities from HR zones', () => {
+        const zones = { zone1: 600, zone2: 0, zone3: 0, zone4: 0, zone5: 0 };
+        expect(scoreTrimp({ durationSec: 600, hrZoneSeconds: zones, modality: 'running' })).toEqual({
+            load: 10,
+            method: 'EDWARDS',
+        });
+        expect(scoreTrimp({ durationSec: 600, hrZoneSeconds: zones, modality: 'other' }).method).toBe('EDWARDS');
+    });
+
+    it('reports Banister and duration methods', () => {
+        expect(scoreTrimp({ durationSec: 600, averageHr: 150, restingHr: 50, maxHr: 190 }).method).toBe('BANISTER');
+        expect(scoreTrimp({ durationSec: 600 })).toEqual({ load: 20, method: 'DURATION' });
+    });
+
+    it('maps activity types to modalities', () => {
+        expect(trimpModality('trail_running')).toBe('running');
+        expect(trimpModality('strength_training')).toBe('strength');
+        expect(trimpModality('cycling')).toBe('other');
+        expect(trimpModality(null)).toBe('other');
+    });
+});
+
+describe('zoneSecondsFromSamples', () => {
+    const bounds = [
+        { lowerBpm: 100, upperBpm: 120 },
+        { lowerBpm: 121, upperBpm: 140 },
+        { lowerBpm: 141, upperBpm: 160 },
+        { lowerBpm: 161, upperBpm: 175 },
+        { lowerBpm: 176, upperBpm: 190 },
+    ];
+
+    it('bins each interval by the starting sample against the athlete zones', () => {
+        const samples = [
+            { timestampSec: 0, heartRate: 90 },
+            { timestampSec: 10, heartRate: 130 },
+            { timestampSec: 40, heartRate: 150 },
+            { timestampSec: 100, heartRate: 200 },
+            { timestampSec: 105, heartRate: null },
+            { timestampSec: 200, heartRate: 110 },
+        ];
+        expect(zoneSecondsFromSamples(samples, bounds)).toEqual({
+            zone1: 0,
+            zone2: 30,
+            zone3: 60,
+            zone4: 0,
+            zone5: 5,
+        });
+    });
+
+    it('returns null when no sample has a heart rate', () => {
+        expect(
+            zoneSecondsFromSamples(
+                [
+                    { timestampSec: 0, heartRate: null },
+                    { timestampSec: 10, heartRate: null },
+                ],
+                bounds,
+            ),
+        ).toBeNull();
     });
 });

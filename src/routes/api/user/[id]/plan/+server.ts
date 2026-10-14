@@ -3,6 +3,7 @@ import { todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile, invalidateAthleteProfile } from '$lib/prisma/prisma';
 import { validateCreatePlanInput } from '$lib/server/planner/validation';
 import { buildPlan } from '$lib/server/planner/build-plan';
+import { rescoreIfZonesChanged } from '$lib/server/garmin/score-runs';
 import {
     ActivePlanExistsError,
     MissingProfileError,
@@ -46,6 +47,7 @@ export async function POST({
     try {
         const plan = await persistNewPlan(userId, built.record);
         invalidateAthleteProfile(userId);
+        await rescoreIfZonesChanged(userId, profile.hrZoneBounds, built.record.hrZoneBounds);
         return createResponse(201, { data: plan });
     } catch (e) {
         if (e instanceof ActivePlanExistsError) {

@@ -1,6 +1,7 @@
 import { createResponse } from '$lib/utils/response';
 import { getAthleteProfile, upsertAthleteProfile } from '$lib/prisma/prisma';
 import { validateAthleteProfileInput } from '$lib/server/athlete-profile/validation';
+import { rescoreIfZonesChanged } from '$lib/server/garmin/score-runs';
 
 export async function GET({ params, locals }: { params: { id: string }; locals: App.Locals }): Promise<Response> {
     if (params.id !== locals.user?.id) {
@@ -30,6 +31,8 @@ export async function PUT({
         return createResponse(400, { code: 'INVALID_BODY', message: validation.error });
     }
 
+    const previous = await getAthleteProfile(params.id);
     const profile = await upsertAthleteProfile(params.id, validation.input);
+    await rescoreIfZonesChanged(params.id, previous?.hrZoneBounds ?? null, validation.input.hrZoneBounds);
     return createResponse(200, { data: profile });
 }

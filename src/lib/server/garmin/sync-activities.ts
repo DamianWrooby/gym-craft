@@ -2,7 +2,8 @@ import { db } from '$lib/database';
 import { fetchGarminActivities } from './fetch-activities';
 import { toIsoDate } from '$lib/utils/iso-week';
 import { pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
-import { computeTrimp, mapProfileSex, type TrimpProfile } from '$lib/server/analytics/load/trimp';
+import { mapProfileSex, scoreTrimp, trimpModality, type TrimpProfile } from '$lib/server/analytics/load/trimp';
+import { rebinRunsAfterSync } from './score-runs';
 import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 import type { Prisma } from '@prisma/client';
@@ -79,6 +80,7 @@ export async function persistActivities(
     backfillDays: number,
 ): Promise<SyncResult> {
     const upserted = await upsertActivities(userId, activities);
+    await rebinRuns(userId);
     const now = new Date();
 
     if (mode === 'backfill') {
@@ -117,6 +119,7 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
     };
 
     const rows = activities.map((activity) => toRow(userId, activity, trimpProfile));
+    const athleteScored = await findAthleteScoredIds(userId, rows);
 
     const results = await db.$transaction(
         rows.map((row) =>
@@ -128,12 +131,40 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
                     },
                 },
                 create: row,
-                update: row,
+                update: athleteScored.has(row.garminActivityId) ? withoutLoad(row) : row,
             }),
         ),
     );
 
     return results.length;
+}
+
+/** Re-binning is best effort: a failure leaves the flag set and never fails the sync. */
+async function rebinRuns(userId: string): Promise<void> {
+    try {
+        await rebinRunsAfterSync(userId);
+    } catch (e) {
+        console.error('Re-binning runs failed; the next sync retries', e);
+    }
+}
+
+/** A sync must not overwrite a run already scored against the athlete's zones with Garmin's load. */
+async function findAthleteScoredIds(userId: string, rows: { garminActivityId: bigint }[]): Promise<Set<bigint>> {
+    const existing = await db.activity.findMany({
+        where: {
+            userId,
+            zoneSource: 'ATHLETE_ZONES',
+            garminActivityId: { in: rows.map((r) => r.garminActivityId) },
+        },
+        select: { garminActivityId: true },
+    });
+    return new Set(existing.map((e) => e.garminActivityId));
+}
+
+function withoutLoad<T extends { trimpLoad: unknown; loadMethod: unknown; zoneSource: unknown }>(row: T) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { trimpLoad, loadMethod, zoneSource, ...rest } = row;
+    return rest;
 }
 
 function toRow(userId: string, activity: GarminActivity, profile: TrimpProfile) {
@@ -172,17 +203,23 @@ function toRow(userId: string, activity: GarminActivity, profile: TrimpProfile) 
     };
 
     // Computed at write time so a synced row always carries a load; re-syncs recompute
-    // deterministically from the same inputs (and pick up profile changes).
+    // deterministically from the same inputs (and pick up profile changes). A run starts on
+    // Garmin's zones; `rebinRunsAfterSync` then re-scores it against the athlete's.
+    const modality = trimpModality(row.activityType);
+    const score = scoreTrimp({
+        durationSec: row.durationSec,
+        hrZoneSeconds: hrZoneSecondsFromRow(row),
+        averageHr: row.averageHr,
+        restingHr: profile.restingHR,
+        maxHr: profile.maxHR,
+        sex: profile.sex ?? 'male',
+        modality,
+    });
     return {
         ...row,
-        trimpLoad: computeTrimp({
-            durationSec: row.durationSec,
-            hrZoneSeconds: hrZoneSecondsFromRow(row),
-            averageHr: row.averageHr,
-            restingHr: profile.restingHR,
-            maxHr: profile.maxHR,
-            sex: profile.sex ?? 'male',
-        }),
+        trimpLoad: score.load,
+        loadMethod: score.method,
+        zoneSource: modality === 'running' ? ('GARMIN_ZONES' as const) : null,
     };
 }
 

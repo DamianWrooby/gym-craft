@@ -324,6 +324,9 @@ model Activity {
     elevationGainM    Float?
     elevationLossM    Float?
     trimpLoad         Float?
+    loadMethod        LoadMethod?
+    // Which zones scored a run; GARMIN_ZONES runs in the 42-day window are retried each sync.
+    zoneSource        ZoneSource?
     raw               Json
     fetchedAt         DateTime        @default(now())
     User              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -332,6 +335,19 @@ model Activity {
     @@unique([userId, garminActivityId])
     @@index([userId, startTime(sort: Desc)])
     @@index([userId, activityType, startTime(sort: Desc)])
+}
+
+enum LoadMethod {
+    EDWARDS
+    BANISTER
+    DURATION
+    LABEL_TABLE
+    ATHLETE_ESTIMATE
+}
+
+enum ZoneSource {
+    ATHLETE_ZONES
+    GARMIN_ZONES
 }
 
 model ActivityDetail {
