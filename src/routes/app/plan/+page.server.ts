@@ -6,6 +6,7 @@ import { MAX_RETRIES, finalizeWeek } from '$lib/server/planner/week-generation';
 import { hashSessionToken } from '$lib/server/session-token';
 import { toPlanView, type PlanView, type PlanViewSession } from '$lib/planner/plan-view';
 import type { PlanRationale } from '$lib/planner/core/explain';
+import type { ConflictRecord } from '$lib/planner/core/conflict';
 
 type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
 
@@ -23,6 +24,7 @@ function toSession(s: StoredWeek['sessions'][number]): PlanViewSession {
         sequence: s.sequence,
         status: s.status,
         plannedLoad: s.plannedLoad,
+        loadMethod: s.loadMethod as PlanViewSession['loadMethod'],
         staleAnchor: anchor?.stale === true,
         body: s.body as unknown as PlanViewSession['body'],
     };
@@ -83,6 +85,15 @@ export const load = async ({
                     volumeUnit: w.volumeUnit,
                     strengthSessionTarget: w.strengthSessionTarget,
                     sessions: w.sessions.map(toSession),
+                    budget: {
+                        struck: w.budgetStruckAt != null,
+                        recoveryBudget: w.recoveryBudget,
+                        chronicLoad: w.chronicLoad,
+                        chronicFallbackShare: w.chronicFallbackShare,
+                        absence: w.budgetAbsence,
+                    },
+                    conflict: w.conflict as unknown as ConflictRecord | null,
+                    decision: w.decision,
                     request: w.aiRequest
                         ? {
                               id: w.aiRequest.id,

@@ -4,6 +4,7 @@ import { addDays } from '$lib/utils/iso-week';
 import type { Prisma } from '@prisma/client';
 import type { NewPlanRecord, PlanningContext } from './build-plan';
 import type { AiRequestInput } from './week-prompt';
+import type { StruckBudget } from './budget';
 
 export class ActivePlanExistsError extends Error {
     constructor() {
@@ -41,6 +42,8 @@ export async function getPlanningContext(userId: string, today: string): Promise
 export interface NewAiRequest {
     model: string;
     input: AiRequestInput;
+    /** Week 1's recovery budget, struck at creation with no outlook (factor 1). */
+    budget: StruckBudget;
 }
 
 export interface CreatedPlan {
@@ -125,7 +128,10 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord, week
                 data: { userId, model: week1.model, input: week1.input as unknown as Prisma.InputJsonValue },
                 select: { id: true },
             });
-            await tx.planWeek.update({ where: { id: weekId }, data: { aiRequestId: request.id } });
+            await tx.planWeek.update({
+                where: { id: weekId },
+                data: { aiRequestId: request.id, outlookFactor: 1, ...week1.budget },
+            });
             return { id: plan.id, weekId, aiRequestId: request.id };
         });
     } catch (e) {

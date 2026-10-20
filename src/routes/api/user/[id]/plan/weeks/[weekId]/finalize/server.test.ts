@@ -219,4 +219,68 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/finalize', () => {
         expect(await (await post()).json()).toEqual({ data: { generation: 'FAILED', retriesLeft: 1 } });
         expect(tx.planWeek.update).toHaveBeenCalledWith({ where: { id: 'week-1' }, data: { generation: 'FAILED' } });
     });
+
+    describe('school versus budget', () => {
+        // The valid week costs 378: lift 80, hard 118, long 180.
+        const foundation = {
+            kind: 'RUNNING',
+            date: '2026-10-16',
+            title: 'Foundation run',
+            cutKey: 'foundation',
+            steps: [{ label: 'z1', durationSec: 1200 }],
+        };
+        const withFoundation = JSON.stringify({ sessions: [...JSON.parse(validOutput).sessions, foundation] });
+
+        it('stores the week as written when it is within the budget', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(week({ recoveryBudget: 400 }));
+            await post();
+            expect(tx.plannedSession.createMany.mock.calls[0][0].data).toHaveLength(3);
+            expect(tx.planWeek.updateMany.mock.calls[0][0].data).toEqual({ generation: 'GENERATED' });
+        });
+
+        it('trims easy volume silently in cut order and records the four facts', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(week({ recoveryBudget: 390 }, { output: withFoundation }));
+            await post();
+            const rows = tx.plannedSession.createMany.mock.calls[0][0].data;
+            expect(rows.map((r: { body: { title: string } }) => r.body.title)).toEqual(['Lift', 'Hard', 'Long run']);
+            expect(tx.planWeek.updateMany.mock.calls[0][0].data).toEqual({
+                generation: 'GENERATED',
+                conflict: {
+                    placement: null,
+                    budget: {
+                        kind: 'TRIM',
+                        facts: expect.objectContaining({
+                            plannedTotal: 418,
+                            budget: 390,
+                            overspend: 28,
+                            removed: [{ title: 'Foundation run', plannedLoad: 40, cutKey: 'foundation' }],
+                            cutOrder: ['recovery', 'foundation'],
+                            protected: ['Hard', 'Long run'],
+                        }),
+                    },
+                },
+            });
+        });
+
+        it('stores the week as written and asks before a key session goes', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(week({ recoveryBudget: 300 }));
+            await post();
+            expect(tx.plannedSession.createMany.mock.calls[0][0].data).toHaveLength(3);
+            const { data } = tx.planWeek.updateMany.mock.calls[0][0];
+            expect(data.decision).toBe('PENDING');
+            expect(data.conflict.budget).toMatchObject({
+                kind: 'ASK',
+                schoolFit: false,
+                removed: [],
+                keySession: { scheduledDate: '2026-10-14', sequence: 0 },
+                facts: { offered: { title: 'Hard', options: ['DROP', 'DOWNGRADE', 'KEEP'] } },
+            });
+        });
+
+        it('raises a school-fit warning when key sessions alone exceed the budget', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(week({ recoveryBudget: 250 }));
+            await post();
+            expect(tx.planWeek.updateMany.mock.calls[0][0].data.conflict.budget.schoolFit).toBe(true);
+        });
+    });
 });

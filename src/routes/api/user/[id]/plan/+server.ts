@@ -5,6 +5,7 @@ import { validateCreatePlanInput } from '$lib/server/planner/validation';
 import { buildPlan } from '$lib/server/planner/build-plan';
 import { getLimit } from '@/constants/subscription.constants';
 import { rescoreIfZonesChanged } from '$lib/server/garmin/score-runs';
+import { strikeWeekBudget } from '$lib/server/planner/budget';
 import {
     ActivePlanExistsError,
     MissingProfileError,
@@ -47,7 +48,8 @@ export async function POST({
 
     try {
         const model = getLimit(locals.user?.subscriptionTier ?? 'FREE', 'aiModel');
-        const plan = await persistNewPlan(userId, built.record, { model, input: built.week1Prompt });
+        const budget = await strikeWeekBudget(userId, today, built.record.layout.weeks[0].inHorizonDays, 1);
+        const plan = await persistNewPlan(userId, built.record, { model, input: built.week1Prompt, budget });
         invalidateAthleteProfile(userId);
         await rescoreIfZonesChanged(userId, profile.hrZoneBounds, built.record.hrZoneBounds);
         return createResponse(201, { data: plan });

@@ -4,7 +4,9 @@ import { getSchool, isSchoolId } from './schools/catalogue';
 import type { SchoolId, VolumeUnit } from './schools/types';
 import type { PlanRationale } from './core/explain';
 import { pullTarget, unconfirmedSessions } from './core/pull';
-import type { OtherBody, RunningBody, SessionKind, StrengthBody } from './core/session';
+import type { OtherBody, PlannedLoadMethod, RunningBody, SessionKind, StrengthBody } from './core/session';
+import { evaluateWeek, type WeekEvaluation } from './core/budget';
+import type { ConflictRecord } from './core/conflict';
 
 export interface PlanViewSession {
     id: string;
@@ -13,6 +15,7 @@ export interface PlanViewSession {
     sequence: number;
     status: 'PLANNED' | 'DONE' | 'SKIPPED' | 'SUPERSEDED';
     plannedLoad: number;
+    loadMethod: PlannedLoadMethod;
     /** The pace targets rest on an anchor that aged out of its window. */
     staleAnchor: boolean;
     body: RunningBody | StrengthBody | OtherBody;
@@ -52,6 +55,20 @@ export interface PlanViewWeek {
     strengthSessionTarget: number;
     sessions: PlanViewSession[];
     request: PlanViewRequest | null;
+    budget: PlanViewBudget;
+    /** What finalize cut or asked; null when the week stands as written. */
+    conflict: ConflictRecord | null;
+    /** The athlete's answer to an ask; KEPT is the per-week override. */
+    decision: 'PENDING' | 'DROPPED' | 'DOWNGRADED' | 'KEPT' | null;
+}
+
+/** The recovery budget as frozen on the week at the pull (ADR 0011). */
+export interface PlanViewBudget {
+    struck: boolean;
+    recoveryBudget: number | null;
+    chronicLoad: number | null;
+    chronicFallbackShare: number | null;
+    absence: 'NO_TRACKED_ACTIVITY' | 'SHORT_HISTORY' | null;
 }
 
 export interface PlanView {
@@ -154,4 +171,45 @@ export function formatVolume(value: number, unit: VolumeUnit): string {
     const h = Math.floor(value / 60);
     const m = value % 60;
     return h > 0 ? `${h} h ${m.toString().padStart(2, '0')} min` : `${m} min`;
+}
+
+export type BudgetBarState =
+    | { kind: 'unstruck' }
+    | { kind: 'needs-tracked-activity' }
+    | { kind: 'needs-tracked-training' }
+    | {
+          kind: 'within' | 'over';
+          evaluation: WeekEvaluation;
+          budget: number;
+          chronicLoad: number | null;
+          chronicFallbackShare: number | null;
+          /** The athlete chose to keep this week over budget. */
+          kept: boolean;
+      };
+
+/** One bar for running and strength together; never split by kind. */
+export function budgetBarState(week: Pick<PlanViewWeek, 'budget' | 'sessions' | 'decision'>): BudgetBarState {
+    const { budget } = week;
+    if (!budget.struck) return { kind: 'unstruck' };
+    if (budget.recoveryBudget == null) {
+        return budget.absence === 'NO_TRACKED_ACTIVITY'
+            ? { kind: 'needs-tracked-activity' }
+            : { kind: 'needs-tracked-training' };
+    }
+    const evaluation = evaluateWeek(
+        week.sessions.map((s) => ({ plannedLoad: s.plannedLoad, method: s.loadMethod })),
+        budget.recoveryBudget,
+    );
+    return {
+        kind: evaluation.verdict === 'over' ? 'over' : 'within',
+        evaluation,
+        budget: budget.recoveryBudget,
+        chronicLoad: budget.chronicLoad,
+        chronicFallbackShare: budget.chronicFallbackShare,
+        kept: week.decision === 'KEPT',
+    };
+}
+
+export function sessionsDone(week: Pick<PlanViewWeek, 'sessions'>): { done: number; total: number } {
+    return { done: week.sessions.filter((s) => s.status === 'DONE').length, total: week.sessions.length };
 }

@@ -46,10 +46,7 @@ describe('unconfirmedSessions', () => {
 });
 
 describe('OUTLOOK_FACTORS', () => {
-    it('never grows the budget and shrinks it most when ill', () => {
-        expect(OUTLOOK_FACTORS.NORMAL).toBe(1);
-        expect(OUTLOOK_FACTORS.ILL).toBeLessThan(OUTLOOK_FACTORS.TRAVEL);
-        expect(OUTLOOK_FACTORS.TRAVEL).toBeLessThan(1);
-        expect(OUTLOOK_FACTORS.BUSY).toBeLessThan(1);
+    it('holds the judged values of ADR 0024', () => {
+        expect(OUTLOOK_FACTORS).toEqual({ NORMAL: 1, BUSY: 0.85, TRAVEL: 0.85, ILL: 0.6 });
     });
 });

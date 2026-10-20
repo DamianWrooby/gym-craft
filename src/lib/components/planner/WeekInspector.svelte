@@ -3,6 +3,9 @@
     import { downloadWeekPdf } from '$lib/utils/plan-description';
     import WeekCalendar from './WeekCalendar.svelte';
     import WeekGeneration from './WeekGeneration.svelte';
+    import RecoveryBudgetBar from './RecoveryBudgetBar.svelte';
+    import SessionsDoneBar from './SessionsDoneBar.svelte';
+    import ConflictNote from './ConflictNote.svelte';
 
     export let plan: PlanView;
     export let index: number;
@@ -63,7 +66,13 @@
         <p class="text-sm text-amber-300">⚑ Tune-up: {fixture.name ?? 'race'} on {fixture.date}</p>
     {/each}
 
+    <div class="grid gap-3 sm:grid-cols-2">
+        <RecoveryBudgetBar {week} />
+        {#if week.generation === 'GENERATED'}<SessionsDoneBar {week} />{/if}
+    </div>
+
     {#if week.generation === 'GENERATED'}
+        <ConflictNote {week} schoolName={plan.school.name} {userId} />
         <WeekCalendar {week} schoolId={plan.school.id} />
         <button type="button" class="gc-ghost" on:click={() => downloadWeekPdf(plan, index)}
             >Download week as PDF</button>
