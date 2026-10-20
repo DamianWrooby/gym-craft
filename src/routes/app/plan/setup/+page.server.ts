@@ -6,8 +6,15 @@ import { getAthleteProfile } from '$lib/prisma/prisma';
 import { getActivePlan, getPlanningContext } from '$lib/server/planner/repository';
 import { recentRunningVolume } from '$lib/server/planner/build-plan';
 import { proposeZones } from '$lib/planner/core/zones';
+import { hashSessionToken } from '$lib/server/session-token';
 
-export const load = async ({ locals }: { locals: App.Locals }) => {
+export const load = async ({
+    locals,
+    cookies,
+}: {
+    locals: App.Locals;
+    cookies: { get(name: string): string | undefined };
+}) => {
     const userId = locals.user?.id;
     if (!userId) redirect(302, '/app/login');
     if (await getActivePlan(userId)) redirect(302, '/app/plan');
@@ -16,6 +23,7 @@ export const load = async ({ locals }: { locals: App.Locals }) => {
     if (!profile) return { profileMissing: true as const };
 
     const today = todayInTimezone(profile.timezone);
+    const session = cookies.get('session');
     const context = await getPlanningContext(userId, today);
     const runs = context.activities
         .filter((a) => isRunningTypeKey(a.activityType) && a.distanceM)
@@ -30,6 +38,8 @@ export const load = async ({ locals }: { locals: App.Locals }) => {
     return {
         profileMissing: false as const,
         today,
+        // Hashed, never the raw cookie: the browser hands it to the AI proxy for week 1.
+        proxySession: session ? hashSessionToken(session) : null,
         goals: context.goals.map((g) => ({
             id: g.id,
             goalType: g.goalType,

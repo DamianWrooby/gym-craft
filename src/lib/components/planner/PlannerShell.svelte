@@ -117,4 +117,21 @@
         background-color: #38bdf8;
         border-color: #38bdf8;
     }
+    /* Shown while an AI request writes a week. */
+    .gc-planner :global(.gc-pulse) {
+        color: #e11d48;
+        font-size: 2rem;
+        animation: gc-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes gc-pulse {
+        50% {
+            opacity: 0.3;
+            transform: scale(0.85);
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .gc-planner :global(.gc-pulse) {
+            animation: none;
+        }
+    }
 </style>

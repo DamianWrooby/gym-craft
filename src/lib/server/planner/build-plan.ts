@@ -9,6 +9,7 @@ import { recommendSchool } from '$lib/planner/core/recommend';
 import { explainPlan, type PlanRationale } from '$lib/planner/core/explain';
 import { WEEKDAYS } from '$lib/planner/wizard';
 import type { CreatePlanInput, RaceResultInput } from './validation';
+import { buildWeekPrompt, type AiRequestInput } from './week-prompt';
 
 export interface ContextGoal {
     id: string;
@@ -48,7 +49,8 @@ export interface NewPlanRecord {
 }
 
 export type BuildPlanResult =
-    { ok: true; record: NewPlanRecord; anchor: Anchor | null } | { ok: false; reason: string };
+    | { ok: true; record: NewPlanRecord; anchor: Anchor | null; week1Prompt: AiRequestInput }
+    | { ok: false; reason: string };
 
 const RECENT_VOLUME_DAYS = 28;
 
@@ -66,6 +68,28 @@ export function recentRunningVolume(activities: ContextActivity[], today: string
     return { minutesPerWeek: Math.round(seconds / 60 / weeks), metresPerWeek: Math.round(metres / weeks) };
 }
 
+/** The anchor for one generation: stored results, any just entered, and recent runs (ADR 0010). */
+export function anchorFromContext(
+    context: Pick<PlanningContext, 'raceResults' | 'activities'>,
+    newResults: { id: string; date: string; distanceM: number; timeSec: number }[],
+    goalDistanceM: number | null,
+    today: string,
+): Anchor | null {
+    return deriveAnchor({
+        results: [...context.raceResults.map((r) => ({ ...r, date: toIsoDate(r.date) })), ...newResults],
+        runs: context.activities
+            .filter((a) => isRunningTypeKey(a.activityType) && a.distanceM)
+            .map((a) => ({
+                id: a.id,
+                date: toIsoDate(a.startTime),
+                distanceM: a.distanceM!,
+                durationSec: a.movingDurationSec ?? a.durationSec,
+            })),
+        goalDistanceM,
+        today,
+    });
+}
+
 const goalTypeName = (goalType: string) => goalType.replace('_', ' ').toLowerCase();
 
 export function buildPlan(context: PlanningContext, input: CreatePlanInput, today: string): BuildPlanResult {
@@ -77,22 +101,12 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
     if (!endDate) return { ok: false, reason: 'Choose when the horizon ends' };
     if (endDate <= today) return { ok: false, reason: 'The horizon must end after today' };
 
-    const anchor = deriveAnchor({
-        results: [
-            ...context.raceResults.map((r) => ({ ...r, date: toIsoDate(r.date) })),
-            ...input.raceResults.map((r, i) => ({ ...r, id: `new-${i}` })),
-        ],
-        runs: context.activities
-            .filter((a) => isRunningTypeKey(a.activityType) && a.distanceM)
-            .map((a) => ({
-                id: a.id,
-                date: toIsoDate(a.startTime),
-                distanceM: a.distanceM!,
-                durationSec: a.movingDurationSec ?? a.durationSec,
-            })),
-        goalDistanceM: goal.targetDistanceM,
+    const anchor = anchorFromContext(
+        context,
+        input.raceResults.map((r, i) => ({ ...r, id: `new-${i}` })),
+        goal.targetDistanceM,
         today,
-    });
+    );
 
     const school = getSchool(input.schoolId);
     const layoutGoal = { isRace: goal.goalType === 'RACE' && goalDate != null, distanceM: goal.targetDistanceM };
@@ -127,9 +141,26 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
         longRunDay: input.longRunDay,
     });
 
+    const firstWeek = result.layout.weeks[0];
+    const firstPhase = result.layout.phases.find((p) => p.ordinal === firstWeek.phaseOrdinal)!;
+    const week1Prompt = buildWeekPrompt({
+        school,
+        phase: firstPhase,
+        week: {
+            ...firstWeek,
+            from: today > firstWeek.startDate ? today : firstWeek.startDate,
+            to: endDate < firstWeek.endDate ? endDate : firstWeek.endDate,
+            timeTrialDistanceM: result.layout.timeTrial?.weekIndex === 0 ? result.layout.timeTrial.distanceM : null,
+        },
+        availability: input.availability,
+        longRunDay: input.longRunDay,
+        anchor,
+    });
+
     return {
         ok: true,
         anchor,
+        week1Prompt,
         record: {
             goalId: goal.id,
             startDate: today,

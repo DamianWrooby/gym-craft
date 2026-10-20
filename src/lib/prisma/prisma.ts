@@ -3,8 +3,7 @@ import { currentMonthStartIso } from '$lib/utils/iso-week';
 import { reportSummaryPreview } from '$lib/utils/report-format';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
-import type { AthleteProfile, GymPlan, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
-import type { NewPlan } from '../../models/plan/plan.model';
+import type { AthleteProfile, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const cache = new NodeCache({ stdTTL: 120 });
@@ -40,60 +39,6 @@ export async function getUserBySession(session: string): Promise<Pick<User, 'id'
     return user;
 }
 
-export async function addPlan(userId: string, plan: NewPlan): Promise<GymPlan> {
-    const createdPlan = await db.gymPlan.create({
-        data: {
-            ...plan,
-        },
-    });
-    cache.del(`plans_${userId}`);
-
-    return createdPlan;
-}
-
-export async function deletePlan(planId: string, userId: string): Promise<GymPlan> {
-    const plan = await db.gymPlan.findUnique({
-        where: { id: planId },
-    });
-
-    if (!plan) {
-        return fail('Plan not found');
-    }
-
-    if (plan.userId !== userId) {
-        return fail('User not authorized');
-    }
-
-    cache.del(`plans_${userId}`);
-    return await db.gymPlan.delete({
-        where: {
-            id: planId,
-        },
-    });
-}
-
-export async function updateGeneratedPlansNumber(userId: string): Promise<number | Error> {
-    const user = await db.user.findUnique({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        return fail('User not found');
-    }
-
-    const generatedPlansNumber = user.generatedPlansNumber;
-    const newGeneratedPlansNumber = generatedPlansNumber + 1;
-
-    await db.user.update({
-        where: { id: userId },
-        data: {
-            generatedPlansNumber: newGeneratedPlansNumber,
-        },
-    });
-
-    return newGeneratedPlansNumber;
-}
-
 const generalPlanLimitKey = 'configuration_general_plan_limit';
 /**
  * Longer than the default TTL. This is a global config row with no in-app writer — it
@@ -114,61 +59,6 @@ export async function getGeneralPlanLimit(): Promise<number> {
     const value = generalPlanLimit ? +generalPlanLimit.value : 0;
     cache.set(generalPlanLimitKey, value, GENERAL_PLAN_LIMIT_TTL_S);
     return value;
-}
-
-export async function updatePlanName(planId: string, newName: string, userId: string): Promise<void> {
-    const result = await db.gymPlan.updateMany({
-        where: { id: planId, userId },
-        data: { name: newName },
-    });
-
-    if (result.count === 0) {
-        return fail('Plan not found or not authorized');
-    }
-
-    cache.del(`plans_${userId}`);
-}
-
-export async function getPlans(userId: string): Promise<GymPlan[] | Error> {
-    const cacheKey = `plans_${userId}`;
-    const cachedPlans = cache.get(cacheKey);
-
-    if (cachedPlans) return cachedPlans as GymPlan[];
-    if (!userId) return fail('User not found');
-
-    const plans = await db.gymPlan.findMany({
-        where: { userId: userId },
-    });
-    cache.set(cacheKey, plans);
-
-    return plans;
-}
-
-export async function getPlan(planId: string, userId: string): Promise<GymPlan | null> {
-    return await db.gymPlan.findUnique({
-        where: { userId: userId, id: planId },
-    });
-}
-
-export async function incrementUserGeneretedPlans(userId: string): Promise<User> {
-    return await db.user.update({
-        where: { id: userId },
-        data: {
-            generatedPlansNumber: {
-                increment: 1,
-            },
-        },
-    });
-}
-
-export async function getGeneratedPlansNumber(userId: string): Promise<number> {
-    const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { generatedPlansNumber: true },
-    });
-
-    if (!user) return -1;
-    return user.generatedPlansNumber;
 }
 
 export async function verifyToken(userId: string, token: string): Promise<boolean> {
@@ -472,25 +362,6 @@ export async function getMonthlyWeeklyReportCount(userId: string): Promise<numbe
         select: { count: true },
     });
     return row?.count ?? 0;
-}
-
-export async function getMonthlyGymPlanCount(userId: string): Promise<number> {
-    // NOT cached — mirrors getMonthlyWeeklyReportCount; pre-flight hint only.
-    const monthKey = currentMonthStartIso();
-    const row = await db.aiUsage.findUnique({
-        where: { userId_kind_day: { userId, kind: 'gym_plan', day: monthKey } },
-        select: { count: true },
-    });
-    return row?.count ?? 0;
-}
-
-export async function incrementMonthlyGymPlanCount(userId: string): Promise<void> {
-    const monthKey = currentMonthStartIso();
-    await db.aiUsage.upsert({
-        where: { userId_kind_day: { userId, kind: 'gym_plan', day: monthKey } },
-        create: { userId, kind: 'gym_plan', day: monthKey, count: 1 },
-        update: { count: { increment: 1 } },
-    });
 }
 
 export interface PersistTrainingReportInput {

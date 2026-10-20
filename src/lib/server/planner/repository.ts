@@ -3,6 +3,7 @@ import { db } from '$lib/database';
 import { addDays } from '$lib/utils/iso-week';
 import type { Prisma } from '@prisma/client';
 import type { NewPlanRecord, PlanningContext } from './build-plan';
+import type { AiRequestInput } from './week-prompt';
 
 export class ActivePlanExistsError extends Error {
     constructor() {
@@ -37,7 +38,20 @@ export async function getPlanningContext(userId: string, today: string): Promise
     return { goals, raceResults, activities };
 }
 
-export async function persistNewPlan(userId: string, record: NewPlanRecord): Promise<{ id: string }> {
+export interface NewAiRequest {
+    model: string;
+    input: AiRequestInput;
+}
+
+export interface CreatedPlan {
+    id: string;
+    /** Week 1, which the bootstrap AI request writes. */
+    weekId: string;
+    aiRequestId: string;
+}
+
+/** Writes the horizon and week 1's AI request together, so a plan never exists without it. */
+export async function persistNewPlan(userId: string, record: NewPlanRecord, week1: NewAiRequest): Promise<CreatedPlan> {
     const { layout } = record;
     try {
         return await db.$transaction(async (tx) => {
@@ -97,9 +111,22 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord): Pro
                         })),
                     },
                 },
+                select: {
+                    id: true,
+                    phases: {
+                        orderBy: { ordinal: 'asc' },
+                        select: { weeks: { orderBy: { startDate: 'asc' }, select: { id: true } } },
+                    },
+                },
+            });
+
+            const weekId = plan.phases[0].weeks[0].id;
+            const request = await tx.aiRequest.create({
+                data: { userId, model: week1.model, input: week1.input as unknown as Prisma.InputJsonValue },
                 select: { id: true },
             });
-            return plan;
+            await tx.planWeek.update({ where: { id: weekId }, data: { aiRequestId: request.id } });
+            return { id: plan.id, weekId, aiRequestId: request.id };
         });
     } catch (e) {
         // The partial unique index catches a concurrent second create.
@@ -113,7 +140,21 @@ export async function getActivePlan(userId: string) {
         where: { userId, state: 'ACTIVE' },
         include: {
             goal: true,
-            phases: { orderBy: { ordinal: 'asc' }, include: { weeks: { orderBy: { startDate: 'asc' } } } },
+            phases: {
+                orderBy: { ordinal: 'asc' },
+                include: {
+                    weeks: {
+                        orderBy: { startDate: 'asc' },
+                        include: {
+                            aiRequest: { select: { id: true, status: true, retryCount: true } },
+                            sessions: {
+                                where: { status: { not: 'SUPERSEDED' } },
+                                orderBy: [{ scheduledDate: 'asc' }, { sequence: 'asc' }],
+                            },
+                        },
+                    },
+                },
+            },
         },
     });
 }

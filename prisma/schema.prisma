@@ -26,10 +26,11 @@ model User {
     stripeSubscriptionId String?
     subscriptionStatus   String?
     currentPeriodEnd     DateTime?
-    gymPlans             GymPlan[]
     plans                Plan[]
     planWeeks            PlanWeek[]
     raceResults          RaceResult[]
+    plannedSessions      PlannedSession[]
+    aiRequests           AiRequest[]
     verificationTokens   VerificationToken[]
     garminData           GarminData?
     athleteProfile       AthleteProfile?
@@ -46,22 +47,6 @@ model Roles {
     id   Int    @id @default(autoincrement())
     name Role   @unique
     User User[]
-}
-
-// Legacy gym plan (a repeating week of Garmin-shaped workouts). Kept working until planner
-// slice 2 drops it (ADR 0017); renamed in Prisma only, the table is still "Plan".
-model GymPlan {
-    id          String   @id @default(uuid())
-    name        String
-    description String
-    workouts    Json     @default("{}")
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-    userId      String
-    User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@index([userId])
-    @@map("Plan")
 }
 
 // A bounded horizon working toward one goal (ADRs 0008, 0012). One ACTIVE plan per user,
@@ -125,30 +110,34 @@ enum VolumeUnit {
 }
 
 model PlanWeek {
-    id                    String         @id @default(uuid())
+    id                    String           @id @default(uuid())
     userId                String
     phaseId               String
-    startDate             DateTime       @db.Date
-    endDate               DateTime       @db.Date
+    startDate             DateTime         @db.Date
+    endDate               DateTime         @db.Date
     inHorizonDays         Int
     // Struck once at the pull and frozen (ADR 0011); null until then.
     recoveryBudget        Float?
     chronicLoad           Float?
     budgetStruckAt        DateTime?
     outlookFactor         Float?
-    generation            WeekGeneration @default(PENDING)
-    isCutback             Boolean        @default(false)
+    generation            WeekGeneration   @default(PENDING)
+    isCutback             Boolean          @default(false)
     // Taper weeks count as recovery for the cutback cap (ADR 0021).
-    isTaper               Boolean        @default(false)
+    isTaper               Boolean          @default(false)
     // Set on the week holding the time trial when no anchor existed at layout (ADR 0020).
     timeTrialDistanceM    Int?
     volumeTarget          Int
     volumeUnit            VolumeUnit
     strengthSessionTarget Int
-    revision              Int            @default(0)
+    revision              Int              @default(0)
     revisedAt             DateTime?
-    User                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-    phase                 PlanPhase      @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+    // The AI request that writes this week's sessions (ADR 0014); null until generation starts.
+    aiRequestId           String?          @unique
+    User                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    phase                 PlanPhase        @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+    aiRequest             AiRequest?       @relation(fields: [aiRequestId], references: [id], onDelete: SetNull)
+    sessions              PlannedSession[]
 
     @@index([userId, startDate])
     @@index([phaseId])
@@ -157,6 +146,79 @@ model PlanWeek {
 enum WeekGeneration {
     PENDING
     GENERATED
+    FAILED
+}
+
+// One training session written onto a date (ADRs 0007, 0009). The body is per kind, typed in
+// src/lib/planner/core/session.ts and versioned by bodyVersion.
+model PlannedSession {
+    id            String        @id @default(uuid())
+    userId        String
+    planWeekId    String
+    kind          SessionKind
+    scheduledDate DateTime      @db.Date
+    sequence      Int           @default(0)
+    status        SessionStatus @default(PLANNED)
+    origin        SessionOrigin
+    plannedLoad   Float
+    loadMethod    LoadMethod
+    activityId    String?
+    supersedesId  String?
+    // Anchor provenance behind the pace targets: { provenance, sourceId, date, stale } or null.
+    anchor        Json?
+    body          Json
+    bodyVersion   Int           @default(1)
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+    User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    planWeek      PlanWeek      @relation(fields: [planWeekId], references: [id], onDelete: Cascade)
+
+    @@index([planWeekId, scheduledDate])
+    @@index([userId, scheduledDate])
+}
+
+enum SessionKind {
+    STRENGTH
+    RUNNING
+    OTHER
+}
+
+enum SessionStatus {
+    PLANNED
+    DONE
+    SKIPPED
+    SUPERSEDED
+}
+
+enum SessionOrigin {
+    AI
+    ATHLETE
+}
+
+// One paid AI call, recorded before it is made (ADR 0014). Generic: the app writes the input and
+// model, the proxy writes the output and status. Nothing here knows about plans.
+model AiRequest {
+    id         String          @id @default(uuid())
+    userId     String
+    model      String
+    // { system, user, maxTokens } — the complete prompt, built by the app server.
+    input      Json
+    status     AiRequestStatus @default(PENDING)
+    output     String?         @db.Text
+    error      String?
+    retryCount Int             @default(0)
+    createdAt  DateTime        @default(now())
+    updatedAt  DateTime        @updatedAt
+    User       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    planWeek   PlanWeek?
+
+    @@index([userId, status])
+}
+
+enum AiRequestStatus {
+    PENDING
+    RUNNING
+    DONE
     FAILED
 }
 

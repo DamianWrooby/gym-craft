@@ -6,6 +6,7 @@
     import type { SchoolDefinition } from '$lib/planner/schools/types';
     import RunningGoalForm from '$lib/components/running-goal/RunningGoalForm.svelte';
     import { readApiError } from '$lib/utils/api-error';
+    import { generateWeek } from '$lib/planner/generation-client';
     import { addDays } from '$lib/utils/iso-week';
     import { SCHOOLS, getSchool } from '$lib/planner/schools/catalogue';
     import { deriveAnchor } from '$lib/planner/core/anchor';
@@ -34,6 +35,7 @@
         | {
               profileMissing: false;
               today: string;
+              proxySession: string | null;
               goals: Goal[];
               zoneProposal: { source: ZoneSource; zones: HrZoneBound[] } | null;
               recentVolume: RecentVolume;
@@ -70,6 +72,8 @@
     let stepIndex = 0;
     let submitting = false;
     let submitError: string | null = null;
+    /** Week 1 is being written: the plan exists, only the AI call is in flight. */
+    let generating = false;
     let addingGoal = false;
     let detailsSchool: SchoolDefinition | null = null;
     let savingGoal = false;
@@ -218,6 +222,17 @@
             }),
         });
         if (response.ok) {
+            const { data: created } = await response.json();
+            generating = true;
+            // The plan page finalizes or retries whatever happens here, so the outcome is not read.
+            if (!data.profileMissing && data.proxySession) {
+                await generateWeek({
+                    userId: $page.data.user.id,
+                    weekId: created.weekId,
+                    aiRequestId: created.aiRequestId,
+                    session: data.proxySession,
+                });
+            }
             await goto('/app/plan');
             return;
         }
@@ -229,7 +244,16 @@
 <svelte:head><title>Plan setup | GymCraft</title></svelte:head>
 
 <PlannerShell fullscreen>
-    {#if data.profileMissing}
+    {#if generating}
+        <section class="gc-panel p-8 text-center space-y-4" aria-live="polite">
+            <div class="gc-pulse mx-auto" aria-hidden="true">◆</div>
+            <h1 class="text-2xl font-black tracking-wide">Writing week 1</h1>
+            <p class="text-slate-300 max-w-prose mx-auto">
+                Your horizon is laid out. GymCraft is now writing this week's sessions. This takes up to a minute.
+            </p>
+            <p class="text-sm text-sky-300">You can close this tab. Week 1 will be on your plan when you come back.</p>
+        </section>
+    {:else if data.profileMissing}
         <section class="gc-panel p-8 space-y-4 text-center">
             <h1 class="text-2xl font-black">Your athlete profile comes first</h1>
             <p class="text-slate-300">The planner needs your age and heart-rate details.</p>

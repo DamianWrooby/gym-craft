@@ -49,7 +49,7 @@ export function buildReportPdfHtml(report: PdfExportableReport): string {
     return `<div style="font-family: Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.5;">${parts.join('\n')}</div>`;
 }
 
-// Mirrors DownloadAsPdf.svelte (gym plans): html2pdf.js is untyped and browser-only,
+// Mirrors downloadWeekPdf (plan weeks): html2pdf.js is untyped and browser-only,
 // so it's imported lazily at click time.
 export async function downloadReportPdf(report: PdfExportableReport): Promise<void> {
     // @ts-expect-error html2pdf.js is not typed
