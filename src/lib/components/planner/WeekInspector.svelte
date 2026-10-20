@@ -1,8 +1,13 @@
 <script lang="ts">
     import { formatVolume, type PlanView } from '$lib/planner/plan-view';
+    import { downloadWeekPdf } from '$lib/utils/plan-description';
+    import WeekCalendar from './WeekCalendar.svelte';
+    import WeekGeneration from './WeekGeneration.svelte';
 
     export let plan: PlanView;
     export let index: number;
+    export let userId: string;
+    export let proxySession: string | null;
 
     $: week = plan.weeks[index];
     $: phase = plan.phases.find((p) => p.ordinal === week.phaseOrdinal)!;
@@ -57,4 +62,12 @@
     {#each fixtures as fixture}
         <p class="text-sm text-amber-300">⚑ Tune-up: {fixture.name ?? 'race'} on {fixture.date}</p>
     {/each}
+
+    {#if week.generation === 'GENERATED'}
+        <WeekCalendar {week} schoolId={plan.school.id} />
+        <button type="button" class="gc-ghost" on:click={() => downloadWeekPdf(plan, index)}
+            >Download week as PDF</button>
+    {:else}
+        {#key week.id}<WeekGeneration {week} {userId} {proxySession} />{/key}
+    {/if}
 </section>

@@ -3,6 +3,7 @@ import { todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile, invalidateAthleteProfile } from '$lib/prisma/prisma';
 import { validateCreatePlanInput } from '$lib/server/planner/validation';
 import { buildPlan } from '$lib/server/planner/build-plan';
+import { getLimit } from '@/constants/subscription.constants';
 import { rescoreIfZonesChanged } from '$lib/server/garmin/score-runs';
 import {
     ActivePlanExistsError,
@@ -13,7 +14,7 @@ import {
 
 const PROFILE_REQUIRED = { code: 'PROFILE_REQUIRED', message: 'Set up your athlete profile first' };
 
-/** Create a plan: lay out the whole horizon and write it. No AI call in this slice. */
+/** Create a plan: lay out the whole horizon, write it, and record week 1's AI request (ADR 0014). */
 export async function POST({
     request,
     params,
@@ -45,7 +46,8 @@ export async function POST({
     }
 
     try {
-        const plan = await persistNewPlan(userId, built.record);
+        const model = getLimit(locals.user?.subscriptionTier ?? 'FREE', 'aiModel');
+        const plan = await persistNewPlan(userId, built.record, { model, input: built.week1Prompt });
         invalidateAthleteProfile(userId);
         await rescoreIfZonesChanged(userId, profile.hrZoneBounds, built.record.hrZoneBounds);
         return createResponse(201, { data: plan });

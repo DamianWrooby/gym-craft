@@ -1,8 +1,28 @@
 // The shape the /app/plan page renders. Built on the server from the stored plan; pure.
 import { tuneUpFixtures, type FixtureGoal, type TuneUpFixture } from './core/fixtures';
 import { getSchool, isSchoolId } from './schools/catalogue';
-import type { VolumeUnit } from './schools/types';
+import type { SchoolId, VolumeUnit } from './schools/types';
 import type { PlanRationale } from './core/explain';
+import type { OtherBody, RunningBody, SessionKind, StrengthBody } from './core/session';
+
+export interface PlanViewSession {
+    id: string;
+    kind: SessionKind;
+    scheduledDate: string;
+    sequence: number;
+    status: 'PLANNED' | 'DONE' | 'SKIPPED' | 'SUPERSEDED';
+    plannedLoad: number;
+    /** The pace targets rest on an anchor that aged out of its window. */
+    staleAnchor: boolean;
+    body: RunningBody | StrengthBody | OtherBody;
+}
+
+/** The AI request writing a week, as far as the page needs it. */
+export interface PlanViewRequest {
+    id: string;
+    status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
+    retriesLeft: number;
+}
 
 export interface PlanViewPhase {
     ordinal: number;
@@ -15,6 +35,7 @@ export interface PlanViewPhase {
 }
 
 export interface PlanViewWeek {
+    id: string;
     index: number;
     phaseOrdinal: number;
     startDate: string;
@@ -28,11 +49,13 @@ export interface PlanViewWeek {
     volumeTarget: number;
     volumeUnit: VolumeUnit;
     strengthSessionTarget: number;
+    sessions: PlanViewSession[];
+    request: PlanViewRequest | null;
 }
 
 export interface PlanView {
     id: string;
-    school: { name: string; lore: string; tagline: string };
+    school: { id: SchoolId | null; name: string; lore: string; tagline: string };
     goalName: string;
     startDate: string;
     endDate: string;
@@ -90,8 +113,8 @@ export function toPlanView(plan: StoredPlan, goals: FixtureGoal[], today: string
     return {
         id: plan.id,
         school: school
-            ? { name: school.name, lore: school.lore, tagline: school.tagline }
-            : { name: schoolId ?? 'Unknown school', lore: '', tagline: '' },
+            ? { id: school.id, name: school.name, lore: school.lore, tagline: school.tagline }
+            : { id: null, name: schoolId ?? 'Unknown school', lore: '', tagline: '' },
         goalName: plan.goalName,
         startDate: plan.startDate,
         endDate: plan.endDate,

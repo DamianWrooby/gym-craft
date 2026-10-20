@@ -1,5 +1,9 @@
-import { sportTypes, stepTypes, targetTypes } from '@/garmin/mapping';
-import type { Plan, GeneratedWorkout, WorkoutStep } from '@models/plan/plan.model';
+// The PDF export of one plan week, built from the typed session body (ADR 0007). Shares its step
+// wording with the week calendar through session-format, so the page and the PDF never disagree.
+import { stepLines } from '$lib/planner/session-format';
+import { formatVolume, type PlanView, type PlanViewSession } from '$lib/planner/plan-view';
+
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function escapeHtml(str: string | number | null | undefined): string {
     if (str == null) return '';
@@ -11,149 +15,71 @@ function escapeHtml(str: string | number | null | undefined): string {
         .replace(/'/g, '&#039;');
 }
 
-export function generateFullPlanDescription(plan: Plan): string {
-    let html = `<h1>${escapeHtml(plan.name)}</h1>`;
-    if (plan.description) {
-        html += `<p>${escapeHtml(plan.description)}</p>`;
-    }
-    html += `<h2>Weekly Training Plan Overview</h2>`;
-    if (plan.workouts?.length) {
-        plan.workouts.forEach((workout) => {
-            html += generateFullWorkoutDescription(workout);
-        });
+const KIND_LABEL: Record<PlanViewSession['kind'], string> = {
+    RUNNING: 'Run',
+    STRENGTH: 'Strength',
+    OTHER: 'Other',
+};
+
+function sessionHtml(s: PlanViewSession, schoolId: string | null): string {
+    let html = `<h3>${KIND_LABEL[s.kind]}: ${escapeHtml(s.body.title)}</h3>`;
+    if ('steps' in s.body) {
+        if (s.body.reason) html += `<p style="color:#555;">Key session: ${escapeHtml(s.body.reason)}</p>`;
+        if (s.staleAnchor) html += `<p style="color:#a15c00;">Paces rest on an old result: enter a newer one.</p>`;
+        html += '<ul>';
+        for (const line of stepLines(s.body.steps, schoolId)) {
+            const note = line.note ? ` <em>(${escapeHtml(line.note)})</em>` : '';
+            html += `<li style="margin-left:${line.nested ? 1.5 : 0}em;">${escapeHtml(line.text)}${note}</li>`;
+        }
+        html += '</ul>';
+    } else if ('exercises' in s.body) {
+        html += `<p>${s.body.durationMin} min</p><ul>`;
+        for (const e of s.body.exercises) {
+            const load = e.load ? ` @ ${escapeHtml(e.load)}` : '';
+            html += `<li>${escapeHtml(e.name)}: ${e.sets} × ${escapeHtml(e.reps)}${load}</li>`;
+        }
+        html += '</ul>';
     } else {
-        html += `<p>No workouts in this plan.</p>`;
+        html += `<p>${s.body.durationMin} min, ${escapeHtml(s.body.effort)}</p>`;
     }
     return html;
 }
 
-export function generateFullWorkoutDescription(workout: GeneratedWorkout): string {
-    // Defensive: fallback for missing mapping keys
-    const getSportTitle = (key: string) => sportTypes[key]?.title ?? key;
-    const getStepTitle = (key: string) => stepTypes[key]?.title ?? key;
+export function weekToHtml(plan: PlanView, index: number): string {
+    const week = plan.weeks[index];
+    const phase = plan.phases.find((p) => p.ordinal === week.phaseOrdinal);
+    let html = `<h1>${escapeHtml(plan.goalName)}: week ${index + 1}</h1>`;
+    html += `<p>${escapeHtml(plan.school.name)} · ${escapeHtml(phase?.name)} · ${week.startDate} – ${week.endDate}</p>`;
+    html += `<p>Running volume ${escapeHtml(formatVolume(week.volumeTarget, week.volumeUnit))} · ${week.strengthSessionTarget} strength sessions</p>`;
 
-    let html = `<h2>${escapeHtml(workout.dayOfWeek)} - ${escapeHtml(workout.workoutName)} <span style="font-weight:normal;color:#aaa;">| ${escapeHtml(getSportTitle(workout.sportType.sportTypeKey))}</span></h2>`;
-    if (workout.justification) {
-        html += `<p style="color:#8ca0b3;">${escapeHtml(workout.justification)}</p>`;
+    const days = [...new Set(week.sessions.map((s) => s.scheduledDate))];
+    if (days.length === 0) html += '<p>No sessions written for this week.</p>';
+    for (const day of days) {
+        const weekday = DAY_NAMES[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7];
+        html += `<h2>${weekday} ${day}</h2>`;
+        for (const s of week.sessions.filter((x) => x.scheduledDate === day)) html += sessionHtml(s, plan.school.id);
     }
-
-    workout.workoutSegments.forEach((segment, segmentIdx) => {
-        html += `<h3>Segment ${segmentIdx + 1}</h3>`;
-        segment.workoutSteps.forEach((step, stepIdx) => {
-            if (step.stepType.stepTypeKey === 'repeat') {
-                html += `<h4>${stepIdx + 1}. Repeat block - ${escapeHtml(getEndConditionValue(step))} iterations</h4>`;
-                if (step.workoutSteps?.length) {
-                    html += `<div style="margin-left:1em;border-left:2px solid #ccc;padding-left:1em;">`;
-                    step.workoutSteps.forEach((subStep) => {
-                        html += `<h5>${escapeHtml(getStepTitle(subStep.stepType.stepTypeKey))}</h5>`;
-                        if (subStep.description) html += `<p>${escapeHtml(subStep.description)}</p>`;
-                        html += generateEndConditionDescription(subStep);
-                        html += generateTargetDescription(subStep);
-                    });
-                    html += `</div>`;
-                }
-            } else {
-                html += `<h4>${stepIdx + 1}. ${escapeHtml(getStepTitle(step.stepType.stepTypeKey))}</h4>`;
-                html += generateExerciseName(step);
-                if (step.description) html += `<p>${escapeHtml(step.description)}</p>`;
-                html += generateEndConditionDescription(step);
-                html += generateTargetDescription(step);
-            }
-        });
-    });
-
     return html;
 }
 
-export function getEndConditionValue(step: WorkoutStep): string | number {
-    switch (step.endCondition?.conditionTypeKey) {
-        case 'time':
-            return formatDuration(step.endConditionValue);
-        case 'iterations':
-            return step.numberOfIterations ?? 'N/A';
-        default:
-            return step.endConditionValue ?? 'N/A';
-    }
-}
+// html2pdf.js is untyped and browser-only, so it is imported lazily at click time.
+export async function downloadWeekPdf(plan: PlanView, index: number): Promise<void> {
+    // @ts-expect-error html2pdf.js is not typed
+    const { default: html2pdf } = await import('html2pdf.js');
 
-export function generateEndConditionDescription(step: WorkoutStep): string {
-    const endConditionValue = step.endCondition?.conditionTypeKey ? getEndConditionValue(step) : 'N/A';
+    const container = document.createElement('div');
+    container.innerHTML = `<div style="font-family: Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.5;">${weekToHtml(plan, index)}</div>`;
+    container.style.color = 'black';
 
-    return `<p class="text-secondary-400">End condition: ${escapeHtml(step.endCondition?.conditionTypeKey ?? 'unknown')} - ${escapeHtml(endConditionValue)}</p>`;
-}
-
-export function generateTargetDescription(step: WorkoutStep): string {
-    return step.targetType.workoutTargetTypeKey === 'no.target'
-        ? ''
-        : `<p class="text-warning-400">Target: ${escapeHtml(targetTypes[step.targetType.workoutTargetTypeKey as keyof typeof targetTypes].label)} - ${escapeHtml(step.targetValueOne)} - ${escapeHtml(step.targetValueTwo)} ${escapeHtml(step.targetValueUnit)}</p>`;
-}
-
-export function generateExerciseName(step: WorkoutStep): string {
-    const formatExerciseName = (exerciseName: string): string => {
-        return exerciseName
-            .toLowerCase() // Convert to lowercase: "dumbbell_row"
-            .replace(/_/g, ' ') // Replace underscores with spaces: "dumbbell row"
-            .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word: "Dumbbell Row"
-    };
-    return step.exerciseName
-        ? `<h4 class="h6 font-bold">${escapeHtml(formatExerciseName(step.exerciseName))}</h4>`
-        : '';
-}
-
-function formatDuration(seconds: number): string {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (hours > 0 && minutes > 0 && remainingSeconds > 0) {
-        return `${hours}h ${minutes}min ${remainingSeconds}s`;
-    } else if (hours > 0 && minutes > 0) {
-        return `${hours}h ${minutes}min`;
-    } else if (hours > 0) {
-        return `${hours}h`;
-    } else if (minutes > 0 && remainingSeconds > 0) {
-        return `${minutes}min ${remainingSeconds}s`;
-    } else if (minutes > 0) {
-        return `${minutes}min`;
-    } else {
-        return `${remainingSeconds}s`;
-    }
-}
-
-// Instead of returning HTML strings, return structured data
-export function getEndConditionData(step: WorkoutStep) {
-    const endConditionValue = step.endCondition?.conditionTypeKey ? getEndConditionValue(step) : 'N/A';
-
-    return {
-        conditionType: step.endCondition?.conditionTypeKey ?? 'unknown',
-        value: endConditionValue,
-        hasCondition: !!step.endCondition?.conditionTypeKey,
-    };
-}
-
-export function getTargetData(step: WorkoutStep) {
-    const isNoTarget = step.targetType.workoutTargetTypeKey === 'no.target';
-
-    return {
-        hasTarget: !isNoTarget,
-        type: targetTypes[step.targetType.workoutTargetTypeKey as keyof typeof targetTypes]?.label,
-        valueOne: step.targetValueOne ?? '',
-        valueTwo: step.targetValueTwo ?? '',
-        unit: step.targetValueUnit ?? '',
-    };
-}
-
-export function getExerciseData(step: WorkoutStep) {
-    if (!step.exerciseName) return null;
-
-    const formatExerciseName = (exerciseName: string): string => {
-        return exerciseName
-            .toLowerCase()
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, (char) => char.toUpperCase());
-    };
-
-    return {
-        name: formatExerciseName(step.exerciseName),
-    };
+    html2pdf()
+        .set({
+            margin: [20, 20],
+            filename: `plan-week-${index + 1}-${plan.weeks[index].startDate}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+        })
+        .from(container)
+        .save();
 }

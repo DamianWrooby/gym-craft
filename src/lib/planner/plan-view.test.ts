@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { formatVolume, toPlanView, type StoredPlan } from './plan-view';
 
 const week = (startDate: string, endDate: string, generation: 'PENDING' | 'GENERATED' | 'FAILED' = 'PENDING') => ({
+    id: `week-${startDate}`,
     startDate,
     endDate,
     inHorizonDays: 7,
@@ -12,6 +13,8 @@ const week = (startDate: string, endDate: string, generation: 'PENDING' | 'GENER
     volumeTarget: 200,
     volumeUnit: 'MINUTES' as const,
     strengthSessionTarget: 2,
+    sessions: [],
+    request: null,
 });
 
 const plan: StoredPlan = {

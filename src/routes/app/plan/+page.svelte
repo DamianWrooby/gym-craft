@@ -4,9 +4,10 @@
     import PhaseTimeline from '$lib/components/planner/PhaseTimeline.svelte';
     import WeekInspector from '$lib/components/planner/WeekInspector.svelte';
     import PlanRationale from '$lib/components/planner/PlanRationale.svelte';
+    import { page } from '$app/stores';
     import type { PlanView } from '$lib/planner/plan-view';
 
-    export let data: { plan: PlanView | null };
+    export let data: { plan: PlanView | null; proxySession: string | null };
 
     let selected: number | null = null;
     $: plan = data.plan;
@@ -20,7 +21,7 @@
         <PlanHeader {plan} />
         {#if plan.rationale}<PlanRationale rationale={plan.rationale} />{/if}
         <PhaseTimeline {plan} selected={shown} on:select={(e) => (selected = e.detail)} />
-        <WeekInspector {plan} index={shown} />
+        <WeekInspector {plan} index={shown} userId={$page.data.user.id} proxySession={data.proxySession} />
     {:else}
         <section class="gc-panel p-8 text-center space-y-4">
             <h1 class="text-3xl font-black tracking-wide">Build your plan</h1>

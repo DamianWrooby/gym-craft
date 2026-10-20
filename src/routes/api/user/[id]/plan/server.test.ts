@@ -11,6 +11,8 @@ vi.mock('$lib/prisma/prisma', () => prismaMocks);
 // The repository runs against a mocked Prisma client so the test sees the one transaction.
 const tx = vi.hoisted(() => ({
     plan: { count: vi.fn(), create: vi.fn() },
+    planWeek: { update: vi.fn() },
+    aiRequest: { create: vi.fn() },
     athleteProfile: { findUnique: vi.fn(), update: vi.fn() },
     raceResult: { createMany: vi.fn() },
 }));
@@ -26,7 +28,7 @@ import { POST } from './+server';
 import { zonesFromMaxHr } from '$lib/planner/core/zones';
 
 const userId = 'user-1';
-const locals = { user: { id: userId } } as unknown as App.Locals;
+const locals = { user: { id: userId, subscriptionTier: 'FREE' } } as unknown as App.Locals;
 
 const raceGoal = {
     id: 'goal-1',
@@ -60,7 +62,11 @@ beforeEach(() => {
     db.$transaction.mockImplementation((fn: (t: typeof tx) => unknown) => fn(tx));
     tx.plan.count.mockResolvedValue(0);
     tx.athleteProfile.findUnique.mockResolvedValue({ id: 'profile-1' });
-    tx.plan.create.mockResolvedValue({ id: 'plan-1' });
+    tx.plan.create.mockResolvedValue({
+        id: 'plan-1',
+        phases: [{ weeks: [{ id: 'week-1' }, { id: 'week-2' }] }, { weeks: [{ id: 'week-15' }] }],
+    });
+    tx.aiRequest.create.mockResolvedValue({ id: 'request-1' });
 });
 
 afterEach(() => {
@@ -76,7 +82,9 @@ describe('POST /api/user/[id]/plan', () => {
     it('writes plan, phases and weeks, zones and results in one transaction', async () => {
         const response = await post(validBody);
         expect(response.status).toBe(201);
-        expect(await response.json()).toMatchObject({ data: { id: 'plan-1' } });
+        expect(await response.json()).toEqual({
+            data: { id: 'plan-1', weekId: 'week-1', aiRequestId: 'request-1' },
+        });
         expect(db.$transaction).toHaveBeenCalledTimes(1);
 
         const data = tx.plan.create.mock.calls[0][0].data;
@@ -107,6 +115,19 @@ describe('POST /api/user/[id]/plan', () => {
             data: [expect.objectContaining({ userId, distanceM: 5000, timeSec: 1300 })],
         });
         expect(prismaMocks.invalidateAthleteProfile).toHaveBeenCalledWith(userId);
+    });
+
+    it('writes one AI request for week 1 in the same transaction, with the tier model', async () => {
+        await post(validBody);
+        expect(db.$transaction).toHaveBeenCalledTimes(1);
+        expect(tx.aiRequest.create).toHaveBeenCalledTimes(1);
+        const { data } = tx.aiRequest.create.mock.calls[0][0];
+        expect(data).toMatchObject({ userId, model: 'gpt-5.4-mini' });
+        expect(data.input).toMatchObject({ system: expect.any(String), user: expect.stringContaining('2026-10-12') });
+        expect(tx.planWeek.update).toHaveBeenCalledWith({
+            where: { id: 'week-1' },
+            data: { aiRequestId: 'request-1' },
+        });
     });
 
     it('refuses a second active plan with 409', async () => {
