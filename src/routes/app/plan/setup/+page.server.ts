@@ -7,6 +7,7 @@ import { getActivePlan, getPlanningContext } from '$lib/server/planner/repositor
 import { recentRunningVolume } from '$lib/server/planner/build-plan';
 import { proposeZones } from '$lib/planner/core/zones';
 import { hashSessionToken } from '$lib/server/session-token';
+import { selectableGoals } from '$lib/planner/wizard';
 
 export const load = async ({
     locals,
@@ -40,13 +41,16 @@ export const load = async ({
         today,
         // Hashed, never the raw cookie: the browser hands it to the AI proxy for week 1.
         proxySession: session ? hashSessionToken(session) : null,
-        goals: context.goals.map((g) => ({
-            id: g.id,
-            goalType: g.goalType,
-            name: g.targetEventName,
-            date: g.targetEventDate ? toIsoDate(g.targetEventDate) : null,
-            distanceM: g.targetDistanceM,
-        })),
+        goals: selectableGoals(
+            context.goals.map((g) => ({
+                id: g.id,
+                goalType: g.goalType,
+                name: g.targetEventName,
+                date: g.targetEventDate ? toIsoDate(g.targetEventDate) : null,
+                distanceM: g.targetDistanceM,
+            })),
+            today,
+        ),
         zoneProposal: proposeZones({
             existing: profile.hrZoneBounds,
             maxHR: profile.maxHR,

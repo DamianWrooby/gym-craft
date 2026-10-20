@@ -144,6 +144,7 @@
         addingGoal = false;
         const fresh = ready?.goals.find((g) => g.id === created.id);
         if (fresh) chooseGoal(fresh);
+        else goalError = 'The goal was saved, but its date has passed, so it cannot set a plan horizon.';
     }
 
     function chooseSchool(id: (typeof SCHOOLS)[number]['id']) {
@@ -280,7 +281,7 @@
 
         {#if step === 'goal'}
             {#if data.goals.length === 0 && !addingGoal}
-                <p class="text-slate-400">You have no goals yet. Add one to start your plan.</p>
+                <p class="text-slate-400">You have no upcoming goals. Add one to start your plan.</p>
             {/if}
             <div class="grid gap-3 sm:grid-cols-2">
                 {#each data.goals as g}
