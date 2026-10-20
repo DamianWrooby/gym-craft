@@ -2,6 +2,7 @@
 // rejected whole. Nothing uncostable and nothing that breaks a placement rule is ever stored.
 import type { SchoolDefinition } from '../schools/types';
 import { costSession } from './cost';
+import { cutCandidates } from './conflict';
 import { placementViolations, type PlacementContext } from './placement';
 import { BODY_VERSION, type Exercise, type RunBlock, type RunStep, type TypedSession } from './session';
 
@@ -12,7 +13,16 @@ export interface GenerationContext {
     placement: PlacementContext;
 }
 
-export type GenerationResult = { ok: true; sessions: TypedSession[] } | { ok: false; errors: string[] };
+/** An infeasible week trimmed in cut order (ADR 0026): the same four facts as a budget trim. */
+export interface PlacementTrim {
+    removed: { title: string; plannedLoad: number; cutKey: string | null }[];
+    violations: string[];
+    cutOrder: string[];
+    protected: string[];
+}
+
+export type GenerationResult =
+    { ok: true; sessions: TypedSession[]; placementTrim: PlacementTrim | null } | { ok: false; errors: string[] };
 
 type Raw = Record<string, unknown>;
 
@@ -163,6 +173,44 @@ export function validateGeneration(rawOutput: string, ctx: GenerationContext): G
     if (errors.length > 0) return { ok: false, errors };
 
     const violations = placementViolations(sessions, ctx.placement);
-    if (violations.length > 0) return { ok: false, errors: violations };
-    return { ok: true, sessions };
+    if (violations.length === 0) return { ok: true, sessions, placementTrim: null };
+    return trimForPlacement(sessions, violations, ctx);
+}
+
+const keyOf = (s: TypedSession) => (s.kind === 'RUNNING' ? s.body.keySession : null);
+const cutOf = (s: TypedSession) => (s.kind === 'RUNNING' ? s.body.cutKey : null);
+
+/**
+ * Removes non-key runs in cut order until the week places; never a key session, never a broken
+ * rule. A week that still breaks a rule is rejected whole, as before.
+ */
+function trimForPlacement(sessions: TypedSession[], violations: string[], ctx: GenerationContext): GenerationResult {
+    const cutOrder = ctx.school.cutOrder.value;
+    const loads = sessions.map((s) => costSession(s, ctx).plannedLoad);
+    const candidates = cutCandidates(
+        sessions.map((s, i) => ({ kind: s.kind, keySession: keyOf(s), cutKey: cutOf(s), plannedLoad: loads[i] })),
+        cutOrder,
+    );
+
+    const removed = new Set<number>();
+    for (const i of candidates) {
+        removed.add(i);
+        const kept = sessions.filter((_, j) => !removed.has(j));
+        if (placementViolations(kept, ctx.placement).length > 0) continue;
+        return {
+            ok: true,
+            sessions: kept,
+            placementTrim: {
+                removed: [...removed].map((j) => ({
+                    title: sessions[j].body.title,
+                    plannedLoad: loads[j],
+                    cutKey: cutOf(sessions[j]),
+                })),
+                violations,
+                cutOrder,
+                protected: kept.filter((s) => keyOf(s) != null).map((s) => s.body.title),
+            },
+        };
+    }
+    return { ok: false, errors: violations };
 }

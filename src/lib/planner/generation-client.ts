@@ -60,3 +60,18 @@ export async function pullWeek(
     if (!response.ok) return { error: json?.message ?? 'Could not write the week. Try again later.' };
     return { aiRequestId: json.data.aiRequestId };
 }
+
+export async function answerDecision(
+    userId: string,
+    weekId: string,
+    choice: 'DROP' | 'DOWNGRADE' | 'KEEP',
+): Promise<{ ok: true } | { error: string }> {
+    const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ choice }),
+    });
+    if (response.ok) return { ok: true };
+    const json = await response.json().catch(() => null);
+    return { error: json?.message ?? 'Could not save your answer. Try again.' };
+}

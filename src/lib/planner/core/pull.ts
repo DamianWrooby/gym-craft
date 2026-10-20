@@ -5,8 +5,8 @@
 export const WEEK_OUTLOOKS = ['NORMAL', 'BUSY', 'TRAVEL', 'ILL'] as const;
 export type WeekOutlook = (typeof WEEK_OUTLOOKS)[number];
 
-/** Judged multipliers applied once to the recovery budget when it is struck. */
-export const OUTLOOK_FACTORS: Record<WeekOutlook, number> = { NORMAL: 1, BUSY: 0.8, TRAVEL: 0.7, ILL: 0.5 };
+/** Judged multipliers applied once to the recovery budget when it is struck (ADR 0024). */
+export const OUTLOOK_FACTORS: Record<WeekOutlook, number> = { NORMAL: 1, BUSY: 0.85, TRAVEL: 0.85, ILL: 0.6 };
 
 export interface PullWeek {
     id: string;

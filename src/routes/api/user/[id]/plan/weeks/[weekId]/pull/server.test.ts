@@ -14,7 +14,8 @@ const db = vi.hoisted(() => ({
     $transaction: vi.fn(),
     plan: { findFirst: vi.fn() },
     raceResult: { findMany: vi.fn() },
-    activity: { findMany: vi.fn() },
+    activity: { findMany: vi.fn(), findFirst: vi.fn() },
+    garminData: { findUnique: vi.fn() },
     runningGoal: { findMany: vi.fn() },
 }));
 vi.mock('$lib/database', () => ({ db }));
@@ -82,6 +83,8 @@ beforeEach(() => {
     db.plan.findFirst.mockResolvedValue(activePlan());
     db.raceResult.findMany.mockResolvedValue([]);
     db.activity.findMany.mockResolvedValue([]);
+    db.activity.findFirst.mockResolvedValue(null);
+    db.garminData.findUnique.mockResolvedValue(null);
     db.runningGoal.findMany.mockResolvedValue([]);
     tx.aiRequest.create.mockResolvedValue({ id: 'request-2' });
     tx.planWeek.updateMany.mockResolvedValue({ count: 1 });
@@ -114,7 +117,7 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/pull', () => {
         expect(input.user).toContain('busy');
         expect(tx.planWeek.updateMany).toHaveBeenCalledWith({
             where: { id: 'week-2', userId, aiRequestId: null },
-            data: { aiRequestId: 'request-2', outlook: 'BUSY', outlookFactor: 0.8 },
+            data: expect.objectContaining({ aiRequestId: 'request-2', outlook: 'BUSY', outlookFactor: 0.85 }),
         });
         expect(tx.plannedSession.updateMany).toHaveBeenCalledWith({
             where: { id: 'past', userId, status: 'PLANNED', scheduledDate: { lt: d('2026-10-14') } },
@@ -149,5 +152,47 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/pull', () => {
         await post(validBody);
         const input = tx.aiRequest.create.mock.calls[0][0].data.input;
         expect(input.anchor).toMatchObject({ provenance: 'RACE_RESULT', sourceId: 'r1' });
+    });
+
+    it('strikes the budget once at the pull, sized by the outlook, and freezes it on the week', async () => {
+        db.activity.findFirst.mockResolvedValue({ startTime: new Date('2026-06-01T07:00:00Z') });
+        // 28 days of 50 TRIMP: chronic load 50, one lift costed at the flat rate.
+        db.activity.findMany.mockResolvedValue(
+            Array.from({ length: 28 }, (_, i) => ({
+                startTime: new Date(Date.UTC(2026, 8, 17 + i, 7)),
+                trimpLoad: 50,
+                loadMethod: i === 0 ? 'DURATION' : 'EDWARDS',
+            })),
+        );
+        await post(validBody);
+        expect(tx.planWeek.updateMany.mock.calls[0][0].data).toMatchObject({
+            chronicLoad: 50,
+            recoveryBudget: 386.8,
+            chronicFallbackShare: 0.04,
+            budgetAbsence: null,
+            budgetStruckAt: expect.any(Date),
+        });
+    });
+
+    it('locks the budget for an athlete without a Garmin link, and says why', async () => {
+        await post(validBody);
+        expect(tx.planWeek.updateMany.mock.calls[0][0].data).toMatchObject({
+            recoveryBudget: null,
+            chronicLoad: null,
+            budgetAbsence: 'NO_TRACKED_ACTIVITY',
+        });
+    });
+
+    it('strikes no budget under 28 days of history', async () => {
+        db.garminData.findUnique.mockResolvedValue({ id: 'g1' });
+        db.activity.findFirst.mockResolvedValue({ startTime: new Date('2026-10-01T07:00:00Z') });
+        db.activity.findMany.mockResolvedValue([
+            { startTime: new Date('2026-10-01T07:00:00Z'), trimpLoad: 80, loadMethod: 'EDWARDS' },
+        ]);
+        await post(validBody);
+        expect(tx.planWeek.updateMany.mock.calls[0][0].data).toMatchObject({
+            recoveryBudget: null,
+            budgetAbsence: 'SHORT_HISTORY',
+        });
     });
 });

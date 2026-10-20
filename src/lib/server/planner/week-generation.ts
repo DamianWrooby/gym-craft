@@ -6,10 +6,12 @@ import { addDays, currentMonthStartIso, toIsoDate } from '$lib/utils/iso-week';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
 import { validateGeneration } from '$lib/planner/core/generation';
 import { costSession } from '$lib/planner/core/cost';
+import { canDowngrade, resolveConflict, type ConflictRecord, type SessionRef } from '$lib/planner/core/conflict';
 import { attachTargets, labelPaces } from '$lib/planner/core/targets';
 import { isValidZones } from '$lib/planner/core/zones';
 import type { AvailabilityMap } from '$lib/planner/wizard';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, WeekDecision } from '@prisma/client';
+import type { TypedSession } from '$lib/planner/core/session';
 import type { AiRequestInput } from './week-prompt';
 
 /** A failed request may be retried at most this many times (ADR 0016). */
@@ -96,7 +98,42 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
     }
 
     const zones = isValidZones(profile?.hrZoneBounds) ? profile.hrZoneBounds : null;
-    const sessions = attachTargets(result.sessions, { school, anchor, zones });
+    const written = attachTargets(result.sessions, { school, anchor, zones });
+    const costs = written.map((s) => costSession(s, { school, paceSecPerKm: paces }));
+
+    // School versus budget (ADR 0013): trim easy volume silently, or store as written and ask.
+    const resolution = resolveConflict(
+        written.map((s, i) => ({
+            title: s.body.title,
+            kind: s.kind,
+            plannedLoad: costs[i].plannedLoad,
+            method: costs[i].method,
+            keySession: s.kind === 'RUNNING' ? s.body.keySession : null,
+            cutKey: s.kind === 'RUNNING' ? s.body.cutKey : null,
+            canDowngrade: s.kind === 'RUNNING' && canDowngrade(s.body.steps, school),
+        })),
+        week.recoveryBudget,
+        school,
+    );
+    const ref = (s: TypedSession): SessionRef => ({ scheduledDate: s.scheduledDate, sequence: s.sequence });
+    let budgetRecord: ConflictRecord['budget'] = null;
+    let decision: WeekDecision | null = null;
+    let kept = written.map((_, i) => i);
+    if (resolution.kind === 'trim') {
+        budgetRecord = { kind: 'TRIM', facts: resolution.facts };
+        kept = kept.filter((i) => !resolution.removed.includes(i));
+    } else if (resolution.kind === 'ask') {
+        budgetRecord = {
+            kind: 'ASK',
+            facts: resolution.facts,
+            schoolFit: resolution.schoolFit,
+            removed: resolution.removed.map((i) => ref(written[i])),
+            keySession: ref(written[resolution.keySessionIndex]),
+        };
+        decision = 'PENDING';
+    }
+    const conflict: ConflictRecord | null =
+        result.placementTrim || budgetRecord ? { placement: result.placementTrim, budget: budgetRecord } : null;
     const anchorRecord = anchor
         ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }
         : null;
@@ -106,13 +143,18 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
         // The conditional update is the idempotency guard: a second finalize finds nothing to claim.
         const claimed = await tx.planWeek.updateMany({
             where: { id: week.id, generation: { not: 'GENERATED' } },
-            data: { generation: 'GENERATED' },
+            data: {
+                generation: 'GENERATED',
+                ...(conflict && { conflict: conflict as unknown as Prisma.InputJsonValue }),
+                ...(decision && { decision }),
+            },
         });
         if (claimed.count === 0) return;
 
         await tx.plannedSession.createMany({
-            data: sessions.map((s) => {
-                const cost = costSession(s, { school, paceSecPerKm: paces });
+            data: kept.map((i) => {
+                const s = written[i];
+                const cost = costs[i];
                 return {
                     userId,
                     planWeekId: week.id,

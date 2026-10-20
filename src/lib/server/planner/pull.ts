@@ -10,6 +10,7 @@ import type { Prisma } from '@prisma/client';
 import { anchorFromContext } from './build-plan';
 import { getPlanningContext } from './repository';
 import { buildWeekPrompt } from './week-prompt';
+import { strikeWeekBudget } from './budget';
 
 export interface PullInput {
     outlook: WeekOutlook;
@@ -77,6 +78,10 @@ export async function pullWeek(
         outlook: input.outlook,
     });
 
+    // Struck once here and frozen on the week (ADR 0011); the outlook sizes it once (ADR 0024).
+    const outlookFactor = OUTLOOK_FACTORS[input.outlook];
+    const budget = await strikeWeekBudget(userId, today, target.inHorizonDays, outlookFactor);
+
     try {
         const aiRequestId = await db.$transaction(async (tx) => {
             for (const c of input.confirmations) {
@@ -92,11 +97,7 @@ export async function pullWeek(
             // Claiming only a week with no request keeps it to one request, even under a race.
             const claimed = await tx.planWeek.updateMany({
                 where: { id: target.id, userId, aiRequestId: null },
-                data: {
-                    aiRequestId: request.id,
-                    outlook: input.outlook,
-                    outlookFactor: OUTLOOK_FACTORS[input.outlook],
-                },
+                data: { aiRequestId: request.id, outlook: input.outlook, outlookFactor, ...budget },
             });
             if (claimed.count === 0) throw new AlreadyPulledError();
             return request.id;

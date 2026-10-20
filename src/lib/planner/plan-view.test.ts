@@ -15,6 +15,9 @@ const week = (startDate: string, endDate: string, generation: 'PENDING' | 'GENER
     strengthSessionTarget: 2,
     sessions: [],
     request: null,
+    budget: { struck: false, recoveryBudget: null, chronicLoad: null, chronicFallbackShare: null, absence: null },
+    conflict: null,
+    decision: null,
 });
 
 const plan: StoredPlan = {
@@ -86,6 +89,7 @@ describe('toPlanView', () => {
             sequence: 0,
             status,
             plannedLoad: 50,
+            loadMethod: 'LABEL_TABLE' as const,
             staleAnchor: false,
             body: { bodyVersion: 1 } as never,
         });

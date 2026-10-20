@@ -133,4 +133,38 @@ describe('validateGeneration', () => {
             errors: [expect.stringMatching(/long run/i), expect.stringMatching(/consecutive/i)],
         });
     });
+
+    it('trims an infeasible week in cut order instead of breaking a placement rule', () => {
+        const easy = (date: string, durationSec: number) => ({
+            kind: 'RUNNING',
+            date,
+            title: `Easy ${date}`,
+            cutKey: 'easy',
+            steps: [{ label: 'E', durationSec }],
+        });
+        const sessions = [
+            easy('2026-10-19', 2400),
+            q1,
+            easy('2026-10-21', 1800),
+            lift,
+            easy('2026-10-23', 2400),
+            easy('2026-10-24', 2400),
+            long,
+        ];
+        const result = validateGeneration(output(sessions), ctx);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.sessions).toHaveLength(6);
+        expect(result.placementTrim).toEqual({
+            removed: [{ title: 'Easy 2026-10-21', plannedLoad: 60, cutKey: 'easy' }],
+            violations: ['The week needs at least one rest day'],
+            cutOrder: ['easy', 'strides'],
+            protected: ['Threshold', 'Long run'],
+        });
+    });
+
+    it('still rejects a week whose key sessions break a rule no trim can fix', () => {
+        const result = validateGeneration(output([q1, { ...long, date: '2026-10-21' }]), ctx);
+        expect(result.ok).toBe(false);
+    });
 });

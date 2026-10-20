@@ -120,6 +120,14 @@ model PlanWeek {
     recoveryBudget        Float?
     chronicLoad           Float?
     budgetStruckAt        DateTime?
+    // Share of the chronic load costed at a flat rate or guessed (ADR 0011).
+    chronicFallbackShare  Float?
+    // Why no budget was struck; null when one was, or before the strike.
+    budgetAbsence         BudgetAbsence?
+    // The trim, ask or placement trim the finalize recorded (ADR 0013); null when nothing was cut.
+    conflict              Json?
+    // The athlete's answer to an ask; KEPT is the per-week override record.
+    decision              WeekDecision?
     // Set by the athlete at the pull that writes this week.
     outlook               WeekOutlook?
     outlookFactor         Float?
@@ -143,6 +151,20 @@ model PlanWeek {
 
     @@index([userId, startDate])
     @@index([phaseId])
+}
+
+enum BudgetAbsence {
+    // No tracked activity at all: the athlete has not linked Garmin or never synced.
+    NO_TRACKED_ACTIVITY
+    // Under 28 days of history, or a chronic load of zero.
+    SHORT_HISTORY
+}
+
+enum WeekDecision {
+    PENDING
+    DROPPED
+    DOWNGRADED
+    KEPT
 }
 
 enum WeekOutlook {

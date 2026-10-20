@@ -20,7 +20,8 @@ const db = vi.hoisted(() => ({
     $transaction: vi.fn(),
     runningGoal: { findMany: vi.fn() },
     raceResult: { findMany: vi.fn() },
-    activity: { findMany: vi.fn() },
+    activity: { findMany: vi.fn(), findFirst: vi.fn() },
+    garminData: { findUnique: vi.fn() },
 }));
 vi.mock('$lib/database', () => ({ db }));
 
@@ -59,6 +60,8 @@ beforeEach(() => {
     db.runningGoal.findMany.mockResolvedValue([raceGoal]);
     db.raceResult.findMany.mockResolvedValue([]);
     db.activity.findMany.mockResolvedValue([]);
+    db.activity.findFirst.mockResolvedValue(null);
+    db.garminData.findUnique.mockResolvedValue(null);
     db.$transaction.mockImplementation((fn: (t: typeof tx) => unknown) => fn(tx));
     tx.plan.count.mockResolvedValue(0);
     tx.athleteProfile.findUnique.mockResolvedValue({ id: 'profile-1' });
@@ -126,7 +129,17 @@ describe('POST /api/user/[id]/plan', () => {
         expect(data.input).toMatchObject({ system: expect.any(String), user: expect.stringContaining('2026-10-12') });
         expect(tx.planWeek.update).toHaveBeenCalledWith({
             where: { id: 'week-1' },
-            data: { aiRequestId: 'request-1' },
+            data: expect.objectContaining({ aiRequestId: 'request-1' }),
+        });
+    });
+
+    it("strikes week 1's recovery budget at creation, with no outlook", async () => {
+        await post(validBody);
+        expect(tx.planWeek.update.mock.calls[0][0].data).toMatchObject({
+            outlookFactor: 1,
+            recoveryBudget: null,
+            budgetAbsence: 'NO_TRACKED_ACTIVITY',
+            budgetStruckAt: expect.any(Date),
         });
     });
 
