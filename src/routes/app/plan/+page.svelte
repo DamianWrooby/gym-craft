@@ -4,6 +4,7 @@
     import PhaseTimeline from '$lib/components/planner/PhaseTimeline.svelte';
     import WeekInspector from '$lib/components/planner/WeekInspector.svelte';
     import PlanRationale from '$lib/components/planner/PlanRationale.svelte';
+    import PullPrompt from '$lib/components/planner/PullPrompt.svelte';
     import { page } from '$app/stores';
     import type { PlanView } from '$lib/planner/plan-view';
 
@@ -21,6 +22,11 @@
         <PlanHeader {plan} />
         {#if plan.rationale}<PlanRationale rationale={plan.rationale} />{/if}
         <PhaseTimeline {plan} selected={shown} on:select={(e) => (selected = e.detail)} />
+        {#if plan.pull && shown === plan.currentWeekIndex}
+            {#key plan.pull.weekIndex}
+                <PullPrompt {plan} userId={$page.data.user.id} proxySession={data.proxySession} />
+            {/key}
+        {/if}
         <WeekInspector {plan} index={shown} userId={$page.data.user.id} proxySession={data.proxySession} />
     {:else}
         <section class="gc-panel p-8 text-center space-y-4">
