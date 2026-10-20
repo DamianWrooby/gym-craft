@@ -78,6 +78,32 @@ describe('toPlanView', () => {
         });
     });
 
+    it('offers a pull for the next unwritten week, listing unconfirmed past sessions', () => {
+        const session = (id: string, scheduledDate: string, status: 'PLANNED' | 'DONE') => ({
+            id,
+            kind: 'RUNNING' as const,
+            scheduledDate,
+            sequence: 0,
+            status,
+            plannedLoad: 50,
+            staleAnchor: false,
+            body: { bodyVersion: 1 } as never,
+        });
+        const written = structuredClone(plan);
+        written.phases[0].weeks[0].request = { id: 'r1', status: 'DONE', retriesLeft: 2 };
+        written.phases[0].weeks[0].sessions = [
+            session('s1', '2026-10-13', 'PLANNED'),
+            session('s2', '2026-10-15', 'DONE'),
+            session('s3', '2026-10-17', 'PLANNED'),
+        ];
+        const v = toPlanView(written, [], '2026-10-16');
+        expect(v.pull?.weekIndex).toBe(1);
+        expect(v.pull?.unconfirmed.map((s) => s.id)).toEqual(['s1']);
+
+        written.phases[1].weeks[0].request = { id: 'r2', status: 'PENDING', retriesLeft: 2 };
+        expect(toPlanView(written, [], '2026-10-16').pull).toBeNull();
+    });
+
     it('has no current week outside the horizon', () => {
         expect(toPlanView(plan, [], '2026-11-02').currentWeekIndex).toBeNull();
     });

@@ -3,6 +3,7 @@ import { tuneUpFixtures, type FixtureGoal, type TuneUpFixture } from './core/fix
 import { getSchool, isSchoolId } from './schools/catalogue';
 import type { SchoolId, VolumeUnit } from './schools/types';
 import type { PlanRationale } from './core/explain';
+import { pullTarget, unconfirmedSessions } from './core/pull';
 import type { OtherBody, RunningBody, SessionKind, StrengthBody } from './core/session';
 
 export interface PlanViewSession {
@@ -66,6 +67,8 @@ export interface PlanView {
     currentWeekIndex: number | null;
     /** Null for plans created before the rationale was stored. */
     rationale: PlanRationale | null;
+    /** The week a pull would write today, with past sessions still to confirm; null when none. */
+    pull: { weekIndex: number; unconfirmed: PlanViewSession[] } | null;
 }
 
 export interface StoredPlan {
@@ -110,6 +113,10 @@ export function toPlanView(plan: StoredPlan, goals: FixtureGoal[], today: string
     const school = isSchoolId(schoolId) ? getSchool(schoolId) : null;
 
     const current = weeks.find((w) => today >= w.startDate && today <= w.endDate);
+    const pullWeek = pullTarget(
+        weeks.map((w) => ({ ...w, hasRequest: w.request != null })),
+        today,
+    );
     return {
         id: plan.id,
         school: school
@@ -129,6 +136,16 @@ export function toPlanView(plan: StoredPlan, goals: FixtureGoal[], today: string
         }),
         currentWeekIndex: current && today >= plan.startDate && today <= plan.endDate ? current.index : null,
         rationale: plan.rationale,
+        pull: pullWeek
+            ? {
+                  weekIndex: pullWeek.index,
+                  // Last week's and this week's: older ones stay "not confirmed" without blocking.
+                  unconfirmed: unconfirmedSessions(
+                      weeks.filter((w) => current && w.index >= current.index - 1).flatMap((w) => w.sessions),
+                      today,
+                  ),
+              }
+            : null,
     };
 }
 

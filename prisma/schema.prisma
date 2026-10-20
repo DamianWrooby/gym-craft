@@ -120,6 +120,8 @@ model PlanWeek {
     recoveryBudget        Float?
     chronicLoad           Float?
     budgetStruckAt        DateTime?
+    // Set by the athlete at the pull that writes this week.
+    outlook               WeekOutlook?
     outlookFactor         Float?
     generation            WeekGeneration   @default(PENDING)
     isCutback             Boolean          @default(false)
@@ -141,6 +143,13 @@ model PlanWeek {
 
     @@index([userId, startDate])
     @@index([phaseId])
+}
+
+enum WeekOutlook {
+    NORMAL
+    BUSY
+    TRAVEL
+    ILL
 }
 
 enum WeekGeneration {

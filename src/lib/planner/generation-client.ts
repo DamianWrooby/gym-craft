@@ -45,3 +45,18 @@ export async function retryWeek(userId: string, weekId: string): Promise<{ aiReq
     if (!response.ok) return { error: body?.message ?? 'Retry failed. Try again later.' };
     return { aiRequestId: body.data.aiRequestId };
 }
+
+export async function pullWeek(
+    userId: string,
+    weekId: string,
+    body: { outlook: string; confirmations: { sessionId: string; status: 'DONE' | 'SKIPPED' }[] },
+): Promise<{ aiRequestId: string } | { error: string }> {
+    const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/pull`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok) return { error: json?.message ?? 'Could not write the week. Try again later.' };
+    return { aiRequestId: json.data.aiRequestId };
+}

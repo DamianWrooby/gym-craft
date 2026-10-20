@@ -7,6 +7,7 @@ import { LONG_RUN_KEY } from '$lib/planner/core/placement';
 import { formatVolume } from '$lib/planner/plan-view';
 import { labelPaces } from '$lib/planner/core/targets';
 import type { Anchor } from '$lib/planner/core/anchor';
+import type { WeekOutlook } from '$lib/planner/core/pull';
 
 export interface AiRequestInput {
     system: string;
@@ -39,7 +40,15 @@ export interface WeekPromptInput {
     availability: AvailabilityMap;
     longRunDay: number;
     anchor: Anchor | null;
+    /** Set at a pull; week 1 has none. */
+    outlook?: WeekOutlook;
 }
+
+const OUTLOOK_LINES: Record<Exclude<WeekOutlook, 'NORMAL'>, string> = {
+    BUSY: 'Week outlook: busy. Keep sessions short and drop easy volume before key sessions.',
+    TRAVEL: 'Week outlook: travel. Prefer runs that need no track or gym; keep strength to bodyweight.',
+    ILL: 'Week outlook: ill. Favour easy running and light strength.',
+};
 
 /** Reasoning models spend output tokens on thinking; a week needs ~5k (ADR 0016 estimate). */
 const MAX_TOKENS = 8000;
@@ -87,6 +96,7 @@ export function buildWeekPrompt(input: WeekPromptInput): AiRequestInput {
         `Week: ${week.from} to ${week.to}${weekKind ? ` (${weekKind})` : ''}.`,
         `Running volume target: ${formatVolume(week.volumeTarget, week.volumeUnit)}.`,
         `Strength sessions: exactly ${week.strengthSessionTarget}.`,
+        input.outlook && input.outlook !== 'NORMAL' ? OUTLOOK_LINES[input.outlook] : '',
         week.timeTrialDistanceM
             ? `Schedule a ${week.timeTrialDistanceM / 1000} km time trial as one running session, all-out after a warm-up.`
             : '',
