@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { canFinish, firstBlockedStep, initialWizardState, stepIssue, type WizardState } from './wizard';
+import {
+    canFinish,
+    firstBlockedStep,
+    initialWizardState,
+    selectableGoals,
+    stepIssue,
+    type WizardState,
+} from './wizard';
 import { zonesFromMaxHr } from './core/zones';
 
 function complete(overrides: Partial<WizardState> = {}): WizardState {
@@ -48,5 +55,17 @@ describe('wizard step gating', () => {
 
     it('checks steps in wizard order', () => {
         expect(firstBlockedStep(complete({ goalId: null, zonesConfirmed: false }))).toBe('goal');
+    });
+});
+
+describe('selectableGoals', () => {
+    it('offers goals dated after today and undated goals, never past or same-day goals', () => {
+        const goals = [
+            { id: 'past', date: '2026-09-01' },
+            { id: 'today', date: '2026-10-20' },
+            { id: 'future', date: '2027-03-01' },
+            { id: 'undated', date: null },
+        ];
+        expect(selectableGoals(goals, '2026-10-20').map((g) => g.id)).toEqual(['future', 'undated']);
     });
 });

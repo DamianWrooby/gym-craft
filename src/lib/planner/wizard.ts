@@ -84,3 +84,8 @@ export function firstBlockedStep(s: WizardState): WizardStep | null {
 export function canFinish(s: WizardState): boolean {
     return firstBlockedStep(s) === null;
 }
+
+/** Goals the wizard offers: a dated goal must end after today to bound a horizon; undated goals choose a length. */
+export function selectableGoals<G extends { date: string | null }>(goals: G[], today: string): G[] {
+    return goals.filter((g) => g.date == null || g.date > today);
+}
