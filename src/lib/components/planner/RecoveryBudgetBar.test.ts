@@ -15,6 +15,8 @@ const session = (plannedLoad: number, extra: Partial<PlanViewSession> = {}): Pla
     plannedLoad,
     loadMethod: 'LABEL_TABLE',
     staleAnchor: false,
+    activityId: null,
+    notConfirmed: false,
     body: { bodyVersion: 1, title: 'Run', keySession: null, reason: null, cutKey: null, steps: [] },
     ...extra,
 });

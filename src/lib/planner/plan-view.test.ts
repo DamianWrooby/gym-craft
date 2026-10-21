@@ -91,6 +91,8 @@ describe('toPlanView', () => {
             plannedLoad: 50,
             loadMethod: 'LABEL_TABLE' as const,
             staleAnchor: false,
+            activityId: null,
+            notConfirmed: false,
             body: { bodyVersion: 1 } as never,
         });
         const written = structuredClone(plan);
@@ -145,6 +147,8 @@ describe('budgetBarState', () => {
         plannedLoad,
         loadMethod: 'DURATION' as const,
         staleAnchor: false,
+        activityId: null,
+        notConfirmed: false,
         body: { bodyVersion: 1, title: 'Lift', template: 't', heavy: false, durationMin: 45, exercises: [] },
     });
 

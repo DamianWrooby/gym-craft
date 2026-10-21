@@ -1,14 +1,18 @@
 <script lang="ts">
     import SessionCard from './SessionCard.svelte';
     import { addDays } from '$lib/utils/iso-week';
-    import type { PlanViewWeek } from '$lib/planner/plan-view';
+    import type { PlanViewActivity, PlanViewWeek } from '$lib/planner/plan-view';
     import type { TuneUpFixture } from '$lib/planner/core/fixtures';
     import type { SchoolDefinition } from '$lib/planner/schools/types';
 
     export let week: PlanViewWeek;
     export let schoolId: string | null;
     export let fixtures: TuneUpFixture[] = [];
-    export let actions: { userId: string; school: SchoolDefinition | null } | null = null;
+    export let actions: {
+        userId: string;
+        school: SchoolDefinition | null;
+        activities: PlanViewActivity[] | null;
+    } | null = null;
 
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 

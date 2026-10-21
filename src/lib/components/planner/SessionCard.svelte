@@ -4,22 +4,33 @@
     import SportIcon from '$lib/components/sport-icon/SportIcon.svelte';
     import SessionForm from './SessionForm.svelte';
     import { stepLines } from '$lib/planner/session-format';
-    import { markSession, recordTimeTrial } from '$lib/planner/session-client';
+    import { linkSession, markSession, recordTimeTrial, unlinkSession } from '$lib/planner/session-client';
     import { uploadWorkoutToGarmin } from '$lib/garmin/upload-workout';
     import { withGarminLogin } from '$lib/garmin/garmin-login';
     import { askGarminCredentials } from '$lib/garmin/garmin-login-modal';
     import type { SchoolDefinition } from '$lib/planner/schools/types';
-    import type { PlanViewSession, PlanViewWeek } from '$lib/planner/plan-view';
+    import type { PlanViewActivity, PlanViewSession, PlanViewWeek } from '$lib/planner/plan-view';
 
     export let session: PlanViewSession;
     export let schoolId: string | null;
     /** Set where the athlete can act on the session; read-only views leave it out. */
-    export let actions: { userId: string; week: PlanViewWeek; school: SchoolDefinition | null } | null = null;
+    export let actions: {
+        userId: string;
+        week: PlanViewWeek;
+        school: SchoolDefinition | null;
+        /** Set in the current week only: links are fixed once the week is over. */
+        activities: PlanViewActivity[] | null;
+    } | null = null;
 
     $: body = session.body;
     $: running = 'steps' in body ? body : null;
     $: strength = 'exercises' in body ? body : null;
     $: other = !running && !strength && 'effort' in body ? body : null;
+    $: linked = session.activityId ? actions?.activities?.find((a) => a.id === session.activityId) : null;
+    $: candidates = session.activityId
+        ? []
+        : (actions?.activities ?? []).filter((a) => a.kind === session.kind && !a.linkedSessionId);
+    let chosen = '';
     $: timeTrialM = session.kind === 'RUNNING' ? (actions?.week.timeTrialDistanceM ?? null) : null;
 
     const modalStore = actions ? getModalStore() : null;
@@ -41,6 +52,9 @@
 
     const mark = (status: 'DONE' | 'SKIPPED' | 'PLANNED') =>
         run(() => markSession(actions!.userId, session.id, status));
+
+    const link = () => run(() => linkSession(actions!.userId, session.id, chosen));
+    const unlink = () => run(() => unlinkSession(actions!.userId, session.id));
 
     function saveTimeTrial() {
         const timeSec = Math.round((ttMinutes ?? 0) * 60 + (ttSeconds ?? 0));
@@ -77,8 +91,12 @@
         </span>
         <div class="min-w-0">
             <h4 class="font-semibold text-slate-100 leading-tight">{body.title}</h4>
-            {#if session.status === 'DONE'}
+            {#if session.status === 'DONE' && session.activityId}
+                <p class="text-xs text-emerald-400">✓ Linked{linked ? `: ${linked.name}` : ' to a synced activity'}</p>
+            {:else if session.status === 'DONE'}
                 <p class="text-xs text-emerald-400">✓ Done</p>
+            {:else if session.notConfirmed}
+                <p class="text-xs text-amber-300">Not confirmed</p>
             {:else if session.status === 'SKIPPED'}
                 <p class="text-xs text-slate-500">Skipped</p>
             {/if}
@@ -128,15 +146,30 @@
                         >Skip</button>
                     <button type="button" class="gc-ghost" disabled={busy} on:click={() => (editing = true)}
                         >Edit</button>
-                {:else}
+                {:else if !session.activityId}
                     <button type="button" class="gc-ghost" disabled={busy} on:click={() => mark('PLANNED')}
                         >Reopen</button>
+                {/if}
+                {#if session.activityId && actions.activities}
+                    <button type="button" class="gc-ghost" disabled={busy} on:click={unlink}>Unlink</button>
                 {/if}
                 {#if session.kind !== 'OTHER'}
                     <button type="button" class="gc-ghost" disabled={busy} on:click={sendToGarmin}
                         >Send to Garmin</button>
                 {/if}
             </div>
+            {#if candidates.length > 0}
+                <form class="mt-2 flex flex-wrap items-center gap-1 text-xs" on:submit|preventDefault={link}>
+                    <select aria-label="Synced activity" bind:value={chosen}>
+                        <option value="">Link a synced activity…</option>
+                        {#each candidates as a (a.id)}
+                            <option value={a.id}
+                                >{a.date.slice(5)} · {a.name} · {Math.round(a.durationSec / 60)} min</option>
+                        {/each}
+                    </select>
+                    <button type="submit" class="gc-ghost" disabled={busy || !chosen}>Link</button>
+                </form>
+            {/if}
             {#if timeTrialM && session.status === 'PLANNED'}
                 <form class="mt-2 flex flex-wrap items-center gap-1 text-xs" on:submit|preventDefault={saveTimeTrial}>
                     <span class="text-sky-300">⏱ {timeTrialM / 1000} km result:</span>
