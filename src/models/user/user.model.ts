@@ -10,4 +10,6 @@ export interface User {
     generatedPlansNumber: number;
     plansLeft: number;
     subscriptionTier: SubscriptionTier;
+    // Stored preference the tier allows, else the tier default. Every AI call uses it.
+    aiModel: string;
 }

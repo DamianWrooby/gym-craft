@@ -47,7 +47,7 @@ export async function POST({
     }
 
     try {
-        const model = getLimit(locals.user?.subscriptionTier ?? 'FREE', 'aiModel');
+        const model = locals.user?.aiModel ?? getLimit('FREE', 'aiModel');
         const budget = await strikeWeekBudget(userId, today, built.record.layout.weeks[0].inHorizonDays, 1);
         const plan = await persistNewPlan(userId, built.record, { model, input: built.week1Prompt, budget });
         invalidateAthleteProfile(userId);

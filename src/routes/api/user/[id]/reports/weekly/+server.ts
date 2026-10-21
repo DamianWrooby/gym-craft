@@ -147,7 +147,7 @@ export async function POST({
     }
 
     const prompt = buildReportPrompt({ metrics, profile, goals, notes });
-    const proxy = await callWeeklyReportProxy(prompt, getLimit(locals.user.subscriptionTier, 'aiModel'));
+    const proxy = await callWeeklyReportProxy(prompt, locals.user.aiModel);
     if (!proxy.ok || !proxy.summary) {
         // proxy.error carries OpenAI's own wording — diagnostics, not copy. Log it, show our own.
         console.error(`[weekly-report] proxy failed for user ${userId}: ${proxy.error}`);

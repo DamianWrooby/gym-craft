@@ -42,7 +42,7 @@ import { POST } from './+server';
 import { validateBody, validateDates } from '$lib/server/reports/weekly-validation';
 
 const userId = 'user-1';
-const locals = { user: { id: userId, subscriptionTier: 'FREE' } } as unknown as App.Locals;
+const locals = { user: { id: userId, subscriptionTier: 'FREE', aiModel: 'gpt-5.4-mini' } } as unknown as App.Locals;
 
 const validBody = {
     periodStart: '2026-05-04', // Monday
@@ -142,7 +142,7 @@ describe('POST /api/user/[id]/reports/weekly — auth and gating', () => {
         expect(mocks.fetchGarminActivities).not.toHaveBeenCalled();
     });
 
-    it('passes the tier AI model to the report proxy', async () => {
+    it('passes the account AI model to the report proxy', async () => {
         const response = await POST({ request: makeRequest(validBody), params: { id: userId }, locals });
         expect(response.status).toBe(200);
         expect(mocks.callWeeklyReportProxy).toHaveBeenCalledWith(expect.anything(), 'gpt-5.4-mini');

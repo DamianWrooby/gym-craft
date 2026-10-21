@@ -114,7 +114,7 @@ export async function POST({
         profile,
     });
 
-    const proxy = await callExplainRunProxy(prompt, getLimit(locals.user.subscriptionTier, 'aiModel'));
+    const proxy = await callExplainRunProxy(prompt, locals.user.aiModel);
     if (!proxy.ok || !proxy.analysis) {
         // proxy.error carries OpenAI's own wording — diagnostics, not copy. Log it, show our own.
         console.error(`[explain-run] proxy failed for user ${userId}: ${proxy.error}`);

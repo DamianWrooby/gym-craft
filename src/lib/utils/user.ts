@@ -2,7 +2,7 @@ import { db } from '$lib/database';
 import { resolveTier } from '$lib/server/subscription/tier';
 import { hashSessionToken } from '$lib/server/session-token';
 import { getGeneralPlanLimit } from '$lib/prisma/prisma';
-import { TIER_LIMITS } from '@/constants/subscription.constants';
+import { TIER_LIMITS, resolveAiModel } from '@/constants/subscription.constants';
 import { currentMonthStartIso } from '$lib/utils/iso-week';
 import type { RequestEvent } from '@sveltejs/kit';
 
@@ -34,6 +34,7 @@ export async function updateUser(event: RequestEvent) {
             email: true,
             subscriptionStatus: true,
             currentPeriodEnd: true,
+            aiModelPreference: true,
         },
     });
 
@@ -68,6 +69,7 @@ export async function updateUser(event: RequestEvent) {
             marketingAgreement,
             email,
             subscriptionTier,
+            aiModel: resolveAiModel(subscriptionTier, user.aiModelPreference),
         };
     }
 }
