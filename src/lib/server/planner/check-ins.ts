@@ -5,6 +5,7 @@ import { toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
 import { readCheckIn } from '$lib/planner/core/check-in';
 import { detectDrift, type DriftWeek } from '$lib/planner/core/revision';
 import type { ActivePlan } from './repository';
+import { keySessionOf } from './revision';
 
 const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
 
@@ -34,12 +35,8 @@ export function driftWeeksOf(plan: ActivePlan): DriftWeek[] {
             startDate: toIsoDate(w.startDate),
             endDate: toIsoDate(w.endDate),
             decision: w.decision,
-            keySessionsSkipped: w.sessions.filter(
-                (s) =>
-                    s.status === 'SKIPPED' &&
-                    s.kind === 'RUNNING' &&
-                    (s.body as { keySession?: string | null } | null)?.keySession != null,
-            ).length,
+            keySessionsSkipped: w.sessions.filter((s) => s.status === 'SKIPPED' && keySessionOf(s.kind, s.body) != null)
+                .length,
         })),
     );
 }

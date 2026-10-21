@@ -10,7 +10,8 @@ vi.mock('$lib/server/planner/revision', () => revision);
 import { POST } from './+server';
 
 const userId = 'user-1';
-const locals = { user: { id: userId } } as unknown as App.Locals;
+const account = { tier: 'FREE', model: 'gpt-5.4-mini' };
+const locals = { user: { id: userId, subscriptionTier: 'FREE', aiModel: 'gpt-5.4-mini' } } as unknown as App.Locals;
 const lift = { id: 's-1', userId, status: 'PLANNED', activityId: null };
 
 const call = (body: unknown, id = userId) =>
@@ -39,16 +40,22 @@ describe('POST /api/user/[id]/plan/sessions/[sessionId]/status', () => {
 
     it('re-evaluates the week after a skip, naming the session', async () => {
         await call({ status: 'SKIPPED' });
-        expect(revision.reevaluateCurrentWeek).toHaveBeenCalledWith(userId, 'SESSION_SKIPPED', {
-            plannedSessionId: 's-1',
-        });
+        expect(revision.reevaluateCurrentWeek).toHaveBeenCalledWith(
+            userId,
+            'SESSION_SKIPPED',
+            { plannedSessionId: 's-1' },
+            account,
+        );
     });
 
     it('re-evaluates after a manual done', async () => {
         await call({ status: 'DONE' });
-        expect(revision.reevaluateCurrentWeek).toHaveBeenCalledWith(userId, 'SESSION_DONE', {
-            plannedSessionId: 's-1',
-        });
+        expect(revision.reevaluateCurrentWeek).toHaveBeenCalledWith(
+            userId,
+            'SESSION_DONE',
+            { plannedSessionId: 's-1' },
+            account,
+        );
     });
 
     it('does not re-evaluate when a session is reopened', async () => {

@@ -106,20 +106,26 @@
         </div>
     {/if}
 
-    {#if reason && !pending && reason.outcome !== 'revise'}
-        <div class="text-sm text-amber-200 space-y-1" role="status">
+    {#if reason && !pending && (reason.outcome !== 'revise' || revision.generation === 'GENERATED')}
+        <div
+            class="text-sm {reason.outcome === 'revise' ? 'text-slate-300' : 'text-amber-200'} space-y-1"
+            role="status">
             <p>
                 Done {reason.executedLoad} + planned {reason.remainingLoad}{reason.budget != null
                     ? ` against a budget of ${reason.budget}`
                     : ''}{reason.overspend > 0 ? `: over by ${reason.overspend}` : ''}.
                 {#if reason.missedKeySessions.length}Missed key sessions: {reason.missedKeySessions.join(', ')}.{/if}
             </p>
-            {#if reason.outcome === 'capped'}
+            {#if reason.outcome === 'revise'}
+                <p>GymCraft rewrote the rest of this week from {reason.from}.</p>
+            {:else if reason.outcome === 'capped'}
                 <p>You have used every revision this month. The week stays as written; edit sessions by hand.</p>
-            {:else}
+            {:else if reason.remainingLoad > 0}
                 <p>
                     Only your own sessions are left, so GymCraft will not change them. Edit them, or rewrite the week.
                 </p>
+            {:else}
+                <p>No sessions are left this week to change.</p>
             {/if}
         </div>
     {/if}
@@ -138,6 +144,9 @@
                 {#each superseded as s (s.id)}
                     <li class="line-through decoration-slate-500">
                         {s.scheduledDate} · {s.title} · load {s.plannedLoad}{s.byAthlete ? ' · your edit' : ''}
+                    </li>
+                    <li class="pl-4 text-slate-400">
+                        → {s.replacedBy ? `${s.replacedBy.title} · load ${s.replacedBy.plannedLoad}` : 'dropped'}
                     </li>
                 {/each}
             </ul>

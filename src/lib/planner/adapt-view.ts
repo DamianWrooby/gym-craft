@@ -23,6 +23,8 @@ export interface SupersededSession {
     plannedLoad: number;
     /** Replaced by an athlete edit rather than a revision. */
     byAthlete: boolean;
+    /** The row that took its place; null when the revision dropped it. */
+    replacedBy: { title: string; plannedLoad: number } | null;
 }
 
 export interface AdaptView {

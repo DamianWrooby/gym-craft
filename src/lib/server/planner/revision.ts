@@ -3,15 +3,15 @@
 // once at DONE; a FAILED request is free and may be retried twice.
 import { db } from '$lib/database';
 import { addDays, currentMonthStartIso, dateInTimezone, toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
-import { getLimit, resolveAiModel } from '@/constants/subscription.constants';
+import { getLimit, resolveAiModel, type SubscriptionTier } from '@/constants/subscription.constants';
 import { resolveTier } from '$lib/server/subscription/tier';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
 import { reevaluate, type RevisionReason, type RevisionTrigger } from '$lib/planner/core/revision';
-import { canDowngrade, resolveConflict } from '$lib/planner/core/conflict';
+import { canDowngrade, resolveConflict, type ConflictRecord, type SessionRef } from '$lib/planner/core/conflict';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 import type { AvailabilityMap } from '$lib/planner/wizard';
 import type { Prisma } from '@prisma/client';
-import { MAX_RETRIES, readWeekOutput } from './week-generation';
+import { MAX_RETRIES, readWeekOutput, retriesLeft } from './week-generation';
 import { buildWeekPrompt, type AiRequestInput, type PromptSession } from './week-prompt';
 
 /** Well past the proxy's 150 s OpenAI timeout: a RUNNING row this old lost its proxy call. */
@@ -30,6 +30,24 @@ export interface StoredRevisionReason extends RevisionReason {
     scope: string[];
     /** The first day the revision rewrites. */
     from: string;
+}
+
+/**
+ * What a revision request rewrites, stored on the request itself: a later verdict may overwrite the
+ * week's reason while a failed request still waits for a retry.
+ */
+interface RevisionRequestInput extends AiRequestInput {
+    revisionScope: { scope: string[]; from: string; executedLoad: number };
+}
+
+/** The budget a revision may still spend: never re-struck, only read (ADR 0015). */
+const loadLeftOf = (budget: number | null, executedLoad: number, fixedLoad: number) =>
+    budget == null ? null : Math.max(0, round1(budget - executedLoad - fixedLoad));
+
+/** Tier and model; the request routes pass the session's, the sync path reads them from the DB. */
+export interface AiAccount {
+    tier: SubscriptionTier;
+    model: string;
 }
 
 export type ReevaluationOutcome =
@@ -52,15 +70,14 @@ export type RevisionRetryOutcome =
     | { kind: 'limit' }
     | { kind: 'retrying'; aiRequestId: string; retriesLeft: number };
 
-const retriesLeft = (retryCount: number) => Math.max(0, MAX_RETRIES - retryCount);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
-const titleOf = (body: unknown) => (body as { title?: string } | null)?.title ?? 'Session';
-const keySessionOf = (kind: string, body: unknown) =>
+export const titleOf = (body: unknown) => (body as { title?: string } | null)?.title ?? 'Session';
+export const keySessionOf = (kind: string, body: unknown) =>
     kind === 'RUNNING' ? ((body as { keySession?: string | null } | null)?.keySession ?? null) : null;
 
 /** Tier and model from the stored subscription, so the sync path needs no request locals. */
-async function aiAccount(userId: string) {
+async function aiAccount(userId: string): Promise<AiAccount> {
     const user = await db.user.findUnique({
         where: { id: userId },
         select: { subscriptionStatus: true, currentPeriodEnd: true, aiModelPreference: true },
@@ -157,6 +174,7 @@ export async function reevaluateCurrentWeek(
     userId: string,
     trigger: RevisionTrigger,
     cause: Omit<RevisionCause, 'trigger'> = {},
+    account?: AiAccount,
 ): Promise<ReevaluationOutcome> {
     const profile = await db.athleteProfile.findUnique({ where: { userId }, select: { timezone: true } });
     const timezone = profile?.timezone ?? 'UTC';
@@ -202,7 +220,7 @@ export async function reevaluateCurrentWeek(
         return { kind: 'ask' };
     }
 
-    const { tier, model } = await aiAccount(userId);
+    const { tier, model } = account ?? (await aiAccount(userId));
     const cap = getLimit(tier, 'planRevisionsPerMonth');
     const used = await revisionsUsed(userId);
     if (used >= cap) {
@@ -241,18 +259,19 @@ export async function reevaluateCurrentWeek(
             done: sessions.filter((s) => s.status === 'DONE').map(line),
             unscheduledLoad,
             fixed: fixed.map(line),
-            loadLeft:
-                week.recoveryBudget == null
-                    ? null
-                    : Math.max(0, round1(week.recoveryBudget - verdict.reason.executedLoad - fixedLoad)),
+            loadLeft: loadLeftOf(week.recoveryBudget, verdict.reason.executedLoad, fixedLoad),
             why: describeReason(verdict.reason, trigger),
             unwell: trigger === 'CHECK_IN',
         },
     });
 
+    const input: RevisionRequestInput = {
+        ...prompt,
+        revisionScope: { scope: verdict.scope, from: today, executedLoad: verdict.reason.executedLoad },
+    };
     const aiRequestId = await db.$transaction(async (tx) => {
         const request = await tx.aiRequest.create({
-            data: { userId, model, input: prompt as unknown as Prisma.InputJsonValue },
+            data: { userId, model, input: input as unknown as Prisma.InputJsonValue },
             select: { id: true },
         });
         // Claiming only a week with no revision in flight keeps it to one, even under a race.
@@ -319,21 +338,21 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
     }
     if (request.status !== 'DONE') return { kind: 'pending', requestStatus: request.status };
 
-    const reason = week.revisionReason as unknown as StoredRevisionReason;
-    const read = await readWeekOutput(userId, week, request, reason.from);
+    const { revisionScope: target } = request.input as unknown as RevisionRequestInput;
+    const read = await readWeekOutput(userId, week, request, target.from);
     if (!read.ok) {
         await failRevision(week, request.id, read.errors.join('; ').slice(0, 1000));
         return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
     }
     const { school, anchor, written, costs } = read;
 
-    // The week's budget is read, never re-struck (ADR 0015): only easy volume is trimmed silently.
-    const scope = new Set(reason.scope);
+    // The week's budget is read, never re-struck (ADR 0015). Easy volume is trimmed silently; when
+    // a key session would have to go, the week is stored as written and 0013's ask decides.
+    const scope = new Set(target.scope);
     const fixedLoad = week.sessions
-        .filter((s) => s.status === 'PLANNED' && !scope.has(s.id) && toIsoDate(s.scheduledDate) >= reason.from)
+        .filter((s) => s.status === 'PLANNED' && !scope.has(s.id) && toIsoDate(s.scheduledDate) >= target.from)
         .reduce((t, s) => t + s.plannedLoad, 0);
-    const loadLeft =
-        week.recoveryBudget == null ? null : Math.max(0, round1(week.recoveryBudget - reason.executedLoad - fixedLoad));
+    const loadLeft = loadLeftOf(week.recoveryBudget, target.executedLoad, fixedLoad);
     const resolution = resolveConflict(
         written.map((s, i) => ({
             title: s.body.title,
@@ -359,6 +378,27 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
         const day = toIsoDate(s.scheduledDate);
         occupied.set(day, (occupied.get(day) ?? 0) + 1);
     }
+    // Each replacement points at a replaced session on its own day; extra rows on a day point at none.
+    const unpaired = [...replaced];
+    const supersedes = kept.map((i) => {
+        const at = unpaired.findIndex((s) => toIsoDate(s.scheduledDate) === written[i].scheduledDate);
+        return at < 0 ? null : unpaired.splice(at, 1)[0].id;
+    });
+    const sequenceOf = (i: number) => (occupied.get(written[i].scheduledDate) ?? 0) + written[i].sequence;
+    const ref = (i: number): SessionRef => ({ scheduledDate: written[i].scheduledDate, sequence: sequenceOf(i) });
+    const ask: ConflictRecord | null =
+        resolution.kind === 'ask'
+            ? {
+                  placement: null,
+                  budget: {
+                      kind: 'ASK',
+                      facts: resolution.facts,
+                      schoolFit: resolution.schoolFit,
+                      removed: resolution.removed.map(ref),
+                      keySession: ref(resolution.keySessionIndex),
+                  },
+              }
+            : null;
     const anchorRecord = anchor
         ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }
         : null;
@@ -368,7 +408,12 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
         // The conditional update is the idempotency guard: a second finalize finds nothing to claim.
         const claimed = await tx.planWeek.updateMany({
             where: { id: week.id, revisionRequestId: request.id, revisionGeneration: { not: 'GENERATED' } },
-            data: { revisionGeneration: 'GENERATED', revision: { increment: 1 }, revisedAt: new Date() },
+            data: {
+                revisionGeneration: 'GENERATED',
+                revision: { increment: 1 },
+                revisedAt: new Date(),
+                ...(ask && { conflict: ask as unknown as Prisma.InputJsonValue, decision: 'PENDING' as const }),
+            },
         });
         if (claimed.count === 0) return;
 
@@ -385,11 +430,11 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
                     planWeekId: week.id,
                     kind: s.kind,
                     scheduledDate: asDate(s.scheduledDate),
-                    sequence: (occupied.get(s.scheduledDate) ?? 0) + s.sequence,
+                    sequence: sequenceOf(i),
                     origin: 'AI' as const,
                     plannedLoad: cost.plannedLoad,
                     loadMethod: cost.method,
-                    supersedesId: replaced[n]?.id ?? null,
+                    supersedesId: supersedes[n],
                     anchor: s.kind === 'RUNNING' && anchorRecord ? anchorRecord : undefined,
                     body: s.body as unknown as Prisma.InputJsonValue,
                     bodyVersion: s.body.bodyVersion,
@@ -414,12 +459,16 @@ export async function retryRevision(userId: string, weekId: string): Promise<Rev
     if (request.retryCount >= MAX_RETRIES) return { kind: 'limit' };
 
     const retryCount = request.retryCount + 1;
-    await db.$transaction(async (tx) => {
-        await tx.aiRequest.update({
-            where: { id: request.id },
+    const reopened = await db.$transaction(async (tx) => {
+        // Claiming the row at the retry count read keeps two parallel retries to one.
+        const claimed = await tx.aiRequest.updateMany({
+            where: { id: request.id, status: 'FAILED', retryCount: request.retryCount },
             data: { status: 'PENDING', output: null, error: null, retryCount },
         });
+        if (claimed.count === 0) return false;
         await tx.planWeek.update({ where: { id: week.id }, data: { revisionGeneration: 'PENDING' } });
+        return true;
     });
+    if (!reopened) return { kind: 'not-failed' };
     return { kind: 'retrying', aiRequestId: request.id, retriesLeft: retriesLeft(retryCount) };
 }
