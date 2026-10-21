@@ -5,6 +5,9 @@
     import WeekGeneration from './WeekGeneration.svelte';
     import RecoveryBudgetBar from './RecoveryBudgetBar.svelte';
     import SessionsDoneBar from './SessionsDoneBar.svelte';
+    import RevisionsLeftBar from './RevisionsLeftBar.svelte';
+    import RevisionPanel from './RevisionPanel.svelte';
+    import type { AdaptView } from '$lib/planner/adapt-view';
     import ConflictNote from './ConflictNote.svelte';
     import SessionForm from './SessionForm.svelte';
     import { getSchool } from '$lib/planner/schools/catalogue';
@@ -15,6 +18,8 @@
     export let proxySession: string | null;
     /** The current week's synced activities; null on other weeks, where links are fixed. */
     export let activities: PlanViewActivity[] | null = null;
+    /** The current week's revision state; null on other weeks, which revisions never touch. */
+    export let adapt: AdaptView | null = null;
 
     $: week = plan.weeks[index];
     $: phase = plan.phases.find((p) => p.ordinal === week.phaseOrdinal)!;
@@ -77,10 +82,21 @@
     <div class="grid gap-3 sm:grid-cols-2">
         <RecoveryBudgetBar {week} />
         {#if week.generation === 'GENERATED'}<SessionsDoneBar {week} />{/if}
+        {#if adapt}<RevisionsLeftBar revisions={adapt.revisions} />{/if}
     </div>
 
     {#if week.generation === 'GENERATED'}
         <ConflictNote {week} schoolName={plan.school.name} {userId} />
+        {#if adapt?.revision}
+            {#key adapt.revision.request?.id}
+                <RevisionPanel
+                    revision={adapt.revision}
+                    superseded={adapt.superseded}
+                    revisions={adapt.revisions}
+                    {userId}
+                    {proxySession} />
+            {/key}
+        {/if}
         <WeekCalendar {week} {fixtures} schoolId={plan.school.id} actions={{ userId, school, activities }} />
         {#if adding}
             {#key week.id}<SessionForm {userId} {week} {school} on:close={() => (adding = false)} />{/key}

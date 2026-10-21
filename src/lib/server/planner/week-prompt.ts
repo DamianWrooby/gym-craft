@@ -44,6 +44,27 @@ export interface WeekPromptInput {
     outlook?: WeekOutlook;
     /** Tune-up races inside the week: fixed sessions the plan schedules around (story 36). */
     fixtures?: { date: string; name: string | null; distanceM: number | null }[];
+    /** Set on a revision: the rest of the week is rewritten around what already happened (ADR 0015). */
+    revision?: RevisionContext;
+}
+
+export interface PromptSession {
+    date: string;
+    title: string;
+    load: number;
+}
+
+export interface RevisionContext {
+    done: PromptSession[];
+    unscheduledLoad: number;
+    /** Athlete sessions an automatic revision must keep. */
+    fixed: PromptSession[];
+    /** Recovery budget minus executed and fixed load; null when the week is ungated. */
+    loadLeft: number | null;
+    /** The cause, in words built from the reason's numbers. */
+    why: string;
+    /** The athlete's check-ins asked for it. */
+    unwell: boolean;
 }
 
 const OUTLOOK_LINES: Record<Exclude<WeekOutlook, 'NORMAL'>, string> = {
@@ -81,6 +102,21 @@ function list(lines: string[]): string {
     return lines.map((l) => `- ${l}`).join('\n');
 }
 
+const sessionLine = (s: PromptSession) => `${s.date}: ${s.title} (load ${s.load})`;
+
+function revisionSections(r: RevisionContext, from: string): string[] {
+    return [
+        `Revision: rewrite only the remaining days of this week, from ${from}. The week's targets are totals; what is already done counts toward them. Why: ${r.why}`,
+        r.done.length ? `Already done this week:\n${list(r.done.map(sessionLine))}` : '',
+        r.unscheduledLoad > 0 ? `Unscheduled training this week: load ${r.unscheduledLoad}.` : '',
+        r.fixed.length
+            ? `Sessions the athlete wrote (they stay; write nothing on their days):\n${list(r.fixed.map(sessionLine))}`
+            : '',
+        r.loadLeft != null ? `Load left in the recovery budget: ${r.loadLeft}. Stay within it.` : '',
+        r.unwell ? 'The athlete reported feeling unwell: favour easy running and light strength.' : '',
+    ];
+}
+
 export function buildWeekPrompt(input: WeekPromptInput): AiRequestInput {
     const { school, phase, week } = input;
     const days: string[] = [];
@@ -109,6 +145,7 @@ export function buildWeekPrompt(input: WeekPromptInput): AiRequestInput {
                   ),
               )}`
             : '',
+        ...(input.revision ? revisionSections(input.revision, week.from) : []),
         `Training days:\n${list(days)}`,
         `Intensity labels (use the key):\n${list(school.intensityLabels.map((l) => `${l.key}: ${l.name}`))}`,
         `Key sessions (keySession):\n${list(school.keySessions.map((k) => `${k.key}: ${k.name}`))}`,

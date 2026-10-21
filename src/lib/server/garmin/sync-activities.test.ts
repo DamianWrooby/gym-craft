@@ -6,7 +6,8 @@ import type { GarminActivity } from '@/models/garmin/activity.model';
 type UpsertArgs = { create: Record<string, unknown> & { garminActivityId: bigint }; update: Record<string, unknown> };
 
 const mocks = vi.hoisted(() => ({
-    link: vi.fn(async () => ({ unscheduled: [] as string[] })),
+    link: vi.fn(async () => ({ unscheduled: [] as string[], linked: [] as string[] })),
+    reevaluate: vi.fn(async () => ({ kind: 'no-change' })),
     db: {
         activity: {
             upsert: vi.fn(async (args: UpsertArgs) => ({
@@ -25,6 +26,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$lib/database', () => ({ db: mocks.db }));
 vi.mock('./fetch-activities', () => ({ fetchGarminActivities: vi.fn() }));
 vi.mock('$lib/server/planner/link', () => ({ linkSyncedActivities: mocks.link }));
+vi.mock('$lib/server/planner/revision', () => ({ reevaluateCurrentWeek: mocks.reevaluate }));
 
 import { persistActivities } from './sync-activities';
 
@@ -201,6 +203,48 @@ describe('persistActivities', () => {
             await persistActivities('user-1', [garminActivity, second], 'incremental', 0);
 
             expect(mocks.link).toHaveBeenCalledWith('user-1', ['row-777']);
+        });
+
+        it('re-evaluates the week exactly once for a batch of three synced runs', async () => {
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+            mocks.link.mockResolvedValueOnce({ unscheduled: ['row-2'], linked: ['row-1', 'row-3'] });
+            const batch = [1, 2, 3].map((n) => ({ ...garminActivity, activityId: n }) as GarminActivity);
+
+            await persistActivities('user-1', batch, 'incremental', 0);
+
+            expect(mocks.reevaluate).toHaveBeenCalledTimes(1);
+            expect(mocks.reevaluate).toHaveBeenCalledWith('user-1', 'UNSCHEDULED', {
+                activityIds: ['row-1', 'row-3', 'row-2'],
+            });
+        });
+
+        it('names a completed session as the trigger when every activity linked', async () => {
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+            mocks.link.mockResolvedValueOnce({ unscheduled: [], linked: ['row-123456'] });
+
+            await persistActivities('user-1', [garminActivity], 'incremental', 0);
+
+            expect(mocks.reevaluate).toHaveBeenCalledWith('user-1', 'SESSION_DONE', { activityIds: ['row-123456'] });
+        });
+
+        it('does not re-evaluate when the batch touched no plan week', async () => {
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+
+            await persistActivities('user-1', [garminActivity], 'incremental', 0);
+
+            expect(mocks.reevaluate).not.toHaveBeenCalled();
+        });
+
+        it('still completes the sync when the re-evaluation fails', async () => {
+            const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+            mocks.link.mockResolvedValueOnce({ unscheduled: ['row-123456'], linked: [] });
+            mocks.reevaluate.mockRejectedValueOnce(new Error('db down'));
+
+            const result = await persistActivities('user-1', [garminActivity], 'incremental', 0);
+
+            expect(result.ok).toBe(true);
+            spy.mockRestore();
         });
 
         it('still completes the sync when linking fails', async () => {

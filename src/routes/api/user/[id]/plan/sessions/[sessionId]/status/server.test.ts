@@ -4,6 +4,8 @@ vi.mock('$env/static/public', () => ({ PUBLIC_APP_ENV: 'test' }));
 
 const db = vi.hoisted(() => ({ plannedSession: { findUnique: vi.fn(), update: vi.fn() } }));
 vi.mock('$lib/database', () => ({ db }));
+const revision = vi.hoisted(() => ({ reevaluateCurrentWeek: vi.fn() }));
+vi.mock('$lib/server/planner/revision', () => revision);
 
 import { POST } from './+server';
 
@@ -33,6 +35,32 @@ describe('POST /api/user/[id]/plan/sessions/[sessionId]/status', () => {
         db.plannedSession.findUnique.mockResolvedValue({ ...lift, activityId: 'a-1' });
         expect((await call({ status: 'SKIPPED' })).status).toBe(409);
         expect(db.plannedSession.update).not.toHaveBeenCalled();
+    });
+
+    it('re-evaluates the week after a skip, naming the session', async () => {
+        await call({ status: 'SKIPPED' });
+        expect(revision.reevaluateCurrentWeek).toHaveBeenCalledWith(userId, 'SESSION_SKIPPED', {
+            plannedSessionId: 's-1',
+        });
+    });
+
+    it('re-evaluates after a manual done', async () => {
+        await call({ status: 'DONE' });
+        expect(revision.reevaluateCurrentWeek).toHaveBeenCalledWith(userId, 'SESSION_DONE', {
+            plannedSessionId: 's-1',
+        });
+    });
+
+    it('does not re-evaluate when a session is reopened', async () => {
+        await call({ status: 'PLANNED' });
+        expect(revision.reevaluateCurrentWeek).not.toHaveBeenCalled();
+    });
+
+    it('keeps the mark when the re-evaluation fails', async () => {
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        revision.reevaluateCurrentWeek.mockRejectedValueOnce(new Error('db down'));
+        expect((await call({ status: 'SKIPPED' })).status).toBe(200);
+        spy.mockRestore();
     });
 
     it('rejects an unknown status', async () => {

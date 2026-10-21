@@ -5,6 +5,7 @@ import { pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
 import { mapProfileSex, scoreTrimp, trimpModality, type TrimpProfile } from '$lib/server/analytics/load/trimp';
 import { rebinRunsAfterSync } from './score-runs';
 import { linkSyncedActivities } from '$lib/server/planner/link';
+import { reevaluateCurrentWeek } from '$lib/server/planner/revision';
 import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 import type { Prisma, ZoneSource } from '@prisma/client';
@@ -154,13 +155,23 @@ async function upsertActivities(
 
 /**
  * Links only activities new to this sync: a re-synced activity the athlete unlinked stays
- * unlinked. Best effort, like re-binning: a failure never fails the sync.
+ * unlinked. Then one re-evaluation for the whole batch (story 76), so three synced runs never
+ * spend three revisions. Best effort, like re-binning: a failure never fails the sync.
  */
 async function linkNewActivities(userId: string, createdIds: string[]): Promise<void> {
+    let result: { linked: string[]; unscheduled: string[] };
     try {
-        await linkSyncedActivities(userId, createdIds);
+        result = await linkSyncedActivities(userId, createdIds);
     } catch (e) {
         console.error('Linking synced activities to planned sessions failed', e);
+        return;
+    }
+    if (result.linked.length === 0 && result.unscheduled.length === 0) return;
+    try {
+        const trigger = result.unscheduled.length > 0 ? 'UNSCHEDULED' : 'SESSION_DONE';
+        await reevaluateCurrentWeek(userId, trigger, { activityIds: [...result.linked, ...result.unscheduled] });
+    } catch (e) {
+        console.error('Re-evaluating the plan week after sync failed', e);
     }
 }
 

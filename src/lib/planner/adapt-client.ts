@@ -1,0 +1,68 @@
+// Browser side of revisions and check-ins (ADR 0015). Like week generation, the browser holds only
+// ids: it asks the proxy to run a revision's AI request, then asks the app to finalize it.
+import { runOnProxy } from './generation-client';
+
+export type RevisionRunResult =
+    { revision: 'GENERATED' } | { revision: 'FAILED'; retriesLeft: number } | { revision: 'PENDING' };
+
+async function post(url: string, body?: unknown): Promise<{ ok: boolean; json: Record<string, unknown> | null }> {
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return { ok: response.ok, json: await response.json().catch(() => null) };
+}
+
+const messageOf = (json: Record<string, unknown> | null, fallback: string) =>
+    typeof json?.message === 'string' ? json.message : fallback;
+
+export async function finalizeRevision(userId: string, weekId: string): Promise<RevisionRunResult> {
+    const { ok, json } = await post(`/api/user/${userId}/plan/weeks/${weekId}/revision/finalize`);
+    if (!ok || !json?.data) return { revision: 'PENDING' };
+    return json.data as RevisionRunResult;
+}
+
+export async function runRevision(input: {
+    userId: string;
+    weekId: string;
+    aiRequestId: string;
+    session: string;
+}): Promise<RevisionRunResult> {
+    await runOnProxy(input.session, input.aiRequestId);
+    return finalizeRevision(input.userId, input.weekId);
+}
+
+export async function retryRevision(userId: string, weekId: string): Promise<{ ok: true } | { error: string }> {
+    const { ok, json } = await post(`/api/user/${userId}/plan/weeks/${weekId}/revision/retry`);
+    return ok ? { ok: true } : { error: messageOf(json, 'Retry failed. Try again later.') };
+}
+
+/** The outcome kinds the revision route answers with. */
+export type RevisionRequestKind = 'no-change' | 'ask' | 'capped' | 'requested';
+
+export async function requestRevision(
+    userId: string,
+    trigger: 'ATHLETE' | 'CHECK_IN',
+): Promise<{ kind: RevisionRequestKind } | { error: string }> {
+    const { ok, json } = await post(`/api/user/${userId}/plan/revision`, { trigger });
+    if (!ok) return { error: messageOf(json, 'Could not request a revision. Try again.') };
+    return { kind: (json?.data as { kind: RevisionRequestKind }).kind };
+}
+
+export async function saveCheckIn(
+    userId: string,
+    feeling: string,
+    reason: string | null,
+): Promise<{ ok: true } | { error: string }> {
+    const { ok, json } = await post(`/api/user/${userId}/plan/check-ins`, { feeling, reason });
+    return ok ? { ok: true } : { error: messageOf(json, 'Could not save your check-in. Try again.') };
+}
+
+export async function dismissCheckInProposal(userId: string): Promise<void> {
+    await post(`/api/user/${userId}/plan/check-ins/dismiss`);
+}
+
+export async function dismissRecutSuggestion(userId: string): Promise<void> {
+    await post(`/api/user/${userId}/plan/recut-suggestion/dismiss`);
+}
