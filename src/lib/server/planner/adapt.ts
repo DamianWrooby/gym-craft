@@ -1,14 +1,14 @@
 // Builds the page's adapt view for the current week (stories 68–79). Read-only, apart from
 // finalizing a revision whose request finished while no tab was open (ADR 0014's pattern).
 import { db } from '$lib/database';
-import { toIsoDate } from '$lib/utils/iso-week';
+import { dateInTimezone, toIsoDate } from '$lib/utils/iso-week';
 import { getLimit, type SubscriptionTier } from '@/constants/subscription.constants';
 import { checkInProposal } from '$lib/planner/core/check-in';
 import { detectDrift, recutSuggestionShown } from '$lib/planner/core/revision';
 import type { AdaptRevision, AdaptView } from '$lib/planner/adapt-view';
 import type { ActivePlan } from './repository';
-import { MAX_RETRIES } from './week-generation';
-import { finalizeRevision, revisionsUsed, type RevisionCause, type StoredRevisionReason } from './revision';
+import { retriesLeft } from './week-generation';
+import { finalizeRevision, revisionsUsed, titleOf, type RevisionCause, type StoredRevisionReason } from './revision';
 import { driftWeeksOf } from './check-ins';
 
 type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
@@ -47,7 +47,7 @@ function revisionOf(week: StoredWeek): AdaptRevision {
         weekId: week.id,
         generation: week.revisionGeneration,
         request: request
-            ? { id: request.id, status: request.status, retriesLeft: Math.max(0, MAX_RETRIES - request.retryCount) }
+            ? { id: request.id, status: request.status, retriesLeft: retriesLeft(request.retryCount) }
             : null,
         trigger: cause?.trigger ?? null,
         reason,
@@ -60,6 +60,7 @@ export async function buildAdaptView(
     plan: ActivePlan,
     tier: SubscriptionTier,
     today: string,
+    timezone: string,
 ): Promise<AdaptView> {
     const week = currentWeekOf(plan, today);
     const written = week?.generation === 'GENERATED' ? week : null;
@@ -77,16 +78,19 @@ export async function buildAdaptView(
             where: { userId, date: { gte: asDate(weekStart), lte: asDate(today) } },
         }),
     ]);
-    // Whoever replaced a superseded row: an athlete edit writes an ATHLETE successor.
+    // What replaced each superseded row; an athlete edit writes an ATHLETE successor.
     const successors = new Map(
-        (written?.sessions ?? []).filter((s) => s.supersedesId).map((s) => [s.supersedesId, s.origin]),
+        [...(written?.sessions ?? []), ...superseded].filter((s) => s.supersedesId).map((s) => [s.supersedesId, s]),
     );
 
     const days = checkIns.map((c) => ({ date: toIsoDate(c.date), feeling: c.feeling, reason: c.reason }));
     const todays = days.find((c) => c.date === today) ?? null;
-    const lastAnswered = [week?.checkInDismissedOn, week?.revisedAt]
-        .filter((d): d is Date => d != null)
-        .map(toIsoDate)
+    // A dismissal is a stored day; a revision is an instant, read in the athlete's timezone.
+    const lastAnswered = [
+        week?.checkInDismissedOn ? toIsoDate(week.checkInDismissedOn) : null,
+        week?.revisedAt ? dateInTimezone(week.revisedAt, timezone) : null,
+    ]
+        .filter((d): d is string => d != null)
         .sort()
         .at(-1);
     const drift = detectDrift(driftWeeksOf(plan), today);
@@ -97,9 +101,13 @@ export async function buildAdaptView(
         superseded: superseded.map((s) => ({
             id: s.id,
             scheduledDate: toIsoDate(s.scheduledDate),
-            title: (s.body as { title?: string } | null)?.title ?? 'Session',
+            title: titleOf(s.body),
             plannedLoad: s.plannedLoad,
-            byAthlete: successors.get(s.id) === 'ATHLETE',
+            byAthlete: successors.get(s.id)?.origin === 'ATHLETE',
+            replacedBy: (() => {
+                const next = successors.get(s.id);
+                return next ? { title: titleOf(next.body), plannedLoad: next.plannedLoad } : null;
+            })(),
         })),
         checkIn: {
             today: todays ? { feeling: todays.feeling, reason: todays.reason } : null,

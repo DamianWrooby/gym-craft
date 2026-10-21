@@ -169,7 +169,7 @@ export const load = async ({
     const current = view.currentWeekIndex != null ? view.weeks[view.currentWeekIndex] : null;
     const [activities, adapt] = await Promise.all([
         current ? weekActivities(userId, current, timezone) : Promise.resolve([]),
-        buildAdaptView(userId, plan, locals.user.subscriptionTier, today),
+        buildAdaptView(userId, plan, locals.user.subscriptionTier, today, timezone),
     ]);
     return { plan: view, proxySession: session ? hashSessionToken(session) : null, activities, adapt };
 };

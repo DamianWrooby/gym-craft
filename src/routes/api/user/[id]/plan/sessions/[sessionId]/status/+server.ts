@@ -25,7 +25,8 @@ export async function POST({
     if (outcome.kind === 'saved' && mark !== 'PLANNED') {
         try {
             const trigger = mark === 'DONE' ? 'SESSION_DONE' : 'SESSION_SKIPPED';
-            await reevaluateCurrentWeek(params.id, trigger, { plannedSessionId: params.sessionId });
+            const account = { tier: locals.user.subscriptionTier, model: locals.user.aiModel };
+            await reevaluateCurrentWeek(params.id, trigger, { plannedSessionId: params.sessionId }, account);
         } catch (e) {
             console.error('Re-evaluating the plan week after a session mark failed', e);
         }

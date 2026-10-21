@@ -22,7 +22,8 @@ export async function POST({
         return createResponse(400, { code: 'INVALID_BODY', message: 'trigger must be ATHLETE or CHECK_IN' });
     }
 
-    const outcome = await reevaluateCurrentWeek(params.id, trigger);
+    const account = { tier: locals.user.subscriptionTier, model: locals.user.aiModel };
+    const outcome = await reevaluateCurrentWeek(params.id, trigger, {}, account);
     switch (outcome.kind) {
         case 'no-week':
             return createResponse(404, { code: 'NO_WEEK', message: 'No written week is running today' });

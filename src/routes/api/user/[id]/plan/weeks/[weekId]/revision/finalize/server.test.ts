@@ -50,31 +50,25 @@ const planned = (id: string, date: string, over: Record<string, unknown> = {}) =
     ...over,
 });
 
-function week(request: Record<string, unknown> = {}) {
+function week(request: Record<string, unknown> = {}, over: Record<string, unknown> = {}) {
     return {
         id: 'week-1',
         userId,
         startDate: day('2026-10-12'),
         endDate: day('2026-10-18'),
         recoveryBudget: null,
+        conflict: null,
+        decision: null,
         revisionGeneration: 'PENDING',
         revisionRequestId: 'request-9',
-        revisionReason: {
-            outcome: 'revise',
-            scope: ['thu', 'sun'],
-            from: '2026-10-14',
-            executedLoad: 60,
-            remainingLoad: 80,
-            budget: null,
-            overspend: 0,
-            missedKeySessions: ['hard'],
-        },
+        // A later verdict may overwrite the reason; finalize reads the scope from the request.
+        revisionReason: { outcome: 'capped', scope: ['mon'], from: '2026-10-12' },
         revisionRequest: {
             id: 'request-9',
             status: 'DONE',
             output,
             retryCount: 0,
-            input: { anchor: null },
+            input: { anchor: null, revisionScope: { scope: ['thu', 'sun'], from: '2026-10-14', executedLoad: 60 } },
             updatedAt: new Date('2026-10-14T08:59:00Z'),
             ...request,
         },
@@ -93,6 +87,7 @@ function week(request: Record<string, unknown> = {}) {
                 longRunDay: 6,
             },
         },
+        ...over,
     };
 }
 
@@ -134,6 +129,38 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/revision/finalize', () => {
             revisionGeneration: 'GENERATED',
             revision: { increment: 1 },
         });
+    });
+
+    it('pairs each replacement with a replaced session on its own day', async () => {
+        const moved = JSON.stringify({
+            sessions: [
+                { kind: 'RUNNING', date: '2026-10-16', title: 'Easy', steps: [{ label: 'z1', durationSec: 1800 }] },
+                {
+                    kind: 'RUNNING',
+                    date: '2026-10-18',
+                    title: 'Long run',
+                    keySession: 'long',
+                    steps: [{ label: 'z1', durationSec: 4800 }],
+                },
+            ],
+        });
+        db.planWeek.findUnique.mockResolvedValue(week({ output: moved }));
+        await post();
+        const rows = tx.plannedSession.createMany.mock.calls[0][0].data;
+        expect(rows.map((r: { supersedesId: string | null }) => r.supersedesId)).toEqual([null, 'sun']);
+    });
+
+    it('stores 0013 ask when the rewrite would cut a key session to fit the budget', async () => {
+        // Budget 100 − executed 60 − the athlete's Saturday 40 leaves 0 for the rewrite.
+        db.planWeek.findUnique.mockResolvedValue(week({}, { recoveryBudget: 100 }));
+        await post();
+        const data = tx.planWeek.updateMany.mock.calls[0][0].data;
+        expect(data.decision).toBe('PENDING');
+        expect(data.conflict.budget).toMatchObject({
+            kind: 'ASK',
+            keySession: { scheduledDate: '2026-10-18', sequence: 0 },
+        });
+        expect(tx.plannedSession.createMany.mock.calls[0][0].data).toHaveLength(2);
     });
 
     it('counts the revision once, at DONE', async () => {

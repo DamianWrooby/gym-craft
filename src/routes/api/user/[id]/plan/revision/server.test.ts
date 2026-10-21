@@ -22,7 +22,7 @@ vi.mock('$lib/database', () => ({ db }));
 import { POST } from './+server';
 
 const userId = 'user-1';
-const locals = { user: { id: userId, subscriptionTier: 'FREE' } } as unknown as App.Locals;
+const freeUser = { id: userId, subscriptionTier: 'FREE', aiModel: 'gpt-5.4-mini' };
 const day = (d: string) => new Date(`${d}T00:00:00Z`);
 
 const session = (id: string, date: string, over: Record<string, unknown> = {}) => ({
@@ -77,9 +77,9 @@ function activePlan(weekOver: Record<string, unknown> = {}) {
     };
 }
 
-function post(body: unknown, id = userId) {
+function post(body: unknown, id = userId, user: Record<string, unknown> = freeUser) {
     const request = new Request('http://test', { method: 'POST', body: JSON.stringify(body) });
-    return POST({ request, params: { id }, locals });
+    return POST({ request, params: { id }, locals: { user } as unknown as App.Locals });
 }
 
 beforeEach(() => {
@@ -131,16 +131,24 @@ describe('POST /api/user/[id]/plan/revision', () => {
         expect(db.planWeek.update.mock.calls[0][0].data.revisionReason).toMatchObject({ outcome: 'capped' });
     });
 
-    it('a supporter gets 30 revisions and their chosen model', async () => {
-        db.user.findUnique.mockResolvedValue({
-            subscriptionStatus: 'active',
-            currentPeriodEnd: new Date('2027-01-01'),
-            aiModelPreference: 'gpt-5.4-mini',
-        });
+    it("a supporter gets 30 revisions on the session's AI model", async () => {
         db.aiUsage.findUnique.mockResolvedValue({ count: 29 });
-        const res = await post({ trigger: 'ATHLETE' });
+        const res = await post({ trigger: 'ATHLETE' }, userId, {
+            id: userId,
+            subscriptionTier: 'SUPPORTER',
+            aiModel: 'gpt-5.4-mini',
+        });
         expect((await res.json()).data.kind).toBe('requested');
         expect(tx.aiRequest.create.mock.calls[0][0].data.model).toBe('gpt-5.4-mini');
+    });
+
+    it('carries the scope on the request, so a later verdict cannot redirect it', async () => {
+        await post({ trigger: 'ATHLETE' });
+        expect(tx.aiRequest.create.mock.calls[0][0].data.input.revisionScope).toEqual({
+            scope: ['thu'],
+            from: '2026-10-14',
+            executedLoad: 40,
+        });
     });
 
     it('keeps one revision in flight per week', async () => {

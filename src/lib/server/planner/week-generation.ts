@@ -34,7 +34,7 @@ export type RetryOutcome =
     | { kind: 'limit' }
     | { kind: 'retrying'; aiRequestId: string; retriesLeft: number };
 
-const retriesLeft = (retryCount: number) => Math.max(0, MAX_RETRIES - retryCount);
+export const retriesLeft = (retryCount: number) => Math.max(0, MAX_RETRIES - retryCount);
 
 async function loadWeek(userId: string, weekId: string) {
     const week = await db.planWeek.findUnique({
