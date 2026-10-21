@@ -10,6 +10,7 @@ import { explainPlan, type PlanRationale } from '$lib/planner/core/explain';
 import { WEEKDAYS } from '$lib/planner/wizard';
 import type { CreatePlanInput, RaceResultInput } from './validation';
 import { buildWeekPrompt, type AiRequestInput } from './week-prompt';
+import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 
 export interface ContextGoal {
     id: string;
@@ -155,6 +156,12 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
         availability: input.availability,
         longRunDay: input.longRunDay,
         anchor,
+        fixtures: fixturesBetween(
+            context.goals.filter((g) => !g.archivedAt).map(toFixtureGoal),
+            goal.id,
+            today > firstWeek.startDate ? today : firstWeek.startDate,
+            endDate < firstWeek.endDate ? endDate : firstWeek.endDate,
+        ),
     });
 
     return {

@@ -42,6 +42,8 @@ export interface WeekPromptInput {
     anchor: Anchor | null;
     /** Set at a pull; week 1 has none. */
     outlook?: WeekOutlook;
+    /** Tune-up races inside the week: fixed sessions the plan schedules around (story 36). */
+    fixtures?: { date: string; name: string | null; distanceM: number | null }[];
 }
 
 const OUTLOOK_LINES: Record<Exclude<WeekOutlook, 'NORMAL'>, string> = {
@@ -99,6 +101,13 @@ export function buildWeekPrompt(input: WeekPromptInput): AiRequestInput {
         input.outlook && input.outlook !== 'NORMAL' ? OUTLOOK_LINES[input.outlook] : '',
         week.timeTrialDistanceM
             ? `Schedule a ${week.timeTrialDistanceM / 1000} km time trial as one running session, all-out after a warm-up.`
+            : '',
+        input.fixtures?.length
+            ? `Tune-up races, fixed by the athlete (write no session on these days; treat each as a key session):\n${list(
+                  input.fixtures.map(
+                      (f) => `${f.date}: ${f.name ?? 'race'}${f.distanceM ? ` (${f.distanceM / 1000} km)` : ''}`,
+                  ),
+              )}`
             : '',
         `Training days:\n${list(days)}`,
         `Intensity labels (use the key):\n${list(school.intensityLabels.map((l) => `${l.key}: ${l.name}`))}`,

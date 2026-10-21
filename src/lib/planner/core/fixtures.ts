@@ -1,5 +1,5 @@
 // Tune-up fixtures (ADR 0008): other dated goals inside the horizon become fixed hard days.
-// Slice 1 derives them on read; a later slice stores them as athlete-owned planned sessions.
+// Derived on read and shown as fixed sessions in their weeks; the week prompt schedules around them.
 
 export interface FixtureGoal {
     id: string;
@@ -33,3 +33,27 @@ export function tuneUpFixtures(input: {
     }
     return fixtures.sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** The fixtures falling between two dates, for one week's prompt. */
+export function fixturesBetween(goals: FixtureGoal[], boundGoalId: string, from: string, to: string) {
+    return tuneUpFixtures({
+        goals,
+        boundGoalId,
+        startDate: from,
+        endDate: to,
+        weeks: [{ index: 0, startDate: from, endDate: to }],
+    }).map(({ date, name, distanceM }) => ({ date, name, distanceM }));
+}
+
+/** A stored goal as a fixture candidate. */
+export const toFixtureGoal = (g: {
+    id: string;
+    targetEventDate: Date | null;
+    targetEventName: string | null;
+    targetDistanceM: number | null;
+}): FixtureGoal => ({
+    id: g.id,
+    date: g.targetEventDate ? g.targetEventDate.toISOString().slice(0, 10) : null,
+    name: g.targetEventName,
+    distanceM: g.targetDistanceM,
+});

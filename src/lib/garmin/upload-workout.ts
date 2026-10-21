@@ -6,15 +6,15 @@ export type UploadWorkoutResult =
     | { ok: false; code: GarminFailureKind | 'GARMIN_EMAIL_NOT_CONFIGURED' | 'NETWORK_ERROR'; message: string };
 
 /**
- * Sends one workout to the user's Garmin Connect account through the SvelteKit route, which owns
- * the stored session and its silent renewal. Pair with `withGarminLogin` for the password prompt.
+ * Sends one planned session to the user's Garmin Connect account. The route builds the workout
+ * and owns the stored session and its silent renewal. Pair with `withGarminLogin` for the password prompt.
  */
-export async function uploadWorkoutToGarmin(userId: string, workout: unknown): Promise<UploadWorkoutResult> {
+export async function uploadWorkoutToGarmin(userId: string, plannedSessionId: string): Promise<UploadWorkoutResult> {
     const [fetchError, response] = await to(
         fetch(`/api/user/${userId}/garmin/upload-workout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ workout }),
+            body: JSON.stringify({ plannedSessionId }),
         }),
     );
     if (fetchError || !response) {

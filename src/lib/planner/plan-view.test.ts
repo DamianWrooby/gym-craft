@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatVolume, toPlanView, type StoredPlan } from './plan-view';
+import { budgetBarState, formatVolume, toPlanView, type StoredPlan } from './plan-view';
 
 const week = (startDate: string, endDate: string, generation: 'PENDING' | 'GENERATED' | 'FAILED' = 'PENDING') => ({
     id: `week-${startDate}`,
@@ -132,5 +132,28 @@ describe('formatVolume', () => {
         [40500, 'METRES', '40.5 km'],
     ] as const)('%i %s → %s', (value, unit, expected) => {
         expect(formatVolume(value, unit)).toBe(expected);
+    });
+});
+
+describe('budgetBarState', () => {
+    const session = (status: 'PLANNED' | 'DONE' | 'SKIPPED', plannedLoad: number) => ({
+        id: `s-${status}`,
+        kind: 'STRENGTH' as const,
+        scheduledDate: '2026-10-13',
+        sequence: 0,
+        status,
+        plannedLoad,
+        loadMethod: 'DURATION' as const,
+        staleAnchor: false,
+        body: { bodyVersion: 1, title: 'Lift', template: 't', heavy: false, durationMin: 45, exercises: [] },
+    });
+
+    it('counts a manual done and drops a skipped session from the planned total', () => {
+        const state = budgetBarState({
+            budget: { struck: true, recoveryBudget: 500, chronicLoad: 50, chronicFallbackShare: 0, absence: null },
+            sessions: [session('DONE', 90), session('PLANNED', 60), session('SKIPPED', 200)],
+            decision: null,
+        });
+        expect(state).toMatchObject({ kind: 'within', evaluation: { plannedTotal: 150, remainder: 350 } });
     });
 });

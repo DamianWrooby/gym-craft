@@ -22,6 +22,7 @@ const db = vi.hoisted(() => ({
     raceResult: { findMany: vi.fn() },
     activity: { findMany: vi.fn(), findFirst: vi.fn() },
     garminData: { findUnique: vi.fn() },
+    plannedSession: { findMany: vi.fn() },
 }));
 vi.mock('$lib/database', () => ({ db }));
 
@@ -62,6 +63,7 @@ beforeEach(() => {
     db.activity.findMany.mockResolvedValue([]);
     db.activity.findFirst.mockResolvedValue(null);
     db.garminData.findUnique.mockResolvedValue(null);
+    db.plannedSession.findMany.mockResolvedValue([]);
     db.$transaction.mockImplementation((fn: (t: typeof tx) => unknown) => fn(tx));
     tx.plan.count.mockResolvedValue(0);
     tx.athleteProfile.findUnique.mockResolvedValue({ id: 'profile-1' });

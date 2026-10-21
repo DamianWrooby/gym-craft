@@ -2,6 +2,8 @@ import { to } from 'await-to-js';
 import { createResponse } from '$lib/utils/response';
 import { garminApiUrl, garminBearerKeyHeaders } from '$lib/server/garmin/config';
 import { classifyGarminStatus } from '$lib/server/garmin/fetch-activities';
+import { getUploadableSession } from '$lib/server/planner/sessions';
+import { toGarminWorkout } from '$lib/server/garmin/workout-adapter';
 import { withGarminSession, type GarminAttemptResult } from '$lib/server/garmin/with-garmin-session';
 
 export async function POST({
@@ -19,10 +21,18 @@ export async function POST({
         return createResponse(403, { message: 'Unauthorized' });
     }
 
-    const body = await request.json();
-    const { workout } = body;
+    // The browser names a planned session and nothing else; the server builds the workout (spec #409).
+    const body = await request.json().catch(() => null);
+    const keys = body && typeof body === 'object' ? Object.keys(body) : [];
+    if (keys.length !== 1 || typeof body.plannedSessionId !== 'string') {
+        return createResponse(400, { code: 'INVALID_BODY', message: 'Send only plannedSessionId' });
+    }
 
-    if (!workout) return createResponse(400, { message: 'workout is required' });
+    const session = await getUploadableSession(userId, body.plannedSessionId);
+    if (!session) return createResponse(404, { code: 'NOT_FOUND', message: 'Session not found' });
+    const adapted = toGarminWorkout(session);
+    if (!adapted.ok) return createResponse(422, { code: adapted.code, message: adapted.message });
+    const workout = adapted.workout;
 
     // Renewal lives in the seam, so an expired session costs the athlete nothing: the upload is
     // retried once against a fresh session rather than failing back to a Garmin login prompt.

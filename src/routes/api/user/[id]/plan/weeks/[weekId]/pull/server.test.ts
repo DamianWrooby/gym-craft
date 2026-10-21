@@ -16,6 +16,7 @@ const db = vi.hoisted(() => ({
     raceResult: { findMany: vi.fn() },
     activity: { findMany: vi.fn(), findFirst: vi.fn() },
     garminData: { findUnique: vi.fn() },
+    plannedSession: { findMany: vi.fn() },
     runningGoal: { findMany: vi.fn() },
 }));
 vi.mock('$lib/database', () => ({ db }));
@@ -85,6 +86,7 @@ beforeEach(() => {
     db.activity.findMany.mockResolvedValue([]);
     db.activity.findFirst.mockResolvedValue(null);
     db.garminData.findUnique.mockResolvedValue(null);
+    db.plannedSession.findMany.mockResolvedValue([]);
     db.runningGoal.findMany.mockResolvedValue([]);
     tx.aiRequest.create.mockResolvedValue({ id: 'request-2' });
     tx.planWeek.updateMany.mockResolvedValue({ count: 1 });
@@ -172,6 +174,26 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/pull', () => {
             budgetAbsence: null,
             budgetStruckAt: expect.any(Date),
         });
+    });
+
+    it('counts a session marked done by hand in chronic load, at its planned load', async () => {
+        db.activity.findFirst.mockResolvedValue({ startTime: new Date('2026-06-01T07:00:00Z') });
+        db.activity.findMany.mockResolvedValue(
+            Array.from({ length: 28 }, (_, i) => ({
+                startTime: new Date(Date.UTC(2026, 8, 17 + i, 7)),
+                trimpLoad: 50,
+                loadMethod: 'EDWARDS',
+            })),
+        );
+        // A watchless lift of 84 TRIMP adds 3 a day across the 28-day window.
+        db.plannedSession.findMany.mockResolvedValue([
+            { scheduledDate: new Date('2026-10-10T00:00:00Z'), plannedLoad: 84, loadMethod: 'DURATION' },
+        ]);
+        await post(validBody);
+        expect(db.plannedSession.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({ where: expect.objectContaining({ status: 'DONE', activityId: null }) }),
+        );
+        expect(tx.planWeek.updateMany.mock.calls[0][0].data).toMatchObject({ chronicLoad: 53 });
     });
 
     it('locks the budget for an athlete without a Garmin link, and says why', async () => {
