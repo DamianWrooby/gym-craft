@@ -56,10 +56,17 @@ export interface StrengthBody {
 }
 
 export type OtherEffort = 'easy' | 'moderate' | 'hard';
+export const OTHER_EFFORTS: readonly OtherEffort[] = ['easy', 'moderate', 'hard'];
+
+/** Intended training outside the plan's two kinds (story 34). */
+export type OtherModality = 'ride' | 'swim' | 'hike' | 'other';
+export const OTHER_MODALITIES: readonly OtherModality[] = ['ride', 'swim', 'hike', 'other'];
 
 export interface OtherBody {
     bodyVersion: number;
     title: string;
+    /** Absent on bodies written before the athlete could add other training. */
+    modality?: OtherModality;
     durationMin: number;
     effort: OtherEffort;
 }

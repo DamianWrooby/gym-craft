@@ -70,17 +70,31 @@ export async function strikeWeekBudget(
     inHorizonDays: number,
     outlookFactor: number,
 ): Promise<StruckBudget> {
-    const [garmin, earliest, activities] = await Promise.all([
+    const since = new Date(`${addDays(today, -CHRONIC_DAYS)}T00:00:00Z`);
+    const [garmin, earliest, activities, manualDone] = await Promise.all([
         db.garminData.findUnique({ where: { userId }, select: { id: true } }),
         db.activity.findFirst({ where: { userId }, orderBy: { startTime: 'asc' }, select: { startTime: true } }),
         db.activity.findMany({
-            where: { userId, startTime: { gte: new Date(`${addDays(today, -CHRONIC_DAYS)}T00:00:00Z`) } },
+            where: { userId, startTime: { gte: since } },
             select: { startTime: true, trimpLoad: true, loadMethod: true },
         }),
+        // A session marked done by hand counts its planned load (story 65); a linked one is its activity.
+        db.plannedSession.findMany({
+            where: { userId, status: 'DONE', activityId: null, scheduledDate: { gte: since } },
+            select: { scheduledDate: true, plannedLoad: true, loadMethod: true },
+        }),
     ]);
+    const manual = manualDone.map((s) => ({
+        startTime: s.scheduledDate,
+        trimpLoad: s.plannedLoad,
+        loadMethod: s.loadMethod as string,
+    }));
+    const firstManual = manual.reduce<Date | null>((min, s) => (!min || s.startTime < min ? s.startTime : min), null);
+    const firstTracked = earliest?.startTime ?? null;
     return budgetFromHistory({
-        activities,
-        earliestActivityAt: earliest?.startTime ?? null,
+        activities: [...activities, ...manual],
+        earliestActivityAt:
+            firstTracked && firstManual && firstManual < firstTracked ? firstManual : (firstTracked ?? firstManual),
         today,
         inHorizonDays,
         outlookFactor,

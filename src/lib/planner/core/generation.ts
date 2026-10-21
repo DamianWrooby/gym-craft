@@ -97,7 +97,7 @@ function readExercises(raw: unknown, errors: string[], where: string): Exercise[
     });
 }
 
-function readSession(raw: unknown, ctx: GenerationContext, errors: string[], index: number) {
+export function readSession(raw: unknown, ctx: Pick<GenerationContext, 'school'>, errors: string[], index: number) {
     const where = `Session ${index + 1}`;
     if (!isObject(raw)) return (errors.push(`${where}: must be an object`), null);
     const date = text(raw.date, 10);

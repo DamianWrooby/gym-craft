@@ -196,8 +196,11 @@ export function budgetBarState(week: Pick<PlanViewWeek, 'budget' | 'sessions' | 
             ? { kind: 'needs-tracked-activity' }
             : { kind: 'needs-tracked-training' };
     }
+    // A skipped session spends nothing; a manual done keeps its planned load (story 65).
     const evaluation = evaluateWeek(
-        week.sessions.map((s) => ({ plannedLoad: s.plannedLoad, method: s.loadMethod })),
+        week.sessions
+            .filter((s) => s.status !== 'SKIPPED')
+            .map((s) => ({ plannedLoad: s.plannedLoad, method: s.loadMethod })),
         budget.recoveryBudget,
     );
     return {

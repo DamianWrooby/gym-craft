@@ -10,6 +10,7 @@ import type { Prisma } from '@prisma/client';
 import { anchorFromContext } from './build-plan';
 import { getPlanningContext } from './repository';
 import { buildWeekPrompt } from './week-prompt';
+import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 import { strikeWeekBudget } from './budget';
 
 export interface PullInput {
@@ -64,18 +65,21 @@ export async function pullWeek(
     const planStart = toIsoDate(plan.startDate);
     const planEnd = toIsoDate(plan.endDate);
     const weekEnd = addDays(target.startDate, 6);
+    const from = planStart > target.startDate ? planStart : target.startDate;
+    const to = planEnd < weekEnd ? planEnd : weekEnd;
     const prompt = buildWeekPrompt({
         school: getSchool(phase.school),
         phase,
         week: {
             ...target,
-            from: planStart > target.startDate ? planStart : target.startDate,
-            to: planEnd < weekEnd ? planEnd : weekEnd,
+            from,
+            to,
         },
         availability: plan.availability as unknown as AvailabilityMap,
         longRunDay: plan.longRunDay,
         anchor,
         outlook: input.outlook,
+        fixtures: fixturesBetween(context.goals.map(toFixtureGoal), plan.goalId, from, to),
     });
 
     // Struck once here and frozen on the week (ADR 0011); the outlook sizes it once (ADR 0024).

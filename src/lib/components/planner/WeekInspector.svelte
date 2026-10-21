@@ -6,6 +6,8 @@
     import RecoveryBudgetBar from './RecoveryBudgetBar.svelte';
     import SessionsDoneBar from './SessionsDoneBar.svelte';
     import ConflictNote from './ConflictNote.svelte';
+    import SessionForm from './SessionForm.svelte';
+    import { getSchool } from '$lib/planner/schools/catalogue';
 
     export let plan: PlanView;
     export let index: number;
@@ -16,6 +18,8 @@
     $: phase = plan.phases.find((p) => p.ordinal === week.phaseOrdinal)!;
     $: fixtures = plan.fixtures.filter((f) => f.weekIndex === index);
     $: partial = week.inHorizonDays < 7;
+    $: school = plan.school.id ? getSchool(plan.school.id) : null;
+    let adding = false;
     $: status =
         week.generation === 'GENERATED'
             ? 'Written'
@@ -62,9 +66,11 @@
             ⏱ Time trial: {week.timeTrialDistanceM / 1000} km this week. Enter the result to anchor your paces.
         </p>
     {/if}
-    {#each fixtures as fixture}
-        <p class="text-sm text-amber-300">⚑ Tune-up: {fixture.name ?? 'race'} on {fixture.date}</p>
-    {/each}
+    {#if week.generation !== 'GENERATED'}
+        {#each fixtures as fixture}
+            <p class="text-sm text-amber-300">⚑ Tune-up: {fixture.name ?? 'race'} on {fixture.date}</p>
+        {/each}
+    {/if}
 
     <div class="grid gap-3 sm:grid-cols-2">
         <RecoveryBudgetBar {week} />
@@ -73,7 +79,12 @@
 
     {#if week.generation === 'GENERATED'}
         <ConflictNote {week} schoolName={plan.school.name} {userId} />
-        <WeekCalendar {week} schoolId={plan.school.id} />
+        <WeekCalendar {week} {fixtures} schoolId={plan.school.id} actions={{ userId, school }} />
+        {#if adding}
+            {#key week.id}<SessionForm {userId} {week} {school} on:close={() => (adding = false)} />{/key}
+        {:else}
+            <button type="button" class="gc-ghost" on:click={() => (adding = true)}>Add session</button>
+        {/if}
         <button type="button" class="gc-ghost" on:click={() => downloadWeekPdf(plan, index)}
             >Download week as PDF</button>
     {:else}
