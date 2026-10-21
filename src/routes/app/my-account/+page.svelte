@@ -10,6 +10,7 @@
     import { goto, invalidateAll } from '$app/navigation';
     import BillingPanel from '$lib/components/billing/BillingPanel.svelte';
     import SupporterBadge from '$lib/components/billing/SupporterBadge.svelte';
+    import { getLimit } from '@/constants/subscription.constants';
 
     // Reactive: the tier flips without a manual reload after the post-checkout invalidateAll.
     $: user = $page.data.user as User;
@@ -37,6 +38,32 @@
         // Strip the query param so a page refresh does not repeat the toast.
         goto('/app/my-account', { replaceState: true, noScroll: true });
     });
+
+    $: allowedModels = getLimit(user.subscriptionTier, 'allowedModels');
+    let isModelSaving = false;
+
+    const saveAiModel = async (event: Event) => {
+        const model = (event.currentTarget as HTMLSelectElement).value;
+        isModelSaving = true;
+        try {
+            const response = await fetch(`/api/user/${user.id}/ai-model`, {
+                method: 'PUT',
+                body: JSON.stringify({ model }),
+            });
+            if (response.ok) {
+                makeToast(toastStore, 'AI model saved.', 'variant-filled-success');
+                await invalidateAll();
+            } else {
+                const { message } = await response.json();
+                makeToast(toastStore, message, 'variant-filled-error');
+            }
+        } catch (err) {
+            console.error({ err });
+            makeToast(toastStore, 'The AI model has not been saved.', 'variant-filled-error');
+        } finally {
+            isModelSaving = false;
+        }
+    };
 
     const openDeleteAccountPanel = () => {
         deleteAccountFormOpened = true;
@@ -99,6 +126,29 @@
                 <span>Edit athlete profile &amp; running goals</span>
                 <span aria-hidden="true">→</span>
             </a>
+        </section>
+
+        <section class="rounded-container-token border border-surface-500/40 p-5" aria-labelledby="ai-model-heading">
+            <h3 id="ai-model-heading" class="h3 mb-2">AI model</h3>
+            <p class="mb-4 text-sm opacity-75">
+                Used by every AI feature: plan weeks, weekly reports and Explain my run.
+            </p>
+            {#if allowedModels.length > 1}
+                <label class="label">
+                    <span class="sr-only">AI model</span>
+                    <select
+                        class="select max-w-xs"
+                        value={user.aiModel}
+                        disabled={isModelSaving}
+                        on:change={saveAiModel}>
+                        {#each allowedModels as model}
+                            <option value={model}>{model}</option>
+                        {/each}
+                    </select>
+                </label>
+            {:else}
+                <p><span class="font-bold">{user.aiModel}</span> — Supporters can switch to a smarter model.</p>
+            {/if}
         </section>
 
         <BillingPanel tier={user.subscriptionTier} />

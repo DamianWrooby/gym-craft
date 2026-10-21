@@ -34,7 +34,7 @@ export async function POST({
 
     const profile = await getAthleteProfile(params.id);
     const today = todayInTimezone(profile?.timezone ?? 'UTC');
-    const model = getLimit(locals.user?.subscriptionTier ?? 'FREE', 'aiModel');
+    const model = locals.user?.aiModel ?? getLimit('FREE', 'aiModel');
 
     const outcome = await pullWeek(params.id, params.weekId, input, model, today);
     switch (outcome.kind) {

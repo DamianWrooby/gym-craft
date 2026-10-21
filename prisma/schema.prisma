@@ -26,6 +26,8 @@ model User {
     stripeSubscriptionId String?
     subscriptionStatus   String?
     currentPeriodEnd     DateTime?
+    // Account-wide AI model setting; null = tier default. Resolved per request (ADR 0016).
+    aiModelPreference    String?
     plans                Plan[]
     planWeeks            PlanWeek[]
     raceResults          RaceResult[]

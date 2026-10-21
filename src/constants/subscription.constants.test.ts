@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PROXY_ALLOWED_MODELS, TIER_LIMITS, getLimit } from './subscription.constants';
+import { PROXY_ALLOWED_MODELS, TIER_LIMITS, getLimit, resolveAiModel } from './subscription.constants';
 
 describe('TIER_LIMITS', () => {
     it('encodes the agreed FREE caps', () => {
@@ -8,6 +8,8 @@ describe('TIER_LIMITS', () => {
         expect(TIER_LIMITS.FREE.gymPlansPerMonth).toBeNull();
         expect(TIER_LIMITS.FREE.garminBackfillDays).toBe(60);
         expect(TIER_LIMITS.FREE.aiModel).toBe('gpt-5.4-mini');
+        expect(TIER_LIMITS.FREE.allowedModels).toEqual(['gpt-5.4-mini']);
+        expect(TIER_LIMITS.FREE.planRevisionsPerMonth).toBe(4);
     });
 
     it('encodes the agreed SUPPORTER caps', () => {
@@ -16,6 +18,8 @@ describe('TIER_LIMITS', () => {
         expect(TIER_LIMITS.SUPPORTER.gymPlansPerMonth).toBe(5);
         expect(TIER_LIMITS.SUPPORTER.garminBackfillDays).toBe(120);
         expect(TIER_LIMITS.SUPPORTER.aiModel).toBe('gpt-5.4');
+        expect(TIER_LIMITS.SUPPORTER.allowedModels).toEqual(['gpt-5.4', 'gpt-5.4-mini']);
+        expect(TIER_LIMITS.SUPPORTER.planRevisionsPerMonth).toBe(30);
     });
 });
 
@@ -25,6 +29,8 @@ describe('tier models vs the proxy allowlist', () => {
     it('keeps every tier model inside the proxy allowlist', () => {
         for (const tier of Object.keys(TIER_LIMITS) as Array<keyof typeof TIER_LIMITS>) {
             expect(PROXY_ALLOWED_MODELS).toContain(TIER_LIMITS[tier].aiModel);
+            expect(TIER_LIMITS[tier].allowedModels).toContain(TIER_LIMITS[tier].aiModel);
+            for (const model of TIER_LIMITS[tier].allowedModels) expect(PROXY_ALLOWED_MODELS).toContain(model);
         }
     });
 });
@@ -33,5 +39,20 @@ describe('getLimit', () => {
     it('returns the cap for a tier + kind', () => {
         expect(getLimit('FREE', 'weeklyReportsPerMonth')).toBe(2);
         expect(getLimit('SUPPORTER', 'explainRunsPerDay')).toBe(5);
+    });
+});
+
+describe('resolveAiModel', () => {
+    it('falls back to the tier default without a preference', () => {
+        expect(resolveAiModel('SUPPORTER', null)).toBe('gpt-5.4');
+        expect(resolveAiModel('FREE', null)).toBe('gpt-5.4-mini');
+    });
+
+    it('honours a preference the tier allows', () => {
+        expect(resolveAiModel('SUPPORTER', 'gpt-5.4-mini')).toBe('gpt-5.4-mini');
+    });
+
+    it('ignores a preference the tier does not allow (lapsed supporter)', () => {
+        expect(resolveAiModel('FREE', 'gpt-5.4')).toBe('gpt-5.4-mini');
     });
 });
