@@ -3,6 +3,16 @@
     import { getModalStore } from '@skeletonlabs/skeleton';
     import SportIcon from '$lib/components/sport-icon/SportIcon.svelte';
     import SessionForm from './SessionForm.svelte';
+    import {
+        CheckIcon,
+        Edit2Icon,
+        LinkIcon,
+        RotateCcwIcon,
+        SaveIcon,
+        SkipForwardIcon,
+        SlashIcon,
+        UploadCloudIcon,
+    } from 'svelte-feather-icons';
     import { stepLines } from '$lib/planner/session-format';
     import { linkSession, markSession, recordTimeTrial, unlinkSession } from '$lib/planner/session-client';
     import { uploadWorkoutToGarmin } from '$lib/garmin/upload-workout';
@@ -139,23 +149,55 @@
                 {session}
                 on:close={() => (editing = false)} />
         {:else}
-            <div class="mt-2 flex flex-wrap gap-1 text-xs">
+            <div class="mt-2 flex flex-wrap gap-0.5 text-xs">
                 {#if session.status === 'PLANNED'}
-                    <button type="button" class="gc-ghost" disabled={busy} on:click={() => mark('DONE')}>Done</button>
-                    <button type="button" class="gc-ghost" disabled={busy} on:click={() => mark('SKIPPED')}
-                        >Skip</button>
-                    <button type="button" class="gc-ghost" disabled={busy} on:click={() => (editing = true)}
-                        >Edit</button>
+                    <button
+                        type="button"
+                        class="gc-ghost gc-icon"
+                        title="Mark done"
+                        aria-label="Mark done"
+                        disabled={busy}
+                        on:click={() => mark('DONE')}><CheckIcon size="12" /></button>
+                    <button
+                        type="button"
+                        class="gc-ghost gc-icon"
+                        title="Skip session"
+                        aria-label="Skip session"
+                        disabled={busy}
+                        on:click={() => mark('SKIPPED')}><SkipForwardIcon size="12" /></button>
+                    <button
+                        type="button"
+                        class="gc-ghost gc-icon"
+                        title="Edit session"
+                        aria-label="Edit session"
+                        disabled={busy}
+                        on:click={() => (editing = true)}><Edit2Icon size="12" /></button>
                 {:else if !session.activityId}
-                    <button type="button" class="gc-ghost" disabled={busy} on:click={() => mark('PLANNED')}
-                        >Reopen</button>
+                    <button
+                        type="button"
+                        class="gc-ghost gc-icon"
+                        title="Reopen session"
+                        aria-label="Reopen session"
+                        disabled={busy}
+                        on:click={() => mark('PLANNED')}><RotateCcwIcon size="12" /></button>
                 {/if}
                 {#if session.activityId && actions.activities}
-                    <button type="button" class="gc-ghost" disabled={busy} on:click={unlink}>Unlink</button>
+                    <button
+                        type="button"
+                        class="gc-ghost gc-icon"
+                        title="Unlink the synced activity"
+                        aria-label="Unlink the synced activity"
+                        disabled={busy}
+                        on:click={unlink}><SlashIcon size="12" /></button>
                 {/if}
                 {#if session.kind !== 'OTHER'}
-                    <button type="button" class="gc-ghost" disabled={busy} on:click={sendToGarmin}
-                        >Send to Garmin</button>
+                    <button
+                        type="button"
+                        class="gc-ghost gc-icon"
+                        title="Send to Garmin"
+                        aria-label="Send to Garmin"
+                        disabled={busy}
+                        on:click={sendToGarmin}><UploadCloudIcon size="12" /></button>
                 {/if}
             </div>
             {#if candidates.length > 0}
@@ -167,7 +209,12 @@
                                 >{a.date.slice(5)} · {a.name} · {Math.round(a.durationSec / 60)} min</option>
                         {/each}
                     </select>
-                    <button type="submit" class="gc-ghost" disabled={busy || !chosen}>Link</button>
+                    <button
+                        type="submit"
+                        class="gc-ghost gc-icon"
+                        title="Link the chosen activity"
+                        aria-label="Link the chosen activity"
+                        disabled={busy || !chosen}><LinkIcon size="12" /></button>
                 </form>
             {/if}
             {#if timeTrialM && session.status === 'PLANNED'}
@@ -188,7 +235,12 @@
                         placeholder="s"
                         aria-label="Seconds"
                         bind:value={ttSeconds} />
-                    <button type="submit" class="gc-ghost" disabled={busy || !ttMinutes}>Save result</button>
+                    <button
+                        type="submit"
+                        class="gc-ghost gc-icon"
+                        title="Save the time-trial result"
+                        aria-label="Save the time-trial result"
+                        disabled={busy || !ttMinutes}><SaveIcon size="12" /></button>
                 </form>
             {/if}
         {/if}
@@ -201,6 +253,23 @@
         background: rgba(2, 6, 23, 0.6);
         border: 1px solid rgba(148, 163, 184, 0.2);
         padding: 0.5rem 0.75rem;
+    }
+    .gc-ghost.gc-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.2rem;
+        letter-spacing: 0;
+        line-height: 1;
+        transition:
+            color 0.15s,
+            border-color 0.15s,
+            background-color 0.15s;
+    }
+    .gc-ghost.gc-icon:hover:not(:disabled) {
+        color: #f8fafc;
+        border-color: #38bdf8;
+        background-color: rgba(56, 189, 248, 0.15);
     }
     .gc-session[data-status='SKIPPED'] {
         opacity: 0.55;
