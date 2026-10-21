@@ -1,4 +1,4 @@
-// Browser calls for athlete-owned session changes: add, edit, mark, time-trial result.
+// Browser calls for athlete-owned session changes: add, edit, mark, link, time-trial result.
 
 type Outcome = { ok: true } | { error: string };
 
@@ -29,3 +29,9 @@ export const recordTimeTrial = (userId: string, sessionId: string, timeSec: numb
         { timeSec },
         'Could not save the result. Try again.',
     );
+
+export const linkSession = (userId: string, sessionId: string, activityId: string) =>
+    send(`/api/user/${userId}/plan/sessions/${sessionId}/link`, 'POST', { activityId }, 'Could not link. Try again.');
+
+export const unlinkSession = (userId: string, sessionId: string) =>
+    send(`/api/user/${userId}/plan/sessions/${sessionId}/link`, 'DELETE', {}, 'Could not unlink. Try again.');

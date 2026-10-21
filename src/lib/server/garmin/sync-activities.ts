@@ -4,9 +4,10 @@ import { toIsoDate } from '$lib/utils/iso-week';
 import { pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
 import { mapProfileSex, scoreTrimp, trimpModality, type TrimpProfile } from '$lib/server/analytics/load/trimp';
 import { rebinRunsAfterSync } from './score-runs';
+import { linkSyncedActivities } from '$lib/server/planner/link';
 import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import type { GarminActivity } from '@/models/garmin/activity.model';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, ZoneSource } from '@prisma/client';
 
 export type SyncResult =
     | {
@@ -86,8 +87,9 @@ export async function persistActivities(
     mode: SyncMode,
     backfillDays: number,
 ): Promise<SyncResult> {
-    const upserted = await upsertActivities(userId, activities);
+    const { upserted, createdIds } = await upsertActivities(userId, activities);
     const runsNeedingDetail = await rebinRuns(userId);
+    await linkNewActivities(userId, createdIds);
     const now = new Date();
 
     if (mode === 'backfill') {
@@ -112,8 +114,11 @@ export async function persistActivities(
     return { ok: true, mode: 'incremental', activitiesUpserted: upserted, lastSyncedAt: now, runsNeedingDetail };
 }
 
-async function upsertActivities(userId: string, activities: GarminActivity[]): Promise<number> {
-    if (activities.length === 0) return 0;
+async function upsertActivities(
+    userId: string,
+    activities: GarminActivity[],
+): Promise<{ upserted: number; createdIds: string[] }> {
+    if (activities.length === 0) return { upserted: 0, createdIds: [] };
 
     const profile = await db.athleteProfile.findUnique({
         where: { userId },
@@ -126,7 +131,7 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
     };
 
     const rows = activities.map((activity) => toRow(userId, activity, trimpProfile));
-    const athleteScored = await findAthleteScoredIds(userId, rows);
+    const existing = await findExisting(userId, rows);
 
     const results = await db.$transaction(
         rows.map((row) =>
@@ -138,12 +143,25 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
                     },
                 },
                 create: row,
-                update: athleteScored.has(row.garminActivityId) ? withoutLoad(row) : row,
+                update: existing.get(row.garminActivityId) === 'ATHLETE_ZONES' ? withoutLoad(row) : row,
             }),
         ),
     );
 
-    return results.length;
+    const createdIds = results.filter((r) => !existing.has(r.garminActivityId)).map((r) => r.id);
+    return { upserted: results.length, createdIds };
+}
+
+/**
+ * Links only activities new to this sync: a re-synced activity the athlete unlinked stays
+ * unlinked. Best effort, like re-binning: a failure never fails the sync.
+ */
+async function linkNewActivities(userId: string, createdIds: string[]): Promise<void> {
+    try {
+        await linkSyncedActivities(userId, createdIds);
+    } catch (e) {
+        console.error('Linking synced activities to planned sessions failed', e);
+    }
 }
 
 /** Re-binning is best effort: a failure leaves the flag set and never fails the sync. */
@@ -156,17 +174,19 @@ async function rebinRuns(userId: string): Promise<string[]> {
     }
 }
 
-/** A sync must not overwrite a run already scored against the athlete's zones with Garmin's load. */
-async function findAthleteScoredIds(userId: string, rows: { garminActivityId: bigint }[]): Promise<Set<bigint>> {
+/**
+ * Rows already stored, with their zone source. A sync must not overwrite a run already scored
+ * against the athlete's zones with Garmin's load.
+ */
+async function findExisting(
+    userId: string,
+    rows: { garminActivityId: bigint }[],
+): Promise<Map<bigint, ZoneSource | null>> {
     const existing = await db.activity.findMany({
-        where: {
-            userId,
-            zoneSource: 'ATHLETE_ZONES',
-            garminActivityId: { in: rows.map((r) => r.garminActivityId) },
-        },
-        select: { garminActivityId: true },
+        where: { userId, garminActivityId: { in: rows.map((r) => r.garminActivityId) } },
+        select: { garminActivityId: true, zoneSource: true },
     });
-    return new Set(existing.map((e) => e.garminActivityId));
+    return new Map(existing.map((e) => [e.garminActivityId, e.zoneSource]));
 }
 
 function withoutLoad<T extends { trimpLoad: unknown; loadMethod: unknown; zoneSource: unknown }>(row: T) {

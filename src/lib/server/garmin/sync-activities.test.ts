@@ -3,17 +3,28 @@ import { pickIncrementalStart } from '$lib/garmin/sync-window';
 import { computeTrimp } from '$lib/server/analytics/load/trimp';
 import type { GarminActivity } from '@/models/garmin/activity.model';
 
+type UpsertArgs = { create: Record<string, unknown> & { garminActivityId: bigint }; update: Record<string, unknown> };
+
 const mocks = vi.hoisted(() => ({
+    link: vi.fn(async () => ({ unscheduled: [] as string[] })),
     db: {
-        activity: { upsert: vi.fn(), findMany: vi.fn(async () => [] as unknown[]), update: vi.fn() },
+        activity: {
+            upsert: vi.fn(async (args: UpsertArgs) => ({
+                id: `row-${args.create.garminActivityId}`,
+                garminActivityId: args.create.garminActivityId,
+            })),
+            findMany: vi.fn(async () => [] as unknown[]),
+            update: vi.fn(),
+        },
         athleteProfile: { findUnique: vi.fn() },
         garminSyncState: { update: vi.fn(), upsert: vi.fn() },
-        $transaction: vi.fn(async (ops: unknown[]) => ops),
+        $transaction: vi.fn(async (ops: unknown[]) => Promise.all(ops)),
     },
 }));
 
 vi.mock('$lib/database', () => ({ db: mocks.db }));
 vi.mock('./fetch-activities', () => ({ fetchGarminActivities: vi.fn() }));
+vi.mock('$lib/server/planner/link', () => ({ linkSyncedActivities: mocks.link }));
 
 import { persistActivities } from './sync-activities';
 
@@ -158,7 +169,9 @@ describe('persistActivities', () => {
 
         it('does not overwrite a run already scored on athlete zones', async () => {
             mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
-            mocks.db.activity.findMany.mockResolvedValueOnce([{ garminActivityId: BigInt(123456) }]);
+            mocks.db.activity.findMany.mockResolvedValueOnce([
+                { garminActivityId: BigInt(123456), zoneSource: 'ATHLETE_ZONES' },
+            ]);
 
             await persistActivities('user-1', [garminActivity], 'incremental', 0);
 
@@ -176,6 +189,29 @@ describe('persistActivities', () => {
 
             const upsertArgs = mocks.db.activity.upsert.mock.calls[0][0];
             expect(upsertArgs.create).toMatchObject({ trimpLoad: 60, loadMethod: 'DURATION', zoneSource: null });
+        });
+    });
+
+    describe('linking planned sessions', () => {
+        it('links only activities new to this sync', async () => {
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+            const second = { ...garminActivity, activityId: 777 } as GarminActivity;
+            mocks.db.activity.findMany.mockResolvedValueOnce([{ garminActivityId: BigInt(123456), zoneSource: null }]);
+
+            await persistActivities('user-1', [garminActivity, second], 'incremental', 0);
+
+            expect(mocks.link).toHaveBeenCalledWith('user-1', ['row-777']);
+        });
+
+        it('still completes the sync when linking fails', async () => {
+            const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            mocks.db.athleteProfile.findUnique.mockResolvedValueOnce(null);
+            mocks.link.mockRejectedValueOnce(new Error('db down'));
+
+            const result = await persistActivities('user-1', [garminActivity], 'incremental', 0);
+
+            expect(result.ok).toBe(true);
+            spy.mockRestore();
         });
     });
 });

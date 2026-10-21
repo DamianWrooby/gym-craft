@@ -1,10 +1,13 @@
 import { redirect } from '@sveltejs/kit';
-import { toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
+import { addDays, dateInTimezone, toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile, getRunningGoals } from '$lib/prisma/prisma';
 import { getActivePlan, type ActivePlan } from '$lib/server/planner/repository';
 import { MAX_RETRIES, finalizeWeek } from '$lib/server/planner/week-generation';
 import { hashSessionToken } from '$lib/server/session-token';
-import { toPlanView, type PlanView, type PlanViewSession } from '$lib/planner/plan-view';
+import { toPlanView, type PlanView, type PlanViewActivity, type PlanViewSession } from '$lib/planner/plan-view';
+import { unconfirmedSessions } from '$lib/planner/core/pull';
+import { activityKindOf } from '$lib/planner/core/match';
+import { db } from '$lib/database';
 import type { PlanRationale } from '$lib/planner/core/explain';
 import type { ConflictRecord } from '$lib/planner/core/conflict';
 
@@ -15,19 +18,62 @@ const awaitsFinalize = (w: StoredWeek) =>
     w.generation !== 'GENERATED' &&
     (w.aiRequest?.status === 'DONE' || (w.aiRequest?.status === 'FAILED' && w.generation !== 'FAILED'));
 
-function toSession(s: StoredWeek['sessions'][number]): PlanViewSession {
+function toSession(s: StoredWeek['sessions'][number], today: string): PlanViewSession {
     const anchor = s.anchor as { stale?: boolean } | null;
+    const scheduledDate = toIsoDate(s.scheduledDate);
     return {
         id: s.id,
         kind: s.kind,
-        scheduledDate: toIsoDate(s.scheduledDate),
+        scheduledDate,
         sequence: s.sequence,
         status: s.status,
         plannedLoad: s.plannedLoad,
         loadMethod: s.loadMethod as PlanViewSession['loadMethod'],
         staleAnchor: anchor?.stale === true,
+        activityId: s.activityId,
+        notConfirmed: !s.activityId && unconfirmedSessions([{ status: s.status, scheduledDate }], today).length > 0,
         body: s.body as unknown as PlanViewSession['body'],
     };
+}
+
+/** The current week's synced training, for linking by hand (story 64). */
+async function weekActivities(
+    userId: string,
+    week: { startDate: string; endDate: string },
+    timezone: string,
+): Promise<PlanViewActivity[]> {
+    // A day either side covers every timezone; the local date then decides the week.
+    const rows = await db.activity.findMany({
+        where: {
+            userId,
+            startTime: {
+                gte: new Date(`${addDays(week.startDate, -1)}T00:00:00Z`),
+                lt: new Date(`${addDays(week.endDate, 2)}T00:00:00Z`),
+            },
+        },
+        select: { id: true, activityName: true, activityType: true, startTime: true, durationSec: true },
+        orderBy: { startTime: 'asc' },
+    });
+    const links = await db.plannedSession.findMany({
+        where: { userId, activityId: { in: rows.map((r) => r.id) } },
+        select: { id: true, activityId: true },
+    });
+    const linkedTo = new Map(links.map((l) => [l.activityId, l.id]));
+    return rows.flatMap((r) => {
+        const kind = activityKindOf(r.activityType);
+        const date = dateInTimezone(r.startTime, timezone);
+        if (!kind || date < week.startDate || date > week.endDate) return [];
+        return [
+            {
+                id: r.id,
+                name: r.activityName ?? r.activityType,
+                kind: kind.kind,
+                date,
+                durationSec: r.durationSec,
+                linkedSessionId: linkedTo.get(r.id) ?? null,
+            },
+        ];
+    });
 }
 
 export const load = async ({
@@ -36,7 +82,7 @@ export const load = async ({
 }: {
     locals: App.Locals;
     cookies: { get(name: string): string | undefined };
-}): Promise<{ plan: PlanView | null; proxySession: string | null }> => {
+}): Promise<{ plan: PlanView | null; proxySession: string | null; activities: PlanViewActivity[] }> => {
     const userId = locals.user?.id;
     if (!userId) redirect(302, '/app/login');
 
@@ -45,7 +91,7 @@ export const load = async ({
         getAthleteProfile(userId),
         getRunningGoals(userId, { includeArchived: false }),
     ]);
-    if (!stored) return { plan: null, proxySession: null };
+    if (!stored) return { plan: null, proxySession: null, activities: [] };
 
     let plan = stored;
     const unfinalized = plan.phases.flatMap((p) => p.weeks).filter(awaitsFinalize);
@@ -55,7 +101,8 @@ export const load = async ({
     }
 
     const session = cookies.get('session');
-    const today = todayInTimezone(profile?.timezone ?? 'UTC');
+    const timezone = profile?.timezone ?? 'UTC';
+    const today = todayInTimezone(timezone);
     const view = toPlanView(
         {
             id: plan.id,
@@ -84,7 +131,7 @@ export const load = async ({
                     volumeTarget: w.volumeTarget,
                     volumeUnit: w.volumeUnit,
                     strengthSessionTarget: w.strengthSessionTarget,
-                    sessions: w.sessions.map(toSession),
+                    sessions: w.sessions.map((s) => toSession(s, today)),
                     budget: {
                         struck: w.budgetStruckAt != null,
                         recoveryBudget: w.recoveryBudget,
@@ -113,5 +160,7 @@ export const load = async ({
         today,
     );
     // The proxy matches the hashed token against User.userAuthToken; the raw cookie stays httpOnly.
-    return { plan: view, proxySession: session ? hashSessionToken(session) : null };
+    const current = view.currentWeekIndex != null ? view.weeks[view.currentWeekIndex] : null;
+    const activities = current ? await weekActivities(userId, current, timezone) : [];
+    return { plan: view, proxySession: session ? hashSessionToken(session) : null, activities };
 };

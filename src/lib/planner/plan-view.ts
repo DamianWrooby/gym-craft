@@ -18,7 +18,22 @@ export interface PlanViewSession {
     loadMethod: PlannedLoadMethod;
     /** The pace targets rest on an anchor that aged out of its window. */
     staleAnchor: boolean;
+    /** The synced activity this session is linked to, or null. */
+    activityId: string | null;
+    /** Past, unlinked, and neither marked done nor skipped (CONTEXT.md "Not confirmed"). */
+    notConfirmed: boolean;
     body: RunningBody | StrengthBody | OtherBody;
+}
+
+/** A synced activity in the current week, offered for linking by hand (story 64). */
+export interface PlanViewActivity {
+    id: string;
+    name: string;
+    kind: SessionKind;
+    date: string;
+    durationSec: number;
+    /** The session it is linked to; null for an unscheduled activity. */
+    linkedSessionId: string | null;
 }
 
 /** The AI request writing a week, as far as the page needs it. */

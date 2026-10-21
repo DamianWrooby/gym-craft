@@ -6,9 +6,9 @@
     import PlanRationale from '$lib/components/planner/PlanRationale.svelte';
     import PullPrompt from '$lib/components/planner/PullPrompt.svelte';
     import { page } from '$app/stores';
-    import type { PlanView } from '$lib/planner/plan-view';
+    import type { PlanView, PlanViewActivity } from '$lib/planner/plan-view';
 
-    export let data: { plan: PlanView | null; proxySession: string | null };
+    export let data: { plan: PlanView | null; proxySession: string | null; activities: PlanViewActivity[] };
 
     let selected: number | null = null;
     $: plan = data.plan;
@@ -27,7 +27,12 @@
                 <PullPrompt {plan} userId={$page.data.user.id} proxySession={data.proxySession} />
             {/key}
         {/if}
-        <WeekInspector {plan} index={shown} userId={$page.data.user.id} proxySession={data.proxySession} />
+        <WeekInspector
+            {plan}
+            index={shown}
+            userId={$page.data.user.id}
+            proxySession={data.proxySession}
+            activities={shown === plan.currentWeekIndex ? data.activities : null} />
     {:else}
         <section class="gc-panel p-8 text-center space-y-4">
             <h1 class="text-3xl font-black tracking-wide">Build your plan</h1>

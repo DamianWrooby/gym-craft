@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { formatVolume, type PlanView } from '$lib/planner/plan-view';
+    import { formatVolume, type PlanView, type PlanViewActivity } from '$lib/planner/plan-view';
     import { downloadWeekPdf } from '$lib/utils/plan-description';
     import WeekCalendar from './WeekCalendar.svelte';
     import WeekGeneration from './WeekGeneration.svelte';
@@ -13,6 +13,8 @@
     export let index: number;
     export let userId: string;
     export let proxySession: string | null;
+    /** The current week's synced activities; null on other weeks, where links are fixed. */
+    export let activities: PlanViewActivity[] | null = null;
 
     $: week = plan.weeks[index];
     $: phase = plan.phases.find((p) => p.ordinal === week.phaseOrdinal)!;
@@ -79,7 +81,7 @@
 
     {#if week.generation === 'GENERATED'}
         <ConflictNote {week} schoolName={plan.school.name} {userId} />
-        <WeekCalendar {week} {fixtures} schoolId={plan.school.id} actions={{ userId, school }} />
+        <WeekCalendar {week} {fixtures} schoolId={plan.school.id} actions={{ userId, school, activities }} />
         {#if adding}
             {#key week.id}<SessionForm {userId} {week} {school} on:close={() => (adding = false)} />{/key}
         {:else}

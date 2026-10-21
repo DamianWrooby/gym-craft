@@ -36,13 +36,18 @@ export function daysBetween(from: string, to: string): number {
 }
 
 export function todayInTimezone(timezone: string = 'UTC'): string {
+    return dateInTimezone(new Date(), timezone);
+}
+
+/** The YYYY-MM-DD calendar date of an instant in a timezone. */
+export function dateInTimezone(instant: Date, timezone: string = 'UTC'): string {
     const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone: timezone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
     });
-    return formatter.format(new Date());
+    return formatter.format(instant);
 }
 
 export function isFutureDate(yyyymmdd: string, timezone: string = 'UTC'): boolean {
