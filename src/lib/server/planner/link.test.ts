@@ -55,7 +55,7 @@ describe('linkSyncedActivities', () => {
             where: { id: 's1', activityId: null },
             data: { activityId: 'a1', status: 'DONE' },
         });
-        expect(result.unscheduled).toEqual([]);
+        expect(result).toEqual({ linked: ['a1'], unscheduled: [] });
     });
 
     it('lets late evidence flip a skipped session to DONE (story 67)', async () => {
@@ -77,7 +77,7 @@ describe('linkSyncedActivities', () => {
 
     it('reports an activity with no session as unscheduled', async () => {
         givenSync([]);
-        expect(await linkSyncedActivities('u1', ['a1'])).toEqual({ unscheduled: ['a1'] });
+        expect(await linkSyncedActivities('u1', ['a1'])).toEqual({ linked: [], unscheduled: ['a1'] });
         expect(mocks.db.plannedSession.updateMany).not.toHaveBeenCalled();
     });
 
@@ -89,12 +89,12 @@ describe('linkSyncedActivities', () => {
 
     it('ignores activities outside the plan', async () => {
         givenSync([plannedRun()], [{ ...run, startTime: new Date('2026-11-20T07:00:00Z') }]);
-        expect(await linkSyncedActivities('u1', ['a1'])).toEqual({ unscheduled: [] });
+        expect(await linkSyncedActivities('u1', ['a1'])).toEqual({ linked: [], unscheduled: [] });
     });
 
     it('does nothing without an active plan', async () => {
         mocks.db.plan.findFirst.mockResolvedValue(null);
-        expect(await linkSyncedActivities('u1', ['a1'])).toEqual({ unscheduled: [] });
+        expect(await linkSyncedActivities('u1', ['a1'])).toEqual({ linked: [], unscheduled: [] });
         expect(mocks.db.activity.findMany).not.toHaveBeenCalled();
     });
 });

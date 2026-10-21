@@ -25,15 +25,21 @@ async function activeWeeks(userId: string) {
     );
 }
 
+export interface LinkResult {
+    /** Activities now linked to a planned session. */
+    linked: string[];
+    /** Activities in a plan week linked to no session (unscheduled activities). */
+    unscheduled: string[];
+}
+
 /**
  * Runs Match activities over newly synced activities and links each pair, setting the session
- * `DONE`. Returns the activities linked to no session (unscheduled activities); the
- * once-per-batch re-evaluation that reads them arrives with revisions (#418, ADR 0023 §8).
+ * `DONE`. The caller re-evaluates the week once for the whole batch (ADR 0023 §8).
  */
-export async function linkSyncedActivities(userId: string, activityIds: string[]): Promise<{ unscheduled: string[] }> {
-    if (activityIds.length === 0) return { unscheduled: [] };
+export async function linkSyncedActivities(userId: string, activityIds: string[]): Promise<LinkResult> {
+    if (activityIds.length === 0) return { linked: [], unscheduled: [] };
     const weeks = await activeWeeks(userId);
-    if (weeks.length === 0) return { unscheduled: [] };
+    if (weeks.length === 0) return { linked: [], unscheduled: [] };
 
     const [timezone, rows, alreadyLinked] = await Promise.all([
         timezoneOf(userId),
@@ -67,6 +73,7 @@ export async function linkSyncedActivities(userId: string, activityIds: string[]
         byWeek.set(week.id, list);
     }
 
+    const linkedIds: string[] = [];
     const unscheduled: string[] = [];
     for (const [planWeekId, activities] of byWeek) {
         const sessions = await db.plannedSession.findMany({
@@ -92,10 +99,11 @@ export async function linkSyncedActivities(userId: string, activityIds: string[]
                 data: { activityId: link.activityId, status: 'DONE' },
             });
             if (claimed.count === 0) unscheduled.push(link.activityId);
+            else linkedIds.push(link.activityId);
         }
         unscheduled.push(...result.unscheduled);
     }
-    return { unscheduled };
+    return { linked: linkedIds, unscheduled };
 }
 
 /** A linked session in the current plan week, or the reason the athlete cannot change it. */

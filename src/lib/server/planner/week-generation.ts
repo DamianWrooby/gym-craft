@@ -4,8 +4,8 @@ import { db } from '$lib/database';
 import { getAthleteProfile } from '$lib/prisma/prisma';
 import { addDays, currentMonthStartIso, toIsoDate } from '$lib/utils/iso-week';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
-import { validateGeneration } from '$lib/planner/core/generation';
-import { costSession } from '$lib/planner/core/cost';
+import { validateGeneration, type PlacementTrim } from '$lib/planner/core/generation';
+import { costSession, type Cost } from '$lib/planner/core/cost';
 import { canDowngrade, resolveConflict, type ConflictRecord, type SessionRef } from '$lib/planner/core/conflict';
 import { attachTargets, labelPaces } from '$lib/planner/core/targets';
 import { isValidZones } from '$lib/planner/core/zones';
@@ -13,6 +13,8 @@ import type { AvailabilityMap } from '$lib/planner/wizard';
 import type { Prisma, WeekDecision } from '@prisma/client';
 import type { TypedSession } from '$lib/planner/core/session';
 import type { AiRequestInput } from './week-prompt';
+import type { SchoolDefinition } from '$lib/planner/schools/types';
+import type { Anchor } from '$lib/planner/core/anchor';
 
 /** A failed request may be retried at most this many times (ADR 0016). */
 export const MAX_RETRIES = 2;
@@ -51,6 +53,64 @@ async function failWeek(week: LoadedWeek, requestId: string, error: string | nul
     });
 }
 
+/** What a week's AI request wrote, validated, targeted and costed; nothing is stored here. */
+export type WeekOutput =
+    | { ok: false; errors: string[] }
+    | {
+          ok: true;
+          school: SchoolDefinition;
+          anchor: Anchor | null;
+          written: TypedSession[];
+          costs: Cost[];
+          placementTrim: PlacementTrim | null;
+      };
+
+/**
+ * Validates a finished request's output for the days from `from` to the week's end (inside the
+ * horizon), then attaches targets and costs each session. Shared by pulls and revisions.
+ */
+export async function readWeekOutput(
+    userId: string,
+    week: {
+        startDate: Date;
+        phase: { school: string; plan: { startDate: Date; endDate: Date; availability: unknown; longRunDay: number } };
+    },
+    request: { input: unknown; output: string | null },
+    from: string,
+): Promise<WeekOutput> {
+    const { plan } = week.phase;
+    const profile = await getAthleteProfile(userId);
+    if (!isSchoolId(week.phase.school)) throw new Error(`Unknown school on phase: ${week.phase.school}`);
+    const school = getSchool(week.phase.school);
+
+    const anchor = (request.input as Partial<AiRequestInput> | null)?.anchor ?? null;
+    const paces = labelPaces(school, anchor);
+    const weekStart = toIsoDate(week.startDate);
+    const planStart = toIsoDate(plan.startDate);
+    const planEnd = toIsoDate(plan.endDate);
+    const weekEnd = addDays(weekStart, 6);
+    const first = planStart > from ? planStart : from;
+
+    const result = validateGeneration(request.output ?? '', {
+        school,
+        paceSecPerKm: paces,
+        placement: {
+            weekStart,
+            from: first,
+            to: planEnd < weekEnd ? planEnd : weekEnd,
+            availability: plan.availability as AvailabilityMap,
+            longRunDay: plan.longRunDay,
+            keySessions: school.keySessions.map((k) => k.key),
+        },
+    });
+    if (!result.ok) return { ok: false, errors: result.errors };
+
+    const zones = isValidZones(profile?.hrZoneBounds) ? profile.hrZoneBounds : null;
+    const written = attachTargets(result.sessions, { school, anchor, zones });
+    const costs = written.map((s) => costSession(s, { school, paceSecPerKm: paces }));
+    return { ok: true, school, anchor, written, costs, placementTrim: result.placementTrim };
+}
+
 export async function finalizeWeek(userId: string, weekId: string): Promise<FinalizeOutcome> {
     const week = await loadWeek(userId, weekId);
     if (!week) return { kind: 'not-found' };
@@ -68,38 +128,12 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
     }
     if (request.status !== 'DONE') return { kind: 'pending', requestStatus: request.status };
 
-    const { plan } = week.phase;
-    const profile = await getAthleteProfile(userId);
-    if (!isSchoolId(week.phase.school)) throw new Error(`Unknown school on phase: ${week.phase.school}`);
-    const school = getSchool(week.phase.school);
-
-    const anchor = (request.input as unknown as Partial<AiRequestInput> | null)?.anchor ?? null;
-    const paces = labelPaces(school, anchor);
-    const weekStart = toIsoDate(week.startDate);
-    const planStart = toIsoDate(plan.startDate);
-    const planEnd = toIsoDate(plan.endDate);
-    const weekEnd = addDays(weekStart, 6);
-
-    const result = validateGeneration(request.output ?? '', {
-        school,
-        paceSecPerKm: paces,
-        placement: {
-            weekStart,
-            from: planStart > weekStart ? planStart : weekStart,
-            to: planEnd < weekEnd ? planEnd : weekEnd,
-            availability: plan.availability as unknown as AvailabilityMap,
-            longRunDay: plan.longRunDay,
-            keySessions: school.keySessions.map((k) => k.key),
-        },
-    });
-    if (!result.ok) {
-        await failWeek(week, request.id, result.errors.join('; ').slice(0, 1000));
+    const read = await readWeekOutput(userId, week, request, toIsoDate(week.startDate));
+    if (!read.ok) {
+        await failWeek(week, request.id, read.errors.join('; ').slice(0, 1000));
         return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
     }
-
-    const zones = isValidZones(profile?.hrZoneBounds) ? profile.hrZoneBounds : null;
-    const written = attachTargets(result.sessions, { school, anchor, zones });
-    const costs = written.map((s) => costSession(s, { school, paceSecPerKm: paces }));
+    const { school, anchor, written, costs, placementTrim } = read;
 
     // School versus budget (ADR 0013): trim easy volume silently, or store as written and ask.
     const resolution = resolveConflict(
@@ -133,7 +167,7 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
         decision = 'PENDING';
     }
     const conflict: ConflictRecord | null =
-        result.placementTrim || budgetRecord ? { placement: result.placementTrim, budget: budgetRecord } : null;
+        placementTrim || budgetRecord ? { placement: placementTrim, budget: budgetRecord } : null;
     const anchorRecord = anchor
         ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }
         : null;

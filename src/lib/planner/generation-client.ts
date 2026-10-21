@@ -10,7 +10,7 @@ export type WeekGenerationResult =
 const proxyUrl = () => (isProduction() ? appConfig.aiRequestApiUrlPROD : appConfig.aiRequestApiUrlDEV);
 
 /** Runs the proxy call; its own result does not matter, because the row records the outcome. */
-async function runOnProxy(session: string, aiRequestId: string): Promise<void> {
+export async function runOnProxy(session: string, aiRequestId: string): Promise<void> {
     try {
         await fetch(proxyUrl(), {
             method: 'POST',

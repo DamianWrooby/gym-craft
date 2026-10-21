@@ -41,6 +41,7 @@ model User {
     activities           Activity[]
     garminSyncState      GarminSyncState?
     aiUsage              AiUsage[]
+    checkIns             WellbeingCheckIn[]
 
     @@index([roleId])
 }
@@ -54,23 +55,25 @@ model Roles {
 // A bounded horizon working toward one goal (ADRs 0008, 0012). One ACTIVE plan per user,
 // enforced by a partial unique index in the migration. Table name avoids the legacy "Plan".
 model Plan {
-    id           String      @id @default(uuid())
-    userId       String
-    goalId       String
-    startDate    DateTime    @db.Date
-    endDate      DateTime    @db.Date
-    state        PlanState   @default(ACTIVE)
+    id                String      @id @default(uuid())
+    userId            String
+    goalId            String
+    startDate         DateTime    @db.Date
+    endDate           DateTime    @db.Date
+    state             PlanState   @default(ACTIVE)
     // { mon: true, tue: false, ... } — the availability map.
-    availability Json
+    availability      Json
     // 0 = Monday … 6 = Sunday.
-    longRunDay   Int
+    longRunDay        Int
     // How the athlete's data shaped the layout (PlanRationale), frozen at creation.
-    rationale    Json?
-    createdAt    DateTime    @default(now())
-    updatedAt    DateTime    @updatedAt
-    User         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-    goal         RunningGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
-    phases       PlanPhase[]
+    rationale         Json?
+    // Start of the drift week the athlete dismissed the recut suggestion for (ADR 0015).
+    recutDismissedFor DateTime?   @db.Date
+    createdAt         DateTime    @default(now())
+    updatedAt         DateTime    @updatedAt
+    User              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    goal              RunningGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+    phases            PlanPhase[]
 
     @@index([userId, state])
     @@map("HorizonPlan")
@@ -144,11 +147,21 @@ model PlanWeek {
     strengthSessionTarget Int
     revision              Int              @default(0)
     revisedAt             DateTime?
+    // The latest re-evaluation's cause: { trigger, activityIds?, plannedSessionId? } (ADR 0015).
+    revisionCause         Json?
+    // Its verdict in numbers, the scope it rewrites and the day it rewrites from (ADR 0015).
+    revisionReason        Json?
+    // The latest revision's AI request; null when no revision was requested.
+    revisionRequestId     String?          @unique
+    revisionGeneration    WeekGeneration?
+    // The day the athlete dismissed a check-in proposal; earlier check-ins are spent.
+    checkInDismissedOn    DateTime?        @db.Date
     // The AI request that writes this week's sessions (ADR 0014); null until generation starts.
     aiRequestId           String?          @unique
     User                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
     phase                 PlanPhase        @relation(fields: [phaseId], references: [id], onDelete: Cascade)
-    aiRequest             AiRequest?       @relation(fields: [aiRequestId], references: [id], onDelete: SetNull)
+    aiRequest             AiRequest?       @relation("PlanWeekGeneration", fields: [aiRequestId], references: [id], onDelete: SetNull)
+    revisionRequest       AiRequest?       @relation("PlanWeekRevision", fields: [revisionRequestId], references: [id], onDelete: SetNull)
     sessions              PlannedSession[]
 
     @@index([userId, startDate])
@@ -231,19 +244,20 @@ enum SessionOrigin {
 // One paid AI call, recorded before it is made (ADR 0014). Generic: the app writes the input and
 // model, the proxy writes the output and status. Nothing here knows about plans.
 model AiRequest {
-    id         String          @id @default(uuid())
-    userId     String
-    model      String
+    id          String          @id @default(uuid())
+    userId      String
+    model       String
     // { system, user, maxTokens } — the complete prompt, built by the app server.
-    input      Json
-    status     AiRequestStatus @default(PENDING)
-    output     String?         @db.Text
-    error      String?
-    retryCount Int             @default(0)
-    createdAt  DateTime        @default(now())
-    updatedAt  DateTime        @updatedAt
-    User       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-    planWeek   PlanWeek?
+    input       Json
+    status      AiRequestStatus @default(PENDING)
+    output      String?         @db.Text
+    error       String?
+    retryCount  Int             @default(0)
+    createdAt   DateTime        @default(now())
+    updatedAt   DateTime        @updatedAt
+    User        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    planWeek    PlanWeek?       @relation("PlanWeekGeneration")
+    revisedWeek PlanWeek?       @relation("PlanWeekRevision")
 
     @@index([userId, status])
 }
@@ -477,4 +491,33 @@ model GarminSyncState {
     backfillComplete Boolean   @default(false)
     updatedAt        DateTime  @updatedAt
     User             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Wellbeing check-in (spec #409, story 77): one optional answer per day. Missing is no data.
+model WellbeingCheckIn {
+    id        String         @id @default(uuid())
+    userId    String
+    date      DateTime       @db.Date
+    feeling   Feeling
+    // Only on a poor day.
+    reason    CheckInReason?
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+    User      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, date])
+}
+
+enum Feeling {
+    GOOD
+    SO_SO
+    POOR
+}
+
+enum CheckInReason {
+    ILL
+    TIRED
+    SORE
+    STRESSED
+    POOR_SLEEP
 }

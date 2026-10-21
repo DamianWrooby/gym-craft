@@ -10,6 +10,8 @@ import { activityKindOf } from '$lib/planner/core/match';
 import { db } from '$lib/database';
 import type { PlanRationale } from '$lib/planner/core/explain';
 import type { ConflictRecord } from '$lib/planner/core/conflict';
+import { buildAdaptView, finalizePendingRevision } from '$lib/server/planner/adapt';
+import type { AdaptView } from '$lib/planner/adapt-view';
 
 type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
 
@@ -82,7 +84,12 @@ export const load = async ({
 }: {
     locals: App.Locals;
     cookies: { get(name: string): string | undefined };
-}): Promise<{ plan: PlanView | null; proxySession: string | null; activities: PlanViewActivity[] }> => {
+}): Promise<{
+    plan: PlanView | null;
+    proxySession: string | null;
+    activities: PlanViewActivity[];
+    adapt: AdaptView | null;
+}> => {
     const userId = locals.user?.id;
     if (!userId) redirect(302, '/app/login');
 
@@ -91,18 +98,17 @@ export const load = async ({
         getAthleteProfile(userId),
         getRunningGoals(userId, { includeArchived: false }),
     ]);
-    if (!stored) return { plan: null, proxySession: null, activities: [] };
+    if (!stored) return { plan: null, proxySession: null, activities: [], adapt: null };
 
-    let plan = stored;
-    const unfinalized = plan.phases.flatMap((p) => p.weeks).filter(awaitsFinalize);
-    if (unfinalized.length > 0) {
-        for (const w of unfinalized) await finalizeWeek(userId, w.id);
-        plan = (await getActivePlan(userId)) ?? plan;
-    }
-
-    const session = cookies.get('session');
     const timezone = profile?.timezone ?? 'UTC';
     const today = todayInTimezone(timezone);
+    let plan = stored;
+    const unfinalized = plan.phases.flatMap((p) => p.weeks).filter(awaitsFinalize);
+    for (const w of unfinalized) await finalizeWeek(userId, w.id);
+    const revised = await finalizePendingRevision(userId, plan, today);
+    if (unfinalized.length > 0 || revised) plan = (await getActivePlan(userId)) ?? plan;
+
+    const session = cookies.get('session');
     const view = toPlanView(
         {
             id: plan.id,
@@ -161,6 +167,9 @@ export const load = async ({
     );
     // The proxy matches the hashed token against User.userAuthToken; the raw cookie stays httpOnly.
     const current = view.currentWeekIndex != null ? view.weeks[view.currentWeekIndex] : null;
-    const activities = current ? await weekActivities(userId, current, timezone) : [];
-    return { plan: view, proxySession: session ? hashSessionToken(session) : null, activities };
+    const [activities, adapt] = await Promise.all([
+        current ? weekActivities(userId, current, timezone) : Promise.resolve([]),
+        buildAdaptView(userId, plan, locals.user.subscriptionTier, today),
+    ]);
+    return { plan: view, proxySession: session ? hashSessionToken(session) : null, activities, adapt };
 };
