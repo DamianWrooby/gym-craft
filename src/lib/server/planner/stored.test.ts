@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { keySessionOf, readRevisionCause, readRevisionReason, readRevisionScope, titleOf } from './stored';
+import {
+    keySessionOf,
+    plannedMethodOf,
+    readAnchor,
+    readConflict,
+    readRevisionCause,
+    readRevisionReason,
+    readRevisionScope,
+    readRunningBody,
+    titleOf,
+} from './stored';
 
 const reason = {
     executedLoad: 120,
@@ -69,5 +79,48 @@ describe('session body readers', () => {
         expect(keySessionOf('RUNNING', { keySession: 'TEMPO' })).toBe('TEMPO');
         expect(keySessionOf('STRENGTH', { keySession: 'TEMPO' })).toBeNull();
         expect(keySessionOf('RUNNING', {})).toBeNull();
+    });
+});
+
+describe('readConflict', () => {
+    it('reads a stored record', () => {
+        const record = { placement: null, budget: { kind: 'ASK' } };
+        expect(readConflict(record)).toEqual(record);
+    });
+
+    it('returns null for nothing or a malformed row', () => {
+        expect(readConflict(null)).toBeNull();
+        expect(readConflict({ budget: { kind: 'MAYBE' } })).toBeNull();
+    });
+});
+
+describe('readRunningBody', () => {
+    it('reads a running body with steps', () => {
+        const body = { title: 'Tempo', steps: [] };
+        expect(readRunningBody('RUNNING', body)).toBe(body);
+    });
+
+    it('returns null for another kind or a body without steps', () => {
+        expect(readRunningBody('STRENGTH', { steps: [] })).toBeNull();
+        expect(readRunningBody('RUNNING', { title: 'Tempo' })).toBeNull();
+    });
+});
+
+describe('readAnchor', () => {
+    it('reads the anchor a prompt was built with', () => {
+        const anchor = { provenance: 'RACE' };
+        expect(readAnchor({ anchor })).toBe(anchor);
+    });
+
+    it('returns null without one', () => {
+        expect(readAnchor({ system: 'x' })).toBeNull();
+        expect(readAnchor(null)).toBeNull();
+    });
+});
+
+describe('plannedMethodOf', () => {
+    it('keeps a planned method and reads an executed one as a duration', () => {
+        expect(plannedMethodOf('LABEL_TABLE')).toBe('LABEL_TABLE');
+        expect(plannedMethodOf('EDWARDS')).toBe('DURATION');
     });
 });

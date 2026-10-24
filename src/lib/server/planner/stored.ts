@@ -1,6 +1,9 @@
 // One typed reader per planner JSON column, so callers never cast. A malformed row reads as null.
 import type { Prisma } from '@prisma/client';
 import { REVISION_TRIGGERS, type RevisionReason, type RevisionTrigger } from '$lib/planner/core/revision';
+import type { ConflictRecord } from '$lib/planner/core/conflict';
+import type { Anchor } from '$lib/planner/core/anchor';
+import type { PlannedLoadMethod, RunningBody } from '$lib/planner/core/session';
 
 /** What started a re-evaluation, for the "what changed" view (ADR 0015). */
 export interface RevisionCause {
@@ -82,3 +85,28 @@ export const titleOf = (body: unknown) => (isRecord(body) && typeof body.title =
 
 export const keySessionOf = (kind: string, body: unknown) =>
     kind === 'RUNNING' && isRecord(body) && typeof body.keySession === 'string' ? body.keySession : null;
+
+const BUDGET_KINDS: readonly unknown[] = ['TRIM', 'ASK'];
+const PLANNED_METHODS: readonly string[] = ['LABEL_TABLE', 'DURATION', 'ATHLETE_ESTIMATE'];
+
+/** The trim, ask or placement trim a week stores (ADR 0013). */
+export function readConflict(json: Json): ConflictRecord | null {
+    if (!isRecord(json) || !('placement' in json) || !('budget' in json)) return null;
+    if (json.budget !== null && !(isRecord(json.budget) && BUDGET_KINDS.includes(json.budget.kind))) return null;
+    return json as unknown as ConflictRecord;
+}
+
+/** A running session's body; null for another kind or a body with no steps. */
+export function readRunningBody(kind: string, body: unknown): RunningBody | null {
+    if (kind !== 'RUNNING' || !isRecord(body) || !Array.isArray(body.steps)) return null;
+    return body as unknown as RunningBody;
+}
+
+/** The anchor a week's prompt was built with, read back from its request input. */
+export function readAnchor(input: Json): Anchor | null {
+    return isRecord(input) && isRecord(input.anchor) ? (input.anchor as unknown as Anchor) : null;
+}
+
+/** A planned row is costed before it is run, so its method is a planned one; anything else counts as duration. */
+export const plannedMethodOf = (method: string): PlannedLoadMethod =>
+    PLANNED_METHODS.includes(method) ? (method as PlannedLoadMethod) : 'DURATION';
