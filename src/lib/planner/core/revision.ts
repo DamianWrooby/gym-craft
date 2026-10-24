@@ -1,5 +1,6 @@
 // Re-evaluate (ADR 0015): an event decides when, the current plan week decides what. The outcome
 // is no change, a revision of the remaining sessions, or an ask. Pure.
+import type { TypedSession } from './session';
 
 /** What started a re-evaluation. `ATHLETE` and `CHECK_IN` are athlete-confirmed requests. */
 export const REVISION_TRIGGERS = ['SESSION_DONE', 'SESSION_SKIPPED', 'UNSCHEDULED', 'ATHLETE', 'CHECK_IN'] as const;
@@ -134,25 +135,44 @@ export function recutSuggestionShown(drift: Drift, dismissedFor: string | null):
 export interface DaySession {
     title: string;
     keySession: string | null;
+    cutKey: string | null;
     date: string;
 }
+
+export const daySessionOf = (s: TypedSession): DaySession => ({
+    title: s.body.title,
+    keySession: s.kind === 'RUNNING' ? s.body.keySession : null,
+    cutKey: s.kind === 'RUNNING' ? s.body.cutKey : null,
+    date: s.scheduledDate,
+});
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const weekdayName = (date: string) => WEEKDAY_NAMES[new Date(`${date}T00:00:00Z`).getUTCDay()];
 
 /**
- * One line per session a rewrite moved to another day (ADR 0026): a key session matches by its key,
- * any other by title. A session the rewrite dropped or kept on its day says nothing.
+ * One line per session a rewrite moved to another day (ADR 0026). A key session matches by its key.
+ * Any other matches by title, else by cut type, as a rewrite often renames an easy run. A session the
+ * rewrite dropped or kept on its day says nothing.
  */
 export function movedSessions(before: DaySession[], after: DaySession[]): string[] {
     const unmatched = [...after];
-    return before.flatMap((old) => {
-        const at = unmatched.findIndex((s) =>
+    const take = (match: (s: DaySession) => boolean) => {
+        const at = unmatched.findIndex(match);
+        return at < 0 ? null : unmatched.splice(at, 1)[0];
+    };
+    // Exact matches first, so a cut-type match never takes a session another one names.
+    const pairs = before.map((old) =>
+        take((s) =>
             old.keySession != null ? s.keySession === old.keySession : s.keySession == null && s.title === old.title,
-        );
-        if (at < 0) return [];
-        const [now] = unmatched.splice(at, 1);
-        if (now.date === old.date) return [];
+        ),
+    );
+    return before.flatMap((old, i) => {
+        const now =
+            pairs[i] ??
+            (old.keySession == null && old.cutKey != null
+                ? take((s) => s.keySession == null && s.cutKey === old.cutKey)
+                : null);
+        if (!now || now.date === old.date) return [];
         return [`${old.title} moved from ${weekdayName(old.date)} to ${weekdayName(now.date)}.`];
     });
 }

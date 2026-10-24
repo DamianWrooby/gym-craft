@@ -14,6 +14,7 @@ import { getLimit, resolveAiModel, type SubscriptionTier } from '@/constants/sub
 import { resolveTier } from '$lib/server/subscription/tier';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
 import {
+    daySessionOf,
     movedSessions,
     reevaluate,
     type Reevaluation,
@@ -34,6 +35,7 @@ import { MAX_RETRIES, readWeekOutput, retriesLeft, type WeekOutput } from './wee
 import { buildWeekPrompt, type AiRequestInput, type PromptSession } from './week-prompt';
 import { athleteTimezone, weekOn } from './current-week';
 import {
+    cutKeyOf,
     keySessionOf,
     plannedMethodOf,
     readAnchor,
@@ -576,7 +578,11 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
     const read = await readWeekOutput(userId, week, request, target.from);
     if (!read.ok) return failed(read.errors.join('; ').slice(0, 1000));
     // A revision has no ask of its own: a week that places only without a key session is rejected.
-    if (read.placementTrim?.asked) return failed(read.placementTrim.violations.join('; ').slice(0, 1000));
+    const leftOut = read.placementTrim?.asked;
+    if (leftOut) {
+        const rules = read.placementTrim!.violations.join('; ');
+        return failed(`${leftOut.title} fits your training days only if it goes: ${rules}`.slice(0, 1000));
+    }
 
     const { anchor, written, costs } = read;
     const resolution = resolveBudget(week, target, read);
@@ -590,16 +596,10 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
             .map((s) => ({
                 title: titleOf(s.body),
                 keySession: keySessionOf(s.kind, s.body),
+                cutKey: cutKeyOf(s.kind, s.body),
                 date: toIsoDate(s.scheduledDate),
             })),
-        kept.map((i) => {
-            const s = written[i];
-            return {
-                title: s.body.title,
-                keySession: s.kind === 'RUNNING' ? s.body.keySession : null,
-                date: s.scheduledDate,
-            };
-        }),
+        kept.map((i) => daySessionOf(written[i])),
     );
     const anchorRecord = anchor
         ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }

@@ -1,7 +1,7 @@
 // One typed reader per planner JSON column, so callers never cast. A malformed row reads as null.
 import type { Prisma } from '@prisma/client';
 import { REVISION_TRIGGERS, type RevisionReason, type RevisionTrigger } from '$lib/planner/core/revision';
-import type { ConflictRecord } from '$lib/planner/core/conflict';
+import { DECISION_OPTIONS, type ConflictRecord } from '$lib/planner/core/conflict';
 import type { Anchor } from '$lib/planner/core/anchor';
 import type { PlannedLoadMethod, RunningBody } from '$lib/planner/core/session';
 import { WEEKDAYS, type AvailabilityMap } from '$lib/planner/wizard';
@@ -90,13 +90,32 @@ export const titleOf = (body: unknown) => (isRecord(body) && typeof body.title =
 export const keySessionOf = (kind: string, body: unknown) =>
     kind === 'RUNNING' && isRecord(body) && typeof body.keySession === 'string' ? body.keySession : null;
 
+export const cutKeyOf = (kind: string, body: unknown) =>
+    kind === 'RUNNING' && isRecord(body) && typeof body.cutKey === 'string' ? body.cutKey : null;
+
 const BUDGET_KINDS: readonly unknown[] = ['TRIM', 'ASK'];
 const PLANNED_METHODS: readonly string[] = ['LABEL_TABLE', 'DURATION', 'ATHLETE_ESTIMATE'];
+
+/** A placement trim, with its ask checked: the answer route acts on its options. */
+function isPlacement(v: unknown): boolean {
+    if (!isRecord(v) || !isStrings(v.violations) || !Array.isArray(v.removed)) return false;
+    const asked = v.asked;
+    if (asked == null) return true;
+    return (
+        isRecord(asked) &&
+        typeof asked.title === 'string' &&
+        isNumber(asked.plannedLoad) &&
+        typeof asked.keySession === 'string' &&
+        isStrings(asked.options) &&
+        asked.options.every((o) => (DECISION_OPTIONS as readonly string[]).includes(o))
+    );
+}
 
 /** The trim, ask or placement trim a week stores (ADR 0013). */
 export function readConflict(json: Json): ConflictRecord | null {
     if (!isRecord(json) || !('placement' in json) || !('budget' in json)) return null;
     if (json.budget !== null && !(isRecord(json.budget) && BUDGET_KINDS.includes(json.budget.kind))) return null;
+    if (json.placement !== null && !isPlacement(json.placement)) return null;
     return json as unknown as ConflictRecord;
 }
 

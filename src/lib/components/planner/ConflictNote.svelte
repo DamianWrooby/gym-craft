@@ -47,20 +47,20 @@
     }
 </script>
 
-{#if asked && week.decision === 'PENDING'}
+{#if placement && asked && week.decision === 'PENDING'}
     <div class="gc-stat space-y-2" role="alert">
         <p class="text-sm text-slate-100">
             {asked.title} does not fit your training days with the rest of this week, so it is not in the week.
         </p>
         <ul class="ml-4 list-disc text-xs text-slate-400">
-            <li>Rules the week broke: {placement?.violations.join('; ')}.</li>
-            {#if placement?.removed.length}
+            <li>Rules the week broke: {placement.violations.join('; ')}.</li>
+            {#if placement.removed.length}
                 <li>
                     Also removed: {placement.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', ')}.
                 </li>
             {/if}
             <li>{asked.title} ({trimp(asked.plannedLoad)}) is a key session, so you decide.</li>
-            <li>Protected: {placement?.protected.join(', ') || 'no other key sessions'}.</li>
+            <li>Protected: {placement.protected.join(', ') || 'no other key sessions'}.</li>
         </ul>
         <div class="flex flex-wrap gap-2">
             {#each asked.options as option}
