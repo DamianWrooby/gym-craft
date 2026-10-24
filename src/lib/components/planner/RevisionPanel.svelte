@@ -122,7 +122,8 @@
                 <p>You have used every revision this month. The week stays as written; edit sessions by hand.</p>
             {:else if reason.remainingLoad > 0}
                 <p>
-                    Only your own sessions are left, so GymCraft will not change them. Edit them, or rewrite the week.
+                    Only your own sessions are left, so GymCraft will not change them. Answer the question on this week,
+                    edit them, or rewrite the week.
                 </p>
             {:else}
                 <p>No sessions are left this week to change.</p>

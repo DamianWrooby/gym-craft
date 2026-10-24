@@ -22,7 +22,12 @@ class AlreadyAnsweredError extends Error {}
 export async function answerDecision(userId: string, weekId: string, choice: DecisionOption): Promise<DecisionOutcome> {
     const week = await db.planWeek.findUnique({
         where: { id: weekId },
-        include: { phase: true, aiRequest: true, sessions: { where: { status: 'PLANNED', origin: 'AI' } } },
+        include: {
+            phase: true,
+            aiRequest: true,
+            // An ask over the athlete's own sessions (ADR 0015) offers one of theirs.
+            sessions: { where: { status: 'PLANNED' } },
+        },
     });
     if (!week || week.userId !== userId) return { kind: 'not-found' };
 
