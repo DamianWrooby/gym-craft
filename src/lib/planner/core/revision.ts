@@ -129,3 +129,30 @@ export function recutSuggestionShown(drift: Drift, dismissedFor: string | null):
     if (!drift.drifting || !drift.latestWeekStart) return false;
     return dismissedFor == null || drift.latestWeekStart > dismissedFor;
 }
+
+/** A session on its day, as the moved-day check reads it. */
+export interface DaySession {
+    title: string;
+    keySession: string | null;
+    date: string;
+}
+
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const weekdayName = (date: string) => WEEKDAY_NAMES[new Date(`${date}T00:00:00Z`).getUTCDay()];
+
+/**
+ * One line per session a rewrite moved to another day (ADR 0026): a key session matches by its key,
+ * any other by title. A session the rewrite dropped or kept on its day says nothing.
+ */
+export function movedSessions(before: DaySession[], after: DaySession[]): string[] {
+    const unmatched = [...after];
+    return before.flatMap((old) => {
+        const at = unmatched.findIndex((s) =>
+            old.keySession != null ? s.keySession === old.keySession : s.keySession == null && s.title === old.title,
+        );
+        if (at < 0) return [];
+        const [now] = unmatched.splice(at, 1);
+        if (now.date === old.date) return [];
+        return [`${old.title} moved from ${weekdayName(old.date)} to ${weekdayName(now.date)}.`];
+    });
+}
