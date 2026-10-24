@@ -155,7 +155,7 @@ export async function getActivePlan(userId: string) {
                     weeks: {
                         orderBy: { startDate: 'asc' },
                         include: {
-                            aiRequest: { select: { id: true, status: true, retryCount: true } },
+                            aiRequest: { select: { id: true, status: true, retryCount: true, updatedAt: true } },
                             revisionRequest: { select: { id: true, status: true, retryCount: true } },
                             sessions: {
                                 where: { status: { not: 'SUPERSEDED' } },

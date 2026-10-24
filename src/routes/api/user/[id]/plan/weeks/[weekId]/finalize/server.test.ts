@@ -214,6 +214,23 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/finalize', () => {
         });
     });
 
+    it('fails a request left PENDING for more than five minutes: the tab closed before the proxy call', async () => {
+        db.planWeek.findUnique.mockResolvedValueOnce(
+            week({}, { status: 'PENDING', output: null, updatedAt: new Date('2026-10-12T08:50:00Z') }),
+        );
+        expect(await (await post()).json()).toEqual({ data: { generation: 'FAILED', retriesLeft: 2 } });
+        expect(tx.aiRequest.update).toHaveBeenCalledWith({
+            where: { id: 'request-1' },
+            data: { status: 'FAILED', error: expect.stringMatching(/never started/i) },
+        });
+    });
+
+    it('answers 202 for a request PENDING for less than five minutes', async () => {
+        db.planWeek.findUnique.mockResolvedValueOnce(week({}, { status: 'PENDING', output: null }));
+        expect((await post()).status).toBe(202);
+        expect(tx.aiRequest.update).not.toHaveBeenCalled();
+    });
+
     it('fails the week when the proxy failed the request', async () => {
         db.planWeek.findUnique.mockResolvedValueOnce(week({}, { status: 'FAILED', output: null, retryCount: 1 }));
         expect(await (await post()).json()).toEqual({ data: { generation: 'FAILED', retriesLeft: 1 } });

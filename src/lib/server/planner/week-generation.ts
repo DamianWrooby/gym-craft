@@ -19,8 +19,19 @@ import type { Anchor } from '$lib/planner/core/anchor';
 /** A failed request may be retried at most this many times (ADR 0016). */
 export const MAX_RETRIES = 2;
 
-/** Well past the proxy's 150 s OpenAI timeout: a RUNNING row this old lost its proxy call. */
-const STALE_RUNNING_MS = 5 * 60 * 1000;
+/**
+ * Well past the proxy's 150 s OpenAI timeout. A RUNNING row this old lost its proxy call; a PENDING
+ * row this old never got one, because the tab closed first (#423).
+ */
+const STALE_MS = 5 * 60 * 1000;
+
+/** Why a request no proxy call will finish is failed, or null while one still may. */
+export function staleReason(request: { status: string; updatedAt: Date }): string | null {
+    if (Date.now() - request.updatedAt.getTime() <= STALE_MS) return null;
+    if (request.status === 'RUNNING') return 'Stalled: the proxy never wrote a result';
+    if (request.status === 'PENDING') return 'Stalled: the proxy call never started';
+    return null;
+}
 
 export type FinalizeOutcome =
     | { kind: 'not-found' }
@@ -118,8 +129,9 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
 
     const request = week.aiRequest;
     if (!request) return { kind: 'pending', requestStatus: 'NONE' };
-    if (request.status === 'RUNNING' && Date.now() - request.updatedAt.getTime() > STALE_RUNNING_MS) {
-        await failWeek(week, request.id, 'Stalled: the proxy never wrote a result');
+    const stalled = staleReason(request);
+    if (stalled) {
+        await failWeek(week, request.id, stalled);
         return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
     }
     if (request.status === 'FAILED') {
