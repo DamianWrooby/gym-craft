@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 import {
     keySessionOf,
@@ -98,6 +99,24 @@ describe('readConflict', () => {
     it('returns null for nothing or a malformed row', () => {
         expect(readConflict(null)).toBeNull();
         expect(readConflict({ budget: { kind: 'MAYBE' } })).toBeNull();
+    });
+
+    const placement = (asked?: Prisma.JsonValue) => ({
+        placement: { removed: [], violations: ['x'], cutOrder: [], protected: [], asked },
+        budget: null,
+    });
+
+    it('reads a placement ask, and a placement stored before asks existed', () => {
+        const asked = { title: 'Long run', plannedLoad: 90, keySession: 'long', options: ['DROP', 'REWRITE'] };
+        expect(readConflict(placement(asked))).toEqual(placement(asked));
+        expect(readConflict(placement(undefined))).not.toBeNull();
+    });
+
+    it('returns null for a malformed placement ask', () => {
+        expect(readConflict(placement({ title: 'Long run', options: 'DROP' }))).toBeNull();
+        expect(
+            readConflict(placement({ title: 'Long run', plannedLoad: 90, keySession: 'long', options: ['MAYBE'] })),
+        ).toBeNull();
     });
 });
 

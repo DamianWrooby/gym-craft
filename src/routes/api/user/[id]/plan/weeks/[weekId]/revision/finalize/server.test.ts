@@ -237,6 +237,29 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/revision/finalize', () => {
         expect(tx.aiUsage.upsert).not.toHaveBeenCalled();
     });
 
+    it('fails a rewrite that places only without a key session, and names it', async () => {
+        const offDay = JSON.stringify({
+            sessions: [
+                {
+                    kind: 'RUNNING',
+                    date: '2026-10-17',
+                    title: 'Long run',
+                    keySession: 'long',
+                    steps: [{ label: 'z1', durationSec: 4800 }],
+                },
+            ],
+        });
+        db.planWeek.findUnique.mockResolvedValue(week({ output: offDay }));
+        expect((await (await post()).json()).data.revision).toBe('FAILED');
+        expect(tx.aiRequest.update).toHaveBeenCalledWith({
+            where: { id: 'request-9' },
+            data: {
+                status: 'FAILED',
+                error: expect.stringMatching(/^Long run fits your training days only if it goes/),
+            },
+        });
+    });
+
     it('rejects a session before the revision day', async () => {
         const early = JSON.stringify({
             sessions: [

@@ -195,15 +195,17 @@ function trimForPlacement(sessions: TypedSession[], violations: string[], ctx: G
         cutOrder,
     );
     const keyRuns = sessions
-        .map((s, i) => ({ i, key: keyOf(s) }))
-        .filter(({ key }) => key != null)
+        .flatMap((s, i) => {
+            const key = keyOf(s);
+            return key == null ? [] : [{ i, key }];
+        })
         .sort((a, b) => loads[a.i] - loads[b.i]);
+    // Nothing cut first, then ever longer runs of the cut order.
+    const cuts = [0, ...candidates.map((_, n) => n + 1)].map((n) => new Set(candidates.slice(0, n)));
 
-    for (const asked of [null, ...keyRuns]) {
-        const removed = new Set<number>();
-        for (const i of [null, ...candidates]) {
-            if (i != null) removed.add(i);
-            const kept = sessions.filter((_, j) => !removed.has(j) && j !== asked?.i);
+    for (const leftOut of [null, ...keyRuns]) {
+        for (const removed of cuts) {
+            const kept = sessions.filter((_, j) => !removed.has(j) && j !== leftOut?.i);
             if (placementViolations(kept, ctx.placement).length > 0) continue;
             return {
                 ok: true,
@@ -217,10 +219,10 @@ function trimForPlacement(sessions: TypedSession[], violations: string[], ctx: G
                     violations,
                     cutOrder,
                     protected: kept.filter((s) => keyOf(s) != null).map((s) => s.body.title),
-                    asked: asked && {
-                        title: sessions[asked.i].body.title,
-                        plannedLoad: loads[asked.i],
-                        keySession: asked.key!,
+                    asked: leftOut && {
+                        title: sessions[leftOut.i].body.title,
+                        plannedLoad: loads[leftOut.i],
+                        keySession: leftOut.key,
                     },
                 },
             };

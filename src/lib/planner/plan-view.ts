@@ -101,6 +101,8 @@ export interface PlanView {
     rationale: PlanRationale | null;
     /** The week a pull would write today, with past sessions still to confirm; null when none. */
     pull: { weekIndex: number; unconfirmed: PlanViewSession[] } | null;
+    /** Weeks the athlete kept over budget: the school-fit evidence (ADR 0013). */
+    keptWeeks: number;
 }
 
 export interface StoredPlan {
@@ -168,6 +170,7 @@ export function toPlanView(plan: StoredPlan, goals: FixtureGoal[], today: string
         }),
         currentWeekIndex: current && today >= plan.startDate && today <= plan.endDate ? current.index : null,
         rationale: plan.rationale,
+        keptWeeks: weeks.filter((w) => w.decision === 'KEPT').length,
         pull: pullWeek
             ? {
                   weekIndex: pullWeek.index,

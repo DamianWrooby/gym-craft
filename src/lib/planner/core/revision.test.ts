@@ -220,8 +220,8 @@ describe('recutSuggestionShown', () => {
 });
 
 describe('movedSessions (ADR 0026)', () => {
-    const tempo = { title: 'Tempo', keySession: 'tempo', date: '2026-10-20' };
-    const easy = { title: 'Easy run', keySession: null, date: '2026-10-21' };
+    const tempo = { title: 'Tempo', keySession: 'tempo', cutKey: null, date: '2026-10-20' };
+    const easy = { title: 'Easy run', keySession: null, cutKey: 'easy', date: '2026-10-21' };
 
     it('names a key session the rewrite moved, matched by its key even when renamed', () => {
         const after = [{ ...tempo, title: 'Tempo 3 × 8 min', date: '2026-10-22' }, easy];
@@ -232,6 +232,16 @@ describe('movedSessions (ADR 0026)', () => {
         expect(movedSessions([easy], [{ ...easy, date: '2026-10-23' }])).toEqual([
             'Easy run moved from Wednesday to Friday.',
         ]);
+    });
+
+    it('matches a renamed non-key session by its cut type', () => {
+        const after = [{ ...easy, title: 'Easy 40 min', date: '2026-10-23' }];
+        expect(movedSessions([easy], after)).toEqual(['Easy run moved from Wednesday to Friday.']);
+    });
+
+    it('prefers the session with the same title over one with the same cut type', () => {
+        const other = { ...easy, title: 'Easy 40 min', date: '2026-10-24' };
+        expect(movedSessions([easy], [other, easy])).toEqual([]);
     });
 
     it('says nothing for a session that stays on its day, or one the rewrite dropped', () => {
