@@ -165,8 +165,11 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
     let budgetRecord: ConflictRecord['budget'] = null;
     let decision: WeekDecision | null = null;
     let kept = written.map((_, i) => i);
-    if (resolution.kind === 'trim') {
-        budgetRecord = { kind: 'TRIM', facts: resolution.facts };
+    const asked = placementTrim?.asked ?? null;
+    if (asked) decision = 'PENDING';
+    // One ask per week: with a placement ask open, the budget only trims easy volume.
+    if (resolution.kind === 'trim' || (resolution.kind === 'ask' && asked)) {
+        budgetRecord = { kind: 'TRIM', facts: { ...resolution.facts, offered: null } };
         kept = kept.filter((i) => !resolution.removed.includes(i));
     } else if (resolution.kind === 'ask') {
         budgetRecord = {
@@ -178,8 +181,12 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
         };
         decision = 'PENDING';
     }
-    const conflict: ConflictRecord | null =
-        placementTrim || budgetRecord ? { placement: placementTrim, budget: budgetRecord } : null;
+    const placement: ConflictRecord['placement'] = placementTrim && {
+        ...placementTrim,
+        // A rewrite spends a retry: with none left, the athlete can only drop the session.
+        asked: asked && { ...asked, options: retriesLeft(request.retryCount) > 0 ? ['DROP', 'REWRITE'] : ['DROP'] },
+    };
+    const conflict: ConflictRecord | null = placement || budgetRecord ? { placement, budget: budgetRecord } : null;
     const anchorRecord = anchor
         ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }
         : null;

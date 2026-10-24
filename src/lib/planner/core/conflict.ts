@@ -17,7 +17,8 @@ export interface ConflictSession {
     canDowngrade: boolean;
 }
 
-export const DECISION_OPTIONS = ['DROP', 'DOWNGRADE', 'KEEP'] as const;
+/** REWRITE answers a placement ask only: the week is failed so the athlete can retry it. */
+export const DECISION_OPTIONS = ['DROP', 'DOWNGRADE', 'KEEP', 'REWRITE'] as const;
 export type DecisionOption = (typeof DECISION_OPTIONS)[number];
 
 /** The four facts every trim and every ask carries (ADR 0013). The surface owns the wording. */
@@ -196,6 +197,13 @@ export interface SessionRef {
     sequence: number;
 }
 
+/** A key session left out so the week places (story 60): the athlete drops it or asks for a rewrite. */
+export interface PlacementAsk {
+    title: string;
+    plannedLoad: number;
+    keySession: string;
+}
+
 /** What a finalize cut or asked, stored on the plan week; null when the week stands as written. */
 export interface ConflictRecord {
     placement: {
@@ -203,6 +211,8 @@ export interface ConflictRecord {
         violations: string[];
         cutOrder: string[];
         protected: string[];
+        /** Absent on weeks stored before the placement ask. */
+        asked?: (PlacementAsk & { options: DecisionOption[] }) | null;
     } | null;
     budget:
         | { kind: 'TRIM'; facts: ConflictFacts }

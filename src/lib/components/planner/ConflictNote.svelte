@@ -1,6 +1,7 @@
 <script lang="ts">
     // Every trim and every ask states the numbers, the action, why that session and what was
     // protected (ADR 0013). A silent trim is one line that expands.
+    import { createEventDispatcher } from 'svelte';
     import { invalidateAll } from '$app/navigation';
     import { answerDecision } from '$lib/planner/generation-client';
     import type { DecisionOption } from '$lib/planner/core/conflict';
@@ -9,11 +10,16 @@
     export let week: Pick<PlanViewWeek, 'id' | 'conflict' | 'decision'>;
     export let schoolName: string;
     export let userId: string;
+    /** Weeks of this plan the athlete kept over budget: the school-fit evidence (ADR 0013). */
+    export let keptWeeks = 0;
+
+    const dispatch = createEventDispatcher<{ recut: void }>();
 
     const OPTION_LABELS: Record<DecisionOption, (title: string) => string> = {
         DROP: (t) => `Drop ${t}`,
         DOWNGRADE: (t) => `Downgrade ${t} one intensity step`,
         KEEP: () => 'Keep the week as written and go over budget',
+        REWRITE: () => 'Rewrite the week',
     };
     const ANSWERED: Record<string, string> = {
         DROPPED: 'You dropped',
@@ -22,6 +28,7 @@
     };
 
     $: placement = week.conflict?.placement ?? null;
+    $: asked = placement?.asked ?? null;
     $: budget = week.conflict?.budget ?? null;
     let saving = false;
     let error: string | null = null;
@@ -40,7 +47,37 @@
     }
 </script>
 
-{#if placement}
+{#if asked && week.decision === 'PENDING'}
+    <div class="gc-stat space-y-2" role="alert">
+        <p class="text-sm text-slate-100">
+            {asked.title} does not fit your training days with the rest of this week, so it is not in the week.
+        </p>
+        <ul class="ml-4 list-disc text-xs text-slate-400">
+            <li>Rules the week broke: {placement?.violations.join('; ')}.</li>
+            {#if placement?.removed.length}
+                <li>
+                    Also removed: {placement.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', ')}.
+                </li>
+            {/if}
+            <li>{asked.title} ({trimp(asked.plannedLoad)}) is a key session, so you decide.</li>
+            <li>Protected: {placement?.protected.join(', ') || 'no other key sessions'}.</li>
+        </ul>
+        <div class="flex flex-wrap gap-2">
+            {#each asked.options as option}
+                <button
+                    type="button"
+                    class={option === 'DROP' ? 'gc-ghost' : 'gc-button'}
+                    disabled={saving}
+                    on:click={() => answer(option)}>
+                    {OPTION_LABELS[option](asked.title)}
+                </button>
+            {/each}
+        </div>
+        {#if error}<p class="text-sm text-amber-300">{error}</p>{/if}
+    </div>
+{:else if asked && week.decision === 'DROPPED'}
+    <p class="text-sm text-slate-300">You dropped {asked.title} so the week fits your training days.</p>
+{:else if placement && placement.removed.length > 0}
     <details class="text-sm text-slate-300">
         <summary>Removed {titles(placement.removed)} so the week fits your training days.</summary>
         <ul class="mt-1 ml-4 list-disc text-xs text-slate-400">
@@ -122,6 +159,11 @@
             <p class="text-sm text-amber-300" role="note">
                 The key sessions alone cost more than this week's budget, so {schoolName}'s minimum week does not fit
                 you now. Consider a gentler school, a longer horizon, or a lead-in phase.
+                {#if keptWeeks > 0}
+                    You kept {keptWeeks}
+                    {keptWeeks === 1 ? 'week' : 'weeks'} over budget so far.
+                {/if}
+                <button type="button" class="underline" on:click={() => dispatch('recut')}>Change school</button>
             </p>
         {/if}
     {/if}

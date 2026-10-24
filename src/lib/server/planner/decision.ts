@@ -9,13 +9,22 @@ import { costSession } from '$lib/planner/core/cost';
 import { attachTargets, labelPaces } from '$lib/planner/core/targets';
 import { isValidZones } from '$lib/planner/core/zones';
 import type { RunningBody } from '$lib/planner/core/session';
-import type { WeekDecision } from '@prisma/client';
+import { Prisma, type WeekDecision } from '@prisma/client';
 import { readAnchor, readConflict, readRunningBody, toJson } from './stored';
 
 export type DecisionOutcome =
-    { kind: 'not-found' } | { kind: 'no-ask' } | { kind: 'not-offered' } | { kind: 'answered'; decision: WeekDecision };
+    | { kind: 'not-found' }
+    | { kind: 'no-ask' }
+    | { kind: 'not-offered' }
+    | { kind: 'answered'; decision: WeekDecision }
+    /** The week is failed for a retry (story 60). */
+    | { kind: 'rewrite' };
 
-const RECORDED: Record<DecisionOption, WeekDecision> = { DROP: 'DROPPED', DOWNGRADE: 'DOWNGRADED', KEEP: 'KEPT' };
+const RECORDED: Record<Exclude<DecisionOption, 'REWRITE'>, WeekDecision> = {
+    DROP: 'DROPPED',
+    DOWNGRADE: 'DOWNGRADED',
+    KEEP: 'KEPT',
+};
 
 class AlreadyAnsweredError extends Error {}
 
@@ -31,8 +40,15 @@ export async function answerDecision(userId: string, weekId: string, choice: Dec
     });
     if (!week || week.userId !== userId) return { kind: 'not-found' };
 
-    const ask = readConflict(week.conflict)?.budget;
-    if (week.decision !== 'PENDING' || ask?.kind !== 'ASK') return { kind: 'no-ask' };
+    const conflict = readConflict(week.conflict);
+    if (week.decision !== 'PENDING') return { kind: 'no-ask' };
+    const placementAsk = conflict?.placement?.asked;
+    if (placementAsk) {
+        if (!placementAsk.options.includes(choice)) return { kind: 'not-offered' };
+        return answerPlacement(week.id, week.aiRequestId, choice);
+    }
+    const ask = conflict?.budget;
+    if (ask?.kind !== 'ASK' || choice === 'REWRITE') return { kind: 'no-ask' };
     if (!ask.facts.offered?.options.includes(choice)) return { kind: 'not-offered' };
 
     const find = (r: SessionRef) =>
@@ -93,4 +109,39 @@ export async function answerDecision(userId: string, weekId: string, choice: Dec
         throw e;
     }
     return { kind: 'answered', decision };
+}
+
+/**
+ * A placement ask (story 60): the key session is already left out. A drop records it; a rewrite fails
+ * the week and its request, so the athlete retries it like any failed week.
+ */
+async function answerPlacement(
+    weekId: string,
+    aiRequestId: string | null,
+    choice: DecisionOption,
+): Promise<DecisionOutcome> {
+    const rewrite = choice === 'REWRITE';
+    try {
+        await db.$transaction(async (tx) => {
+            const claimed = await tx.planWeek.updateMany({
+                where: { id: weekId, decision: 'PENDING' },
+                data: rewrite
+                    ? { decision: null, generation: 'FAILED', conflict: Prisma.DbNull }
+                    : { decision: 'DROPPED' },
+            });
+            if (claimed.count === 0) throw new AlreadyAnsweredError();
+            if (!rewrite) return;
+            await tx.plannedSession.deleteMany({ where: { planWeekId: weekId, status: 'PLANNED' } });
+            if (aiRequestId) {
+                await tx.aiRequest.update({
+                    where: { id: aiRequestId },
+                    data: { status: 'FAILED', error: 'The athlete asked for a rewrite' },
+                });
+            }
+        });
+    } catch (e) {
+        if (e instanceof AlreadyAnsweredError) return { kind: 'no-ask' };
+        throw e;
+    }
+    return rewrite ? { kind: 'rewrite' } : { kind: 'answered', decision: 'DROPPED' };
 }

@@ -555,6 +555,8 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
     if (!target) return failed('The request has no revision scope');
     const read = await readWeekOutput(userId, week, request, target.from);
     if (!read.ok) return failed(read.errors.join('; ').slice(0, 1000));
+    // A revision has no ask of its own: a week that places only without a key session is rejected.
+    if (read.placementTrim?.asked) return failed(read.placementTrim.violations.join('; ').slice(0, 1000));
 
     const { anchor, written, costs } = read;
     const resolution = resolveBudget(week, target, read);

@@ -126,12 +126,9 @@ describe('validateGeneration', () => {
         });
     });
 
-    it('rejects a week that breaks a placement rule', () => {
-        const result = validateGeneration(output([q1, { ...long, date: '2026-10-21' }]), ctx);
-        expect(result).toEqual({
-            ok: false,
-            errors: [expect.stringMatching(/long run/i), expect.stringMatching(/consecutive/i)],
-        });
+    it('rejects a week that breaks a rule no removal of a run can fix', () => {
+        const result = validateGeneration(output([q1, { ...lift, date: '2026-10-25' }, long]), ctx);
+        expect(result).toEqual({ ok: false, errors: [expect.stringMatching(/long-run day/i)] });
     });
 
     it('trims an infeasible week in cut order instead of breaking a placement rule', () => {
@@ -160,11 +157,33 @@ describe('validateGeneration', () => {
             violations: ['The week needs at least one rest day'],
             cutOrder: ['easy', 'strides'],
             protected: ['Threshold', 'Long run'],
+            asked: null,
         });
     });
 
-    it('still rejects a week whose key sessions break a rule no trim can fix', () => {
+    it('asks before a key session goes when only removing one places the week (story 60)', () => {
         const result = validateGeneration(output([q1, { ...long, date: '2026-10-21' }]), ctx);
-        expect(result.ok).toBe(false);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.sessions.map((s) => s.body.title)).toEqual(['Threshold']);
+        expect(result.placementTrim).toMatchObject({
+            removed: [],
+            violations: [expect.stringMatching(/long run/i), expect.stringMatching(/consecutive/i)],
+            asked: { title: 'Long run', plannedLoad: expect.any(Number), keySession: 'long' },
+            protected: ['Threshold'],
+        });
+    });
+
+    it('takes the cheaper key session when either would place the week', () => {
+        const q2 = {
+            ...q1,
+            date: '2026-10-21',
+            title: 'Intervals',
+            keySession: 'q2',
+            steps: [{ label: 'I', durationSec: 600 }],
+        };
+        const result = validateGeneration(output([q1, q2, long]), ctx);
+        if (!result.ok) throw new Error(result.errors.join('; '));
+        expect(result.placementTrim?.asked?.title).toBe('Intervals');
     });
 });
