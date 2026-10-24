@@ -13,7 +13,13 @@ import {
 import { getLimit, resolveAiModel, type SubscriptionTier } from '@/constants/subscription.constants';
 import { resolveTier } from '$lib/server/subscription/tier';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
-import { reevaluate, type Reevaluation, type RevisionReason, type RevisionTrigger } from '$lib/planner/core/revision';
+import {
+    movedSessions,
+    reevaluate,
+    type Reevaluation,
+    type RevisionReason,
+    type RevisionTrigger,
+} from '$lib/planner/core/revision';
 import {
     athleteSessionsAsk,
     canDowngrade,
@@ -32,6 +38,7 @@ import {
     plannedMethodOf,
     readAnchor,
     readConflict,
+    readRevisionReason,
     readRevisionScope,
     readRunningBody,
     titleOf,
@@ -251,6 +258,7 @@ async function buildRevisionInput(
             done: sessions.filter((s) => s.status === 'DONE').map(line),
             unscheduledLoad,
             fixed: fixed.map(line),
+            rewritten: sessions.filter((s) => inScope.has(s.id) && s.status === 'PLANNED').map(line),
             loadLeft: loadLeftOf(week.recoveryBudget, verdict.reason.executedLoad, fixedLoad),
             why: describeReason(verdict.reason, trigger),
             unwell: trigger === 'CHECK_IN',
@@ -366,6 +374,7 @@ export async function reevaluateCurrentWeek(
         outcome,
         scope: verdict.scope,
         from: today,
+        moved: [],
     });
     const storeVerdict = (outcome: 'ask' | 'capped', extra: Prisma.PlanWeekUpdateInput = {}) =>
         db.planWeek.update({
@@ -495,10 +504,20 @@ interface StoredRevision {
     replaced: string[];
     rows: Prisma.PlannedSessionCreateManyInput[];
     ask: ConflictRecord | null;
+    /** The verdict, with one line per session the rewrite moved to another day. */
+    reason: StoredRevisionReason | null;
 }
 
 /** One transaction: claim the week, supersede, insert, and count the revision. */
-async function storeRevision({ userId, weekId, requestId, replaced, rows, ask }: StoredRevision): Promise<void> {
+async function storeRevision({
+    userId,
+    weekId,
+    requestId,
+    replaced,
+    rows,
+    ask,
+    reason,
+}: StoredRevision): Promise<void> {
     const monthKey = currentMonthStartIso();
     await db.$transaction(async (tx) => {
         // The conditional update is the idempotency guard: a second finalize finds nothing to claim.
@@ -509,6 +528,7 @@ async function storeRevision({ userId, weekId, requestId, replaced, rows, ask }:
                 revision: { increment: 1 },
                 revisedAt: new Date(),
                 ...(ask && { conflict: toJson(ask), decision: 'PENDING' as const }),
+                ...(reason && { revisionReason: toJson(reason) }),
             },
         });
         if (claimed.count === 0) return;
@@ -563,6 +583,24 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
     const kept = written.map((_, i) => i).filter((i) => resolution.kind !== 'trim' || !resolution.removed.includes(i));
     const { replaced, supersedes, sequenceOf } = placeRevision(week, target, written, kept);
     const ask = askRecordOf(resolution, (i) => ({ scheduledDate: written[i].scheduledDate, sequence: sequenceOf(i) }));
+    const verdict = readRevisionReason(week.revisionReason);
+    const moved = movedSessions(
+        week.sessions
+            .filter((s) => replaced.includes(s.id))
+            .map((s) => ({
+                title: titleOf(s.body),
+                keySession: keySessionOf(s.kind, s.body),
+                date: toIsoDate(s.scheduledDate),
+            })),
+        kept.map((i) => {
+            const s = written[i];
+            return {
+                title: s.body.title,
+                keySession: s.kind === 'RUNNING' ? s.body.keySession : null,
+                date: s.scheduledDate,
+            };
+        }),
+    );
     const anchorRecord = anchor
         ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }
         : null;
@@ -573,6 +611,7 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
         requestId: request.id,
         replaced,
         ask,
+        reason: verdict && { ...verdict, moved },
         rows: kept.map((i, n) => {
             const s = written[i];
             return {

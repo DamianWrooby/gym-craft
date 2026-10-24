@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { addDays } from '$lib/utils/iso-week';
-import { detectDrift, recutSuggestionShown, reevaluate, type DriftWeek, type ReevalSession } from './revision';
+import {
+    detectDrift,
+    movedSessions,
+    recutSuggestionShown,
+    reevaluate,
+    type DriftWeek,
+    type ReevalSession,
+} from './revision';
 
 const today = '2026-10-21'; // Wednesday
 
@@ -209,5 +216,25 @@ describe('recutSuggestionShown', () => {
 
     it('hidden without drift', () => {
         expect(recutSuggestionShown({ drifting: false, driftWeeks: 1, latestWeekStart: null }, null)).toBe(false);
+    });
+});
+
+describe('movedSessions (ADR 0026)', () => {
+    const tempo = { title: 'Tempo', keySession: 'tempo', date: '2026-10-20' };
+    const easy = { title: 'Easy run', keySession: null, date: '2026-10-21' };
+
+    it('names a key session the rewrite moved, matched by its key even when renamed', () => {
+        const after = [{ ...tempo, title: 'Tempo 3 × 8 min', date: '2026-10-22' }, easy];
+        expect(movedSessions([tempo, easy], after)).toEqual(['Tempo moved from Tuesday to Thursday.']);
+    });
+
+    it('matches a non-key session by title', () => {
+        expect(movedSessions([easy], [{ ...easy, date: '2026-10-23' }])).toEqual([
+            'Easy run moved from Wednesday to Friday.',
+        ]);
+    });
+
+    it('says nothing for a session that stays on its day, or one the rewrite dropped', () => {
+        expect(movedSessions([tempo, easy], [tempo])).toEqual([]);
     });
 });

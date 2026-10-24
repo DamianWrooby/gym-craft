@@ -150,6 +150,48 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/revision/finalize', () => {
         expect(rows.map((r: { supersedesId: string | null }) => r.supersedesId)).toEqual([null, 'sun']);
     });
 
+    it('stores one line per session the rewrite moved to another day (ADR 0026)', async () => {
+        const verdict = {
+            executedLoad: 60,
+            remainingLoad: 80,
+            budget: null,
+            overspend: 0,
+            missedKeySessions: [],
+            outcome: 'revise',
+            scope: ['thu', 'sun'],
+            from: '2026-10-14',
+        };
+        const output = JSON.stringify({
+            sessions: [
+                { kind: 'RUNNING', date: '2026-10-16', title: 'Easy', steps: [{ label: 'z1', durationSec: 1800 }] },
+                {
+                    kind: 'RUNNING',
+                    date: '2026-10-18',
+                    title: 'Long run',
+                    keySession: 'long',
+                    steps: [{ label: 'z1', durationSec: 4800 }],
+                },
+            ],
+        });
+        db.planWeek.findUnique.mockResolvedValue(
+            week(
+                { output },
+                {
+                    revisionReason: verdict,
+                    sessions: [
+                        planned('thu', '2026-10-15', { body: { title: 'Easy' } }),
+                        planned('sun', '2026-10-18', { body: { title: 'Long run', keySession: 'long' } }),
+                    ],
+                },
+            ),
+        );
+        await post();
+        expect(tx.planWeek.updateMany.mock.calls[0][0].data.revisionReason).toEqual({
+            ...verdict,
+            moved: ['Easy moved from Thursday to Friday.'],
+        });
+    });
+
     it('stores 0013 ask when the rewrite would cut a key session to fit the budget', async () => {
         // Budget 100 − executed 60 − the athlete's Saturday 40 leaves 0 for the rewrite.
         db.planWeek.findUnique.mockResolvedValue(week({}, { recoveryBudget: 100 }));

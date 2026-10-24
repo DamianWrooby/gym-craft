@@ -11,7 +11,7 @@ export interface AdaptRevision {
     request: { id: string; status: string; retriesLeft: number } | null;
     trigger: RevisionTrigger | null;
     /** The latest verdict; `capped` and `ask` keep the week as written. */
-    reason: (RevisionReason & { outcome: 'revise' | 'ask' | 'capped'; from: string }) | null;
+    reason: (RevisionReason & { outcome: 'revise' | 'ask' | 'capped'; from: string; moved: string[] }) | null;
     revisedAt: string | null;
 }
 

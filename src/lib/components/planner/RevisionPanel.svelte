@@ -118,6 +118,7 @@
             </p>
             {#if reason.outcome === 'revise'}
                 <p>GymCraft rewrote the rest of this week from {reason.from}.</p>
+                {#each reason.moved as line}<p>{line}</p>{/each}
             {:else if reason.outcome === 'capped'}
                 <p>You have used every revision this month. The week stays as written; edit sessions by hand.</p>
             {:else if reason.remainingLoad > 0}

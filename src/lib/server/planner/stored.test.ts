@@ -20,11 +20,18 @@ const reason = {
     outcome: 'revise',
     scope: ['s1'],
     from: '2026-10-21',
+    moved: ['Tempo moved from Tuesday to Thursday.'],
 };
 
 describe('readRevisionReason', () => {
     it('reads a stored verdict', () => {
         expect(readRevisionReason(reason)).toEqual(reason);
+    });
+
+    it('reads a verdict stored before moved lines existed as moving nothing', () => {
+        const { moved, ...older } = reason;
+        expect(moved).toHaveLength(1);
+        expect(readRevisionReason(older)).toEqual({ ...older, moved: [] });
     });
 
     it('reads an ungated verdict', () => {

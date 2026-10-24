@@ -59,6 +59,8 @@ export interface RevisionContext {
     unscheduledLoad: number;
     /** Athlete sessions an automatic revision must keep. */
     fixed: PromptSession[];
+    /** The sessions being rewritten, on their current days: they keep those days where they can (ADR 0026). */
+    rewritten: PromptSession[];
     /** Recovery budget minus executed and fixed load; null when the week is ungated. */
     loadLeft: number | null;
     /** The cause, in words built from the reason's numbers. */
@@ -111,6 +113,9 @@ function revisionSections(r: RevisionContext, from: string): string[] {
         r.unscheduledLoad > 0 ? `Unscheduled training this week: load ${r.unscheduledLoad}.` : '',
         r.fixed.length
             ? `Sessions the athlete wrote (they stay; write nothing on their days):\n${list(r.fixed.map(sessionLine))}`
+            : '',
+        r.rewritten.length
+            ? `Sessions you are rewriting, on their current days. Keep each one on its day unless a rule above forbids it:\n${list(r.rewritten.map(sessionLine))}`
             : '',
         r.loadLeft != null ? `Load left in the recovery budget: ${r.loadLeft}. Stay within it.` : '',
         r.unwell ? 'The athlete reported feeling unwell: favour easy running and light strength.' : '',

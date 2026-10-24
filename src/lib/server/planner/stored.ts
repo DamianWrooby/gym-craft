@@ -19,6 +19,8 @@ export interface StoredRevisionReason extends RevisionReason {
     scope: string[];
     /** The first day the revision rewrites. */
     from: string;
+    /** One line per session the rewrite moved to another day (ADR 0026); empty before it is stored. */
+    moved: string[];
 }
 
 /** What a revision request rewrites, stored on the request input beside the prompt. */
@@ -49,7 +51,7 @@ export function readRevisionCause(json: Json): RevisionCause | null {
 
 export function readRevisionReason(json: Json): StoredRevisionReason | null {
     if (!isRecord(json)) return null;
-    const { executedLoad, remainingLoad, budget, overspend, missedKeySessions, outcome, scope, from } = json;
+    const { executedLoad, remainingLoad, budget, overspend, missedKeySessions, outcome, scope, from, moved } = json;
     const valid =
         isNumber(executedLoad) &&
         isNumber(remainingLoad) &&
@@ -70,6 +72,7 @@ export function readRevisionReason(json: Json): StoredRevisionReason | null {
         outcome: outcome as StoredRevisionReason['outcome'],
         scope,
         from,
+        moved: isStrings(moved) ? moved : [],
     };
 }
 
