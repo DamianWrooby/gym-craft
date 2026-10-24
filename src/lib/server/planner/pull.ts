@@ -2,12 +2,12 @@
 // sessions, and the server writes the next week's AI request. The browser then runs it through the
 // same finalize path as week 1. At most one request per week; pulls are never capped.
 import { db } from '$lib/database';
-import { addDays, toIsoDate } from '$lib/utils/iso-week';
+import { addDays, toIsoDate, fromIsoDate } from '$lib/utils/iso-week';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
 import { OUTLOOK_FACTORS, pullTarget, type WeekOutlook } from '$lib/planner/core/pull';
-import type { AvailabilityMap } from '$lib/planner/wizard';
 import type { Prisma } from '@prisma/client';
 import { anchorFromContext } from './build-plan';
+import { readAvailability } from './stored';
 import { getPlanningContext } from './repository';
 import { buildWeekPrompt } from './week-prompt';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
@@ -25,8 +25,6 @@ export type PullOutcome =
     | { kind: 'pulled'; weekId: string; aiRequestId: string };
 
 class AlreadyPulledError extends Error {}
-
-const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
 
 export async function pullWeek(
     userId: string,
@@ -75,7 +73,7 @@ export async function pullWeek(
             from,
             to,
         },
-        availability: plan.availability as unknown as AvailabilityMap,
+        availability: readAvailability(plan.availability),
         longRunDay: plan.longRunDay,
         anchor,
         outlook: input.outlook,
@@ -90,7 +88,7 @@ export async function pullWeek(
         const aiRequestId = await db.$transaction(async (tx) => {
             for (const c of input.confirmations) {
                 await tx.plannedSession.updateMany({
-                    where: { id: c.sessionId, userId, status: 'PLANNED', scheduledDate: { lt: asDate(today) } },
+                    where: { id: c.sessionId, userId, status: 'PLANNED', scheduledDate: { lt: fromIsoDate(today) } },
                     data: { status: c.status },
                 });
             }

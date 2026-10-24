@@ -5,14 +5,17 @@ import { isSchoolId } from '$lib/planner/schools/catalogue';
 import { getActivePlan } from '$lib/server/planner/repository';
 import { RecutConflictError, applyRecut, planRecut, type RecutChange } from '$lib/server/planner/recut';
 
-function readChange(body: unknown): RecutChange | string {
+function readBody(body: unknown): { change: RecutChange; confirm: boolean } | string {
     if (typeof body !== 'object' || body === null) return 'Send a goal date or a school';
-    const { endDate, schoolId } = body as Record<string, unknown>;
+    const { endDate, schoolId, confirm } = body as Record<string, unknown>;
     if (endDate !== undefined && (typeof endDate !== 'string' || !isValidDateString(endDate))) {
         return 'endDate must be YYYY-MM-DD';
     }
     if (schoolId !== undefined && !isSchoolId(schoolId)) return 'Unknown school';
-    return { endDate: endDate as string | undefined, schoolId: schoolId as RecutChange['schoolId'] };
+    return {
+        change: { endDate: endDate as string | undefined, schoolId: schoolId as RecutChange['schoolId'] },
+        confirm: confirm === true,
+    };
 }
 
 /**
@@ -30,9 +33,10 @@ export async function POST({
 }): Promise<Response> {
     if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
 
-    const body = await request.json().catch(() => null);
-    const change = readChange(body);
-    if (typeof change === 'string') return createResponse(400, { code: 'INVALID_BODY', message: change });
+    const body: unknown = await request.json().catch(() => null);
+    const read = readBody(body);
+    if (typeof read === 'string') return createResponse(400, { code: 'INVALID_BODY', message: read });
+    const { change, confirm } = read;
 
     const plan = await getActivePlan(params.id);
     if (!plan) return createResponse(404, { code: 'NO_PLAN', message: 'There is no active plan' });
@@ -43,7 +47,7 @@ export async function POST({
     if (result.kind === 'refused') return createResponse(422, { code: 'RECUT_REFUSED', message: result.reason });
 
     const preview = { kind: result.kind, summary: result.summary, losses: result.losses };
-    if (result.kind === 'relaid' && body?.confirm !== true) {
+    if (result.kind === 'relaid' && !confirm) {
         return createResponse(200, { data: { applied: false, ...preview } });
     }
     try {

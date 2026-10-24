@@ -1,6 +1,6 @@
 // Planner persistence. Every write that creates a plan happens in one transaction (ADR 0012).
 import { db } from '$lib/database';
-import { addDays } from '$lib/utils/iso-week';
+import { addDays, fromIsoDate } from '$lib/utils/iso-week';
 import type { Prisma } from '@prisma/client';
 import type { NewPlanRecord, PlanningContext } from './build-plan';
 import type { AiRequestInput } from './week-prompt';
@@ -19,14 +19,12 @@ export class MissingProfileError extends Error {
     }
 }
 
-const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
-
 /** A laid-out week as a `PlanWeek` row; shared by plan creation and the recut. */
 export function laidWeekRow(userId: string, w: LaidWeek, timeTrial: Layout['timeTrial']) {
     return {
         userId,
-        startDate: asDate(w.startDate),
-        endDate: asDate(w.endDate),
+        startDate: fromIsoDate(w.startDate),
+        endDate: fromIsoDate(w.endDate),
         inHorizonDays: w.inHorizonDays,
         isCutback: w.isCutback,
         isTaper: w.isTaper,
@@ -42,7 +40,7 @@ export async function getPlanningContext(userId: string, today: string): Promise
         db.runningGoal.findMany({ where: { userId, archivedAt: null }, orderBy: { priority: 'asc' } }),
         db.raceResult.findMany({ where: { userId }, orderBy: { date: 'desc' } }),
         db.activity.findMany({
-            where: { userId, startTime: { gte: asDate(addDays(today, -90)) } },
+            where: { userId, startTime: { gte: fromIsoDate(addDays(today, -90)) } },
             select: {
                 id: true,
                 activityType: true,
@@ -87,7 +85,7 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord, week
 
             if (record.raceResults.length > 0) {
                 await tx.raceResult.createMany({
-                    data: record.raceResults.map((r) => ({ ...r, userId, date: asDate(r.date) })),
+                    data: record.raceResults.map((r) => ({ ...r, userId, date: fromIsoDate(r.date) })),
                 });
             }
 
@@ -95,8 +93,8 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord, week
                 data: {
                     userId,
                     goalId: record.goalId,
-                    startDate: asDate(record.startDate),
-                    endDate: asDate(record.endDate),
+                    startDate: fromIsoDate(record.startDate),
+                    endDate: fromIsoDate(record.endDate),
                     availability: record.availability,
                     longRunDay: record.longRunDay,
                     rationale: record.rationale as unknown as Prisma.InputJsonValue,
@@ -105,8 +103,8 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord, week
                             key: p.key,
                             name: p.name,
                             ordinal: p.ordinal,
-                            startDate: asDate(p.startDate),
-                            endDate: asDate(p.endDate),
+                            startDate: fromIsoDate(p.startDate),
+                            endDate: fromIsoDate(p.endDate),
                             intent: p.intent,
                             source: p.source,
                             school: p.school,

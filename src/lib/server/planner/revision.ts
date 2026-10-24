@@ -2,7 +2,14 @@
 // remaining sessions through an AI request, superseding the old rows. Capped per month, counted
 // once at DONE; a FAILED request is free and may be retried twice.
 import { db } from '$lib/database';
-import { addDays, currentMonthStartIso, dateInTimezone, toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
+import {
+    addDays,
+    currentMonthStartIso,
+    dateInTimezone,
+    toIsoDate,
+    todayInTimezone,
+    fromIsoDate,
+} from '$lib/utils/iso-week';
 import { getLimit, resolveAiModel, type SubscriptionTier } from '@/constants/subscription.constants';
 import { resolveTier } from '$lib/server/subscription/tier';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
@@ -16,7 +23,6 @@ import {
     type SessionRef,
 } from '$lib/planner/core/conflict';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
-import type { AvailabilityMap } from '$lib/planner/wizard';
 import type { Prisma } from '@prisma/client';
 import { MAX_RETRIES, readWeekOutput, retriesLeft, type WeekOutput } from './week-generation';
 import { buildWeekPrompt, type AiRequestInput, type PromptSession } from './week-prompt';
@@ -33,6 +39,7 @@ import {
     type RevisionCause,
     type RevisionScope,
     type StoredRevisionReason,
+    readAvailability,
 } from './stored';
 
 /** Well past the proxy's 150 s OpenAI timeout: a RUNNING row this old lost its proxy call. */
@@ -75,8 +82,6 @@ export type RevisionRetryOutcome =
     | { kind: 'retrying'; aiRequestId: string; retriesLeft: number };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
-const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
-
 /** Tier and model from the stored subscription, so the sync path needs no request locals. */
 async function aiAccount(userId: string): Promise<AiAccount> {
     const user = await db.user.findUnique({
@@ -106,7 +111,7 @@ async function currentWeek(userId: string, today: string) {
             phases: {
                 include: {
                     weeks: {
-                        where: { startDate: { lte: asDate(today) }, endDate: { gte: asDate(today) } },
+                        where: { startDate: { lte: fromIsoDate(today) }, endDate: { gte: fromIsoDate(today) } },
                         include: {
                             aiRequest: { select: { input: true } },
                             revisionRequest: { select: { status: true, updatedAt: true } },
@@ -134,7 +139,7 @@ async function executedLoads(userId: string, week: { startDate: Date; endDate: D
     const activities = await db.activity.findMany({
         where: {
             userId,
-            startTime: { gte: asDate(addDays(startDate, -1)), lt: asDate(addDays(endDate, 2)) },
+            startTime: { gte: fromIsoDate(addDays(startDate, -1)), lt: fromIsoDate(addDays(endDate, 2)) },
         },
         select: { id: true, startTime: true, trimpLoad: true },
     });
@@ -238,7 +243,7 @@ async function buildRevisionInput(
         school: getSchool(phase.school),
         phase,
         week: { ...week, startDate, from: today, to },
-        availability: plan.availability as unknown as AvailabilityMap,
+        availability: readAvailability(plan.availability),
         longRunDay: plan.longRunDay,
         anchor,
         fixtures: fixturesBetween(goals.map(toFixtureGoal), plan.goalId, today, to),
@@ -572,7 +577,7 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
                 userId,
                 planWeekId: week.id,
                 kind: s.kind,
-                scheduledDate: asDate(s.scheduledDate),
+                scheduledDate: fromIsoDate(s.scheduledDate),
                 sequence: sequenceOf(i),
                 origin: 'AI' as const,
                 plannedLoad: costs[i].plannedLoad,

@@ -9,10 +9,10 @@ import { costSession, type Cost } from '$lib/planner/core/cost';
 import { canDowngrade, resolveConflict, type ConflictRecord, type SessionRef } from '$lib/planner/core/conflict';
 import { attachTargets, labelPaces } from '$lib/planner/core/targets';
 import { isValidZones } from '$lib/planner/core/zones';
-import type { AvailabilityMap } from '$lib/planner/wizard';
 import type { Prisma, WeekDecision } from '@prisma/client';
 import type { TypedSession } from '$lib/planner/core/session';
 import type { AiRequestInput } from './week-prompt';
+import { readAvailability } from './stored';
 import type { SchoolDefinition } from '$lib/planner/schools/types';
 import type { Anchor } from '$lib/planner/core/anchor';
 
@@ -98,7 +98,7 @@ export async function readWeekOutput(
             weekStart,
             from: first,
             to: planEnd < weekEnd ? planEnd : weekEnd,
-            availability: plan.availability as AvailabilityMap,
+            availability: readAvailability(plan.availability),
             longRunDay: plan.longRunDay,
             keySessions: school.keySessions.map((k) => k.key),
         },
