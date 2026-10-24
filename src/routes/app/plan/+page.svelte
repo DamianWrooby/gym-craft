@@ -7,6 +7,7 @@
     import PullPrompt from '$lib/components/planner/PullPrompt.svelte';
     import CheckInCard from '$lib/components/planner/CheckInCard.svelte';
     import RecutSuggestion from '$lib/components/planner/RecutSuggestion.svelte';
+    import RecutPanel from '$lib/components/planner/RecutPanel.svelte';
     import { page } from '$app/stores';
     import type { PlanView, PlanViewActivity } from '$lib/planner/plan-view';
     import type { AdaptView } from '$lib/planner/adapt-view';
@@ -19,6 +20,7 @@
     };
 
     let selected: number | null = null;
+    let recutOpen = false;
     $: plan = data.plan;
     $: shown = plan ? (selected ?? plan.currentWeekIndex ?? 0) : null;
     $: adapt = data.adapt;
@@ -33,8 +35,16 @@
         {#if plan.rationale}<PlanRationale rationale={plan.rationale} />{/if}
         <PhaseTimeline {plan} selected={shown} on:select={(e) => (selected = e.detail)} />
         {#if adapt?.recut.shown}
-            <RecutSuggestion driftWeeks={adapt.recut.driftWeeks} userId={$page.data.user.id} />
+            <RecutSuggestion
+                driftWeeks={adapt.recut.driftWeeks}
+                userId={$page.data.user.id}
+                on:recut={() => (recutOpen = true)} />
         {/if}
+        <RecutPanel
+            userId={$page.data.user.id}
+            endDate={plan.endDate}
+            schoolId={plan.school.id}
+            bind:open={recutOpen} />
         {#if adapt?.revision && onCurrent}
             <CheckInCard
                 checkIn={adapt.checkIn}

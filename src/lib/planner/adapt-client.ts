@@ -66,3 +66,21 @@ export async function dismissCheckInProposal(userId: string): Promise<void> {
 export async function dismissRecutSuggestion(userId: string): Promise<void> {
     await post(`/api/user/${userId}/plan/recut-suggestion/dismiss`);
 }
+
+export interface RecutAnswer {
+    applied: boolean;
+    kind: 'absorbed' | 'relaid';
+    summary: string;
+    losses: string[];
+}
+
+/** Previews a recut (or applies it with `confirm`); an absorbed goal-date move is applied at once. */
+export async function recutPlan(
+    userId: string,
+    change: { endDate?: string; schoolId?: string },
+    confirm = false,
+): Promise<RecutAnswer | { error: string }> {
+    const { ok, json } = await post(`/api/user/${userId}/plan/recut`, { ...change, confirm });
+    if (!ok) return { error: messageOf(json, 'Could not recut the plan. Try again.') };
+    return json?.data as RecutAnswer;
+}
