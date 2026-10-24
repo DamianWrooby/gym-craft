@@ -207,7 +207,136 @@ const DANIELS: SchoolDefinition = {
     ],
 };
 
-export const SCHOOLS: readonly SchoolDefinition[] = [POLARIZED, DANIELS];
+const PFITZINGER: SchoolDefinition = {
+    id: 'PFITZINGER',
+    name: 'Pfitzinger',
+    lore: 'Pete Pfitzinger ran two Olympic marathons and wrote Advanced Marathoning. His plans pile up mileage, a medium-long run and weekly lactate-threshold work, all paced from your threshold.',
+    tagline: 'High mileage and threshold work, built for the marathon.',
+    phases: [
+        {
+            key: 'endurance',
+            name: 'Endurance',
+            intent: 'Build mileage and the long run.',
+            lossLine: 'Fewer Endurance weeks means less mileage under you before the threshold work starts.',
+            idealWeeks: sourced(6, 'Advanced Marathoning 18-week table: weeks-to-goal 17→12.'),
+            floorWeeks: sourced(4, 'Transcribed 12-week plan: Endurance weeks 1–4.'),
+            droppable: sourced(false, 'All four mesocycles survive into the 12-week plan.'),
+            volumeUnit: 'METRES',
+            strengthKind: 'base',
+        },
+        {
+            key: 'lt',
+            name: 'Lactate Threshold + Endurance',
+            intent: 'Threshold volume on top of endurance.',
+            lossLine: 'Fewer threshold weeks means a lower lactate threshold and a slower marathon pace.',
+            idealWeeks: sourced(5, 'Advanced Marathoning 18-week table: weeks-to-goal 11→7.'),
+            floorWeeks: sourced(3, 'Transcribed 12-week plan: LT weeks 5–7.'),
+            droppable: sourced(false, 'All four mesocycles survive into the 12-week plan.'),
+            volumeUnit: 'METRES',
+            strengthKind: 'build',
+        },
+        {
+            key: 'race-prep',
+            name: 'Race Preparation',
+            intent: 'VO2max and tune-up races.',
+            lossLine: 'Fewer Race Preparation weeks means less VO2max work and fewer tune-up races.',
+            idealWeeks: sourced(4, 'Advanced Marathoning 18-week table: weeks-to-goal 6→3.'),
+            floorWeeks: sourced(3, 'Transcribed 12-week plan; one reviewer reads 2. 3 makes the floors sum to 12.'),
+            droppable: sourced(false, 'All four mesocycles survive into the 12-week plan.'),
+            volumeUnit: 'METRES',
+            strengthKind: 'sharpen',
+        },
+        {
+            key: 'taper',
+            name: 'Taper',
+            intent: 'Shed fatigue, keep sharpness.',
+            lossLine: 'A shorter taper means reaching the start line less fresh.',
+            idealWeeks: sourced(3, 'Advanced Marathoning 18-week table: weeks-to-goal 2→race.'),
+            floorWeeks: sourced(2, 'Transcribed 12-week plan: two-week taper.'),
+            droppable: sourced(false, 'All four mesocycles survive into the 12-week plan.'),
+            volumeUnit: 'METRES',
+            strengthKind: 'sharpen',
+        },
+    ],
+    compressionOrder: sourced(
+        ['endurance', 'lt', 'race-prep', 'taper'],
+        'The 18→12 delta: Endurance −2, LT −2, Race Preparation −1, Taper −1.',
+    ),
+    dropOrder: sourced([], 'Nothing is droppable.'),
+    schoolFloorWeeks: sourced(12, 'pfitzingercoaching.com/faq: "about 12-18 weeks"; the four floors sum to 12.'),
+    peak: {
+        kind: 'tiers',
+        tiers: judged(
+            [55, 70, 85, 100].map((mi) => mi * MILE),
+            'Book tiers up to 55 / 55–70 / 70–85 / 85+ mi are sourced; 100 mi for 85+ is judged.',
+        ),
+    },
+    ramp: {
+        kind: 'linear',
+        startFractionOfPeak: sourced(0.6, '18-week / 55 mi table opens at 33 mi, 0.60 of peak.'),
+        maxStepFraction: judged(0.08, 'The table steps +2 to +4 mi a week, about 5–11 %.'),
+    },
+    cutbackCadence: sourced(4, '18-week table: recovery weeks at weeks-to-goal 12 and 8.'),
+    cutbackDepth: judged(0.15, 'The table cuts back 10–18 % below the prior loading week.'),
+    taperFractions: sourced([0.8, 0.58, 0.4], '18-week / 55 mi table: 43–45, 32, then 22 mi plus the race.'),
+    leadIn: {
+        split: sourced('100/0: general aerobic running only', 'Plans have no on-ramp; at least 24 km a week to start.'),
+        touch: sourced('strides', 'General aerobic runs carry strides.'),
+    },
+    intensityLabels: [
+        {
+            key: 'REC',
+            name: 'Recovery',
+            edwardsWeight: judged(1),
+            targetType: sourced('PACE'),
+            paceDerivation: 'LT pace from the anchor; recovery is well slower.',
+        },
+        {
+            key: 'GA',
+            name: 'General aerobic',
+            edwardsWeight: judged(2),
+            targetType: sourced('PACE'),
+            paceDerivation: 'LT pace from the anchor; general aerobic is well slower.',
+        },
+        {
+            key: 'MP',
+            name: 'Marathon pace',
+            edwardsWeight: judged(3),
+            targetType: sourced('PACE'),
+            paceDerivation: 'LT pace from the anchor; marathon pace is "a couple of percent slower".',
+        },
+        {
+            key: 'LT',
+            name: 'Lactate threshold',
+            edwardsWeight: judged(4),
+            targetType: sourced('PACE', 'pfitzingercoaching.com: LT pace is the best predictor of race pace.'),
+            paceDerivation: 'LT pace from the anchor: about the pace you could race for an hour.',
+        },
+        {
+            key: 'VO2',
+            name: 'VO2max',
+            edwardsWeight: judged(5),
+            targetType: sourced('PACE'),
+            paceDerivation: 'LT pace from the anchor; VO2max is about 5K race pace.',
+        },
+    ],
+    keySessions: [
+        { key: 'long', name: 'Long run', reason: 'Pfitzinger calls the long run "number one".' },
+        { key: 'lt', name: 'Lactate threshold', reason: 'The weekly LT session is the cornerstone workout.' },
+        { key: 'medium-long', name: 'Medium-long run', reason: 'The second endurance run of the week.' },
+        { key: 'vo2', name: 'VO2max or tune-up race', reason: 'Race Preparation is built around it.' },
+    ],
+    cutOrder: sourced(
+        ['recovery', 'general-aerobic'],
+        "Recovery runs, then general aerobic; never make up lost time. The medium-long run is shortened, not removed.",
+    ),
+    strengthTemplates: [
+        { key: 'heavy-full-body', name: 'Heavy full body', tag: 'heavy' },
+        { key: 'light-maintenance', name: 'Light maintenance', tag: 'light' },
+    ],
+};
+
+export const SCHOOLS: readonly SchoolDefinition[] = [POLARIZED, DANIELS, PFITZINGER];
 
 export function getSchool(id: SchoolId): SchoolDefinition {
     const school = SCHOOLS.find((s) => s.id === id);

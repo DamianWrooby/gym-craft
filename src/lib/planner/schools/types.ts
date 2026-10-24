@@ -14,7 +14,7 @@ export interface Marked<T> {
 export const sourced = <T>(value: T, note?: string): Marked<T> => ({ value, mark: 'sourced', note });
 export const judged = <T>(value: T, note?: string): Marked<T> => ({ value, mark: 'judged', note });
 
-export type SchoolId = 'POLARIZED' | 'DANIELS';
+export type SchoolId = 'POLARIZED' | 'DANIELS' | 'PFITZINGER';
 export type VolumeUnit = 'MINUTES' | 'METRES';
 export type TargetType = 'PACE' | 'HR';
 

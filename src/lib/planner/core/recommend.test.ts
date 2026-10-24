@@ -13,8 +13,20 @@ describe('recommendSchool', () => {
         ['no anchor → polarized', { anchorPresent: false }, 'POLARIZED', 'Works from heart rate alone.'],
         ['half marathon with a result → Daniels', {}, 'DANIELS', 'Paces set from your race result.'],
         [
-            'marathon with a result → polarized fallback',
+            'marathon, 16 weeks, 30 km a week → Pfitzinger',
             { goal: { isRace: true, distanceM: 42195 } },
+            'PFITZINGER',
+            'Built for the marathon, 12–18 weeks.',
+        ],
+        [
+            'marathon below 24 km a week → polarized fallback',
+            { goal: { isRace: true, distanceM: 42195 }, recentMetresPerWeek: 20000 },
+            'POLARIZED',
+            'Flexible and forgiving.',
+        ],
+        [
+            'marathon over 20 weeks → polarized fallback',
+            { goal: { isRace: true, distanceM: 42195 }, horizonWeeks: 21 },
             'POLARIZED',
             'Flexible and forgiving.',
         ],
@@ -31,7 +43,10 @@ describe('recommendSchool', () => {
     it('filters schools whose floor exceeds the horizon, with a reason', () => {
         const r = recommendSchool({ ...base, horizonWeeks: 8 });
         expect(r.offered).toEqual(['DANIELS']);
-        expect(r.filtered).toEqual([{ schoolId: 'POLARIZED', reason: 'Needs at least 9 weeks; your horizon has 8.' }]);
+        expect(r.filtered).toEqual([
+            { schoolId: 'POLARIZED', reason: 'Needs at least 9 weeks; your horizon has 8.' },
+            { schoolId: 'PFITZINGER', reason: 'Needs at least 12 weeks; your horizon has 8.' },
+        ]);
         expect(r.recommended).toEqual({ schoolId: 'DANIELS', reason: 'Paces set from your race result.' });
     });
 
@@ -41,10 +56,17 @@ describe('recommendSchool', () => {
         expect(r.recommended?.reason).toBeTruthy();
     });
 
+    it('filters Pfitzinger below its 12-week floor, so a short marathon falls back', () => {
+        const r = recommendSchool({ ...base, goal: { isRace: true, distanceM: 42195 }, horizonWeeks: 11 });
+        expect(r.offered).toEqual(['POLARIZED', 'DANIELS']);
+        expect(r.filtered).toEqual([{ schoolId: 'PFITZINGER', reason: 'Needs at least 12 weeks; your horizon has 11.' }]);
+        expect(r.recommended?.schoolId).toBe('POLARIZED');
+    });
+
     it('recommends nothing when every school is filtered', () => {
         const r = recommendSchool({ ...base, horizonWeeks: 5 });
         expect(r.recommended).toBeNull();
         expect(r.offered).toEqual([]);
-        expect(r.filtered).toHaveLength(2);
+        expect(r.filtered).toHaveLength(3);
     });
 });
