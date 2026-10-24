@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { addDays, dateInTimezone, toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile, getRunningGoals } from '$lib/prisma/prisma';
 import { getActivePlan, type ActivePlan } from '$lib/server/planner/repository';
-import { MAX_RETRIES, finalizeWeek } from '$lib/server/planner/week-generation';
+import { MAX_RETRIES, finalizeWeek, staleReason } from '$lib/server/planner/week-generation';
 import { hashSessionToken } from '$lib/server/session-token';
 import { toPlanView, type PlanView, type PlanViewActivity, type PlanViewSession } from '$lib/planner/plan-view';
 import { unconfirmedSessions } from '$lib/planner/core/pull';
@@ -15,10 +15,16 @@ import type { AdaptView } from '$lib/planner/adapt-view';
 
 type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
 
-/** A week whose request finished while no tab was open: finalize it now (ADR 0014). */
+/**
+ * A week whose request finished while no tab was open: finalize it now (ADR 0014). A request no
+ * proxy call will finish is failed here, so the athlete can retry it (#423).
+ */
 const awaitsFinalize = (w: StoredWeek) =>
     w.generation !== 'GENERATED' &&
-    (w.aiRequest?.status === 'DONE' || (w.aiRequest?.status === 'FAILED' && w.generation !== 'FAILED'));
+    w.aiRequest != null &&
+    (w.aiRequest.status === 'DONE' ||
+        (w.aiRequest.status === 'FAILED' && w.generation !== 'FAILED') ||
+        staleReason(w.aiRequest) != null);
 
 function toSession(s: StoredWeek['sessions'][number], today: string): PlanViewSession {
     const anchor = s.anchor as { stale?: boolean } | null;
