@@ -161,3 +161,67 @@ describe('recut: goal date', () => {
         if (result.kind === 'relaid') expect(result.weeks).toHaveLength(20);
     });
 });
+
+describe('recut: a re-lay carries on (ADR 0019)', () => {
+    // Weeks 1–6 written: the 4-week lead-in and 2 aerobic weeks.
+    const sixWritten = () => stored(twentyWeeks, 6);
+
+    it('continues the phase underway, with no new lead-in and no ramp restart', () => {
+        const result = recut(input(twentyWeeks, 6, { endDate: endForWeeks(22) }));
+        expect(result.kind).toBe('relaid');
+        if (result.kind !== 'relaid') return;
+        expect(result.phases.map((p) => p.name)).toEqual(['Aerobic', 'Taper']);
+        const lastLoading = sixWritten()
+            .weeks.slice(0, 6)
+            .filter((w) => !w.isCutback && w.volumeUnit === result.weeks[0].volumeUnit)
+            .at(-1)!;
+        const firstLoading = result.weeks.find((w) => !w.isCutback)!;
+        expect(firstLoading.volumeTarget).toBeGreaterThanOrEqual(lastLoading.volumeTarget);
+    });
+
+    it('starts a new school at its first phase, with no new lead-in', () => {
+        const result = recut(input(twentyWeeks, 6, { schoolId: 'DANIELS' }));
+        expect(result.kind).toBe('relaid');
+        if (result.kind !== 'relaid') return;
+        expect(result.phases.some((p) => p.source === 'LEAD_IN')).toBe(false);
+        expect(result.phases.every((p) => p.school === 'DANIELS')).toBe(true);
+    });
+
+    it('sizes a lead-in that is still underway again', () => {
+        const result = recut(input(twentyWeeks, 2, { endDate: endForWeeks(22) }));
+        if (result.kind !== 'relaid') throw new Error(result.kind);
+        expect(result.phases[0].source).toBe('LEAD_IN');
+    });
+});
+
+describe('recut: guards', () => {
+    it('refuses a plan that has not started', () => {
+        const result = recut(input(twentyWeeks, 0, { schoolId: 'DANIELS' }, { today: addDays(MONDAY, -10) }));
+        expect(result).toMatchObject({ kind: 'refused', reason: expect.stringContaining('not started') });
+    });
+
+    describe('when the school sources its cadence', () => {
+        // Pfitzinger: three loading weeks, then a cutback (sourced). Week 1 written.
+        const pfitz = (weeks: number) => {
+            const marathon = {
+                goal: { isRace: true, distanceM: 42195 },
+                recentVolume: { minutesPerWeek: 300, metresPerWeek: 60000 },
+                runsPerWeek: 5,
+            };
+            const l = layout({ school: getSchool('PFITZINGER'), endDate: endForWeeks(weeks), ...marathon });
+            return { l, result: recut(input(l, 1, { endDate: endForWeeks(weeks - 1) }, marathon)) };
+        };
+
+        it('absorbs a week after the last cutback, leaving every cutback in place', () => {
+            const { l, result } = pfitz(16);
+            expect(result.kind).toBe('absorbed');
+            if (result.kind !== 'absorbed') return;
+            const cutbacks = (weeks: { isCutback: boolean }[]) => weeks.flatMap((w, i) => (w.isCutback ? [i] : []));
+            expect(cutbacks(result.weeks)).toEqual(cutbacks(l.weeks.slice(1)));
+        });
+
+        it('asks, through a full re-lay, when only a week before a cutback may go', () => {
+            expect(pfitz(18).result.kind).toBe('relaid');
+        });
+    });
+});

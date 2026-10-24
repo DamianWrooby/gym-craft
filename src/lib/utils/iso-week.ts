@@ -55,6 +55,11 @@ export function isFutureDate(yyyymmdd: string, timezone: string = 'UTC'): boolea
     return yyyymmdd > todayInTimezone(timezone);
 }
 
+/** A YYYY-MM-DD date as UTC midnight, the way date columns store it. */
+export function fromIsoDate(yyyymmdd: string): Date {
+    return new Date(`${yyyymmdd}T00:00:00Z`);
+}
+
 export function toIsoDate(d: Date): string {
     return d.toISOString().slice(0, 10);
 }

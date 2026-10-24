@@ -5,7 +5,14 @@
 import { addDays, daysBetween, mondayOf } from '$lib/utils/iso-week';
 import { getSchool } from '../schools/catalogue';
 import type { SchoolId } from '../schools/types';
-import { horizonWeekCount, layoutHorizon, type LaidPhase, type LaidWeek, type LayoutInput } from './layout';
+import {
+    horizonWeekCount,
+    layoutHorizon,
+    type LaidPhase,
+    type LaidWeek,
+    type LayoutInput,
+    type Resume,
+} from './layout';
 
 /** A stored phase, as the recut reads it. */
 export type StoredPhase = Omit<LaidPhase, 'weekCount'>;
@@ -68,6 +75,7 @@ export function recut(input: RecutInput): RecutResult {
             (last, w, i) => (w.startDate <= thisMonday || w.pulled || w.generation !== 'PENDING' ? i : last),
             -1,
         ) + 1;
+    if (keptCount === 0) return { kind: 'refused', reason: 'The plan has not started yet; set it up again.' };
     const lastKept = weeks[keptCount - 1];
     const relayFrom = addDays(lastKept.endDate, 1);
     if (endDate <= lastKept.endDate) {
@@ -79,7 +87,7 @@ export function recut(input: RecutInput): RecutResult {
 
     const days = daysBetween(endDate, input.endDate);
     if (schoolId === currentSchool && days > 0 && days <= ABSORB_MAX_DAYS) {
-        const absorbed = absorb(input, keptCount, relayFrom, endDate);
+        const absorbed = absorb(input, keptCount, relayFrom, endDate, currentSchool);
         if (absorbed) return { kind: 'absorbed', ...absorbed };
     }
 
@@ -92,6 +100,7 @@ export function recut(input: RecutInput): RecutResult {
         recentVolume: input.recentVolume,
         runsPerWeek: input.runsPerWeek,
         anchorPresent: input.anchorPresent,
+        resume: resumeFrom(input, keptCount, schoolId),
     });
     if (!result.ok) return { kind: 'refused', reason: result.reason };
     const { phases: laid, weeks: laidWeeks, timeTrial, losses } = result.layout;
@@ -109,11 +118,40 @@ export function recut(input: RecutInput): RecutResult {
 }
 
 /**
+ * Where the re-lay picks up (ADR 0019): inside the school phase underway when the school stays, at
+ * the new school's first phase otherwise. A lead-in still underway is no resume: the re-lay sizes it.
+ */
+function resumeFrom(input: RecutInput, keptCount: number, schoolId: SchoolId): Resume | undefined {
+    const kept = input.weeks.slice(0, keptCount);
+    const last = kept[kept.length - 1];
+    const phase = input.phases.find((p) => p.ordinal === last.phaseOrdinal);
+    if (!phase || phase.source !== 'SCHOOL') return undefined;
+    const same = phase.school === schoolId;
+    const unit = getSchool(schoolId).phases[0].volumeUnit;
+    const backwards = [...kept].reverse();
+    const recovery = backwards.findIndex((w) => w.isCutback || w.isTaper);
+    const loading = backwards.find((w) => !w.isCutback && !w.isTaper);
+    return {
+        phaseKey: same ? phase.key : undefined,
+        weeksDone: same ? kept.filter((w) => w.phaseOrdinal === last.phaseOrdinal).length : 0,
+        volume: loading && loading.volumeUnit === unit ? loading.volumeTarget : null,
+        loadingRun: recovery < 0 ? kept.length : recovery,
+    };
+}
+
+/**
  * The tail with one week fewer, or the same weeks with a shorter last one. The week comes from the
  * lead-in first, then the school's compression order; never a phase underway, never the taper,
- * never a cutback or time-trial week, never below a floor. Null when no week may go.
+ * never a cutback or time-trial week, never below a floor. When the school's cutback cadence is
+ * sourced, never a week before a cutback: the cutback would move one week earlier. Null when no week may go.
  */
-function absorb(input: RecutInput, keptCount: number, relayFrom: string, endDate: string): RecutPlan | null {
+function absorb(
+    input: RecutInput,
+    keptCount: number,
+    relayFrom: string,
+    endDate: string,
+    schoolId: SchoolId,
+): RecutPlan | null {
     const tail = input.weeks.slice(keptCount);
     const underway = new Set(input.weeks.slice(0, keptCount).map((w) => w.phaseOrdinal));
     const surplus = tail.length - horizonWeekCount(relayFrom, endDate);
@@ -166,7 +204,7 @@ function absorb(input: RecutInput, keptCount: number, relayFrom: string, endDate
     return {
         relayFrom,
         endDate,
-        schoolId: input.phases[input.phases.length - 1].school,
+        schoolId,
         phases,
         weeks,
         timeTrial: trial < 0 ? null : { weekIndex: trial, distanceM: kept[trial].timeTrialDistanceM! },
@@ -192,8 +230,15 @@ function removableWeek(phases: StoredPhase[], tail: StoredWeek[], underway: Set<
     };
     for (const phase of [...candidates].sort((a, b) => rank(a) - rank(b))) {
         if (rank(phase) === Infinity) continue;
+        const cadence = getSchool(phase.school).cutbackCadence;
+        const exactCadence = cadence.mark === 'sourced' && cadence.value != null;
         const index = tail.findIndex(
-            (w) => w.phaseOrdinal === phase.ordinal && !w.isTaper && !w.isCutback && w.timeTrialDistanceM == null,
+            (w, i) =>
+                w.phaseOrdinal === phase.ordinal &&
+                !w.isTaper &&
+                !w.isCutback &&
+                w.timeTrialDistanceM == null &&
+                !(exactCadence && tail.slice(i + 1).some((later) => later.isCutback)),
         );
         if (index >= 0) return index;
     }

@@ -1,7 +1,7 @@
 // Athlete-owned changes to planned sessions (spec #409, stories 33–38, 65). The app never
 // overwrites an athlete session: editing an AI session supersedes it with an `ATHLETE` row.
 import { db } from '$lib/database';
-import { toIsoDate } from '$lib/utils/iso-week';
+import { toIsoDate, fromIsoDate } from '$lib/utils/iso-week';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
 import { readAthleteSession } from '$lib/planner/core/athlete-session';
 import { attachTargets } from '$lib/planner/core/targets';
@@ -24,8 +24,6 @@ export const SESSION_MARKS: readonly SessionMark[] = ['DONE', 'SKIPPED', 'PLANNE
 
 /** A solo time trial slower than this is not a race result. */
 const MAX_TIME_TRIAL_SEC = 6 * 3600;
-
-const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
 
 async function activePlanWeeks(userId: string) {
     return db.plan.findFirst({
@@ -70,7 +68,7 @@ function rowData(userId: string, weekId: string, session: TypedSession, cost: Co
         userId,
         planWeekId: weekId,
         kind: session.kind,
-        scheduledDate: asDate(session.scheduledDate),
+        scheduledDate: fromIsoDate(session.scheduledDate),
         sequence,
         origin: 'ATHLETE' as const,
         plannedLoad: cost.plannedLoad,
@@ -82,7 +80,7 @@ function rowData(userId: string, weekId: string, session: TypedSession, cost: Co
 
 async function nextSequence(userId: string, date: string): Promise<number> {
     return db.plannedSession.count({
-        where: { userId, scheduledDate: asDate(date), status: { not: 'SUPERSEDED' } },
+        where: { userId, scheduledDate: fromIsoDate(date), status: { not: 'SUPERSEDED' } },
     });
 }
 

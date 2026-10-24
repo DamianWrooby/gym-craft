@@ -4,6 +4,7 @@ import { REVISION_TRIGGERS, type RevisionReason, type RevisionTrigger } from '$l
 import type { ConflictRecord } from '$lib/planner/core/conflict';
 import type { Anchor } from '$lib/planner/core/anchor';
 import type { PlannedLoadMethod, RunningBody } from '$lib/planner/core/session';
+import { WEEKDAYS, type AvailabilityMap } from '$lib/planner/wizard';
 
 /** What started a re-evaluation, for the "what changed" view (ADR 0015). */
 export interface RevisionCause {
@@ -110,3 +111,9 @@ export function readAnchor(input: Json): Anchor | null {
 /** A planned row is costed before it is run, so its method is a planned one; anything else counts as duration. */
 export const plannedMethodOf = (method: string): PlannedLoadMethod =>
     PLANNED_METHODS.includes(method) ? (method as PlannedLoadMethod) : 'DURATION';
+
+/** The plan's training days. A day missing from the row reads as unavailable. */
+export function readAvailability(json: unknown): AvailabilityMap {
+    const days = isRecord(json) ? json : {};
+    return Object.fromEntries(WEEKDAYS.map((d) => [d, days[d] === true])) as AvailabilityMap;
+}

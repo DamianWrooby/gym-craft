@@ -1,7 +1,7 @@
 // Builds the page's adapt view for the current week (stories 68–79). Read-only, apart from
 // finalizing a revision whose request finished while no tab was open (ADR 0014's pattern).
 import { db } from '$lib/database';
-import { dateInTimezone, toIsoDate } from '$lib/utils/iso-week';
+import { dateInTimezone, toIsoDate, fromIsoDate } from '$lib/utils/iso-week';
 import { getLimit, type SubscriptionTier } from '@/constants/subscription.constants';
 import { checkInProposal } from '$lib/planner/core/check-in';
 import { detectDrift, recutSuggestionShown } from '$lib/planner/core/revision';
@@ -14,8 +14,6 @@ import { weekOn } from './current-week';
 import { driftWeeksOf } from './check-ins';
 
 type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
-
-const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
 
 function currentWeekOf(plan: ActivePlan, today: string): StoredWeek | null {
     return weekOn(plan.phases, today)?.week ?? null;
@@ -72,7 +70,7 @@ export async function buildAdaptView(
               })
             : Promise.resolve([]),
         db.wellbeingCheckIn.findMany({
-            where: { userId, date: { gte: asDate(weekStart), lte: asDate(today) } },
+            where: { userId, date: { gte: fromIsoDate(weekStart), lte: fromIsoDate(today) } },
         }),
     ]);
     // What replaced each superseded row; an athlete edit writes an ATHLETE successor.

@@ -30,7 +30,12 @@
     };
     $: changed = Object.keys(change).length > 0;
     // Any edit invalidates a preview: the athlete confirms only the cost they saw.
-    $: (change, (preview = null));
+    $: if (change) preview = null;
+
+    function openPanel() {
+        open = true;
+        done = null;
+    }
 
     async function submit(confirm: boolean) {
         busy = true;
@@ -91,7 +96,5 @@
         {#if error}<p class="text-sm text-rose-300" role="alert">{error}</p>{/if}
     </section>
 {:else}
-    <button type="button" class="gc-ghost" on:click={() => ((open = true), (done = null))}>
-        Change goal date or school
-    </button>
+    <button type="button" class="gc-ghost" on:click={openPanel}> Change goal date or school </button>
 {/if}

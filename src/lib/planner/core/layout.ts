@@ -33,6 +33,20 @@ export interface LayoutInput {
     /** Training days in the availability map. */
     runsPerWeek: number;
     anchorPresent: boolean;
+    /** A re-lay that carries on from training already in the plan (ADR 0019). */
+    resume?: Resume;
+}
+
+/** Where a re-lay picks up: no lead-in, and the ramp and the cutback count carry on. */
+export interface Resume {
+    /** The school phase underway; the phases before it are done. Absent: the school starts at its first phase. */
+    phaseKey?: string;
+    /** Weeks of that phase already in the plan. */
+    weeksDone: number;
+    /** The last loading week's volume, in the school's unit; null when it was in another unit. */
+    volume: number | null;
+    /** Loading weeks since the last cutback or taper week. */
+    loadingRun: number;
 }
 
 export type LeadInKind = 'none' | 'bridge' | 'lead-in';
@@ -173,8 +187,48 @@ interface PhaseSlot {
     weeks: number;
 }
 
+/**
+ * The school as a resume sees it: the phases before the one underway are gone, and that phase is
+ * shorter by the weeks done. Its floor drops with them, but never below one week.
+ */
+function remainingSchool(school: SchoolDefinition, resume: Resume): SchoolDefinition {
+    const from = resume.phaseKey ? school.phases.findIndex((p) => p.key === resume.phaseKey) : 0;
+    if (!resume.phaseKey || from < 0) return school;
+    const [underway, ...after] = school.phases.slice(from);
+    const ideal = underway.idealWeeks.value - resume.weeksDone;
+    const current: PhaseDefinition[] =
+        ideal <= 0
+            ? []
+            : [
+                  {
+                      ...underway,
+                      autoSatisfiedAboveRecentMetres: undefined,
+                      idealWeeks: { ...underway.idealWeeks, value: ideal },
+                      floorWeeks: {
+                          ...underway.floorWeeks,
+                          value: Math.min(ideal, Math.max(1, underway.floorWeeks.value - resume.weeksDone)),
+                      },
+                  },
+              ];
+    const phases = [...current, ...after];
+    const keys = new Set(phases.map((p) => p.key));
+    const floors = phases.filter((p) => !p.autoSatisfiedAboveRecentMetres).reduce((a, p) => a + p.floorWeeks.value, 0);
+    return {
+        ...school,
+        phases,
+        compressionOrder: {
+            ...school.compressionOrder,
+            value: school.compressionOrder.value.filter((k) => keys.has(k)),
+        },
+        dropOrder: { ...school.dropOrder, value: school.dropOrder.value.filter((k) => keys.has(k)) },
+        schoolFloorWeeks: { ...school.schoolFloorWeeks, value: Math.min(school.schoolFloorWeeks.value, floors) },
+    };
+}
+
 export function layoutHorizon(input: LayoutInput): LayoutResult {
-    const { school, startDate, endDate, goal, recentVolume, runsPerWeek, anchorPresent } = input;
+    const { resume } = input;
+    const school = resume ? remainingSchool(input.school, resume) : input.school;
+    const { startDate, endDate, goal, recentVolume, runsPerWeek, anchorPresent } = input;
     if (endDate <= startDate) return { ok: false, reason: 'The horizon must end after it starts.' };
 
     const n = horizonWeekCount(startDate, endDate);
@@ -204,6 +258,11 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
             continue;
         }
         if (compression[p.key] > 0) slots.push({ def: p, weeks: compression[p.key] });
+    }
+    // A resume has no lead-in: the athlete is past it. Spare weeks lengthen the phase underway.
+    if (resume && room > 0 && slots.length > 0) {
+        slots[0].weeks += room;
+        room = 0;
     }
     const leadInKind: LeadInKind = room === 0 ? 'none' : room < LEAD_IN.bridgeBelowWeeks.value ? 'bridge' : 'lead-in';
     if (room > 0) slots.unshift({ def: null, weeks: room });
@@ -250,7 +309,7 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
             ? cadence.value
             : Math.min(cadence.value ?? CUTBACK_CAP.value, CUTBACK_CAP.value);
     const flags: { isTaper: boolean; isCutback: boolean }[] = [];
-    let run = 0;
+    let run = resume?.loadingRun ?? 0;
     for (let i = 0; i < n; i++) {
         const slot = weekPhase[i];
         if (i >= taperFrom) {
@@ -270,7 +329,8 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
     const schoolUnit = school.phases[0].volumeUnit;
     const recentInSchoolUnit = schoolUnit === 'MINUTES' ? recentVolume.minutesPerWeek : recentVolume.metresPerWeek;
     const peak = peakFor(school, recentInSchoolUnit);
-    const start = schoolStart(school, recentInSchoolUnit, peak);
+    const start =
+        resume?.volume != null ? Math.min(peak, resume.volume) : schoolStart(school, recentInSchoolUnit, peak);
     const handOffMinutes =
         schoolUnit === 'MINUTES'
             ? start

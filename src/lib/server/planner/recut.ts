@@ -1,15 +1,13 @@
 // Recut persistence (ADRs 0015, 0019): reads the active plan into the pure recut, and writes a re-lay
 // in one transaction. Free: layout only, no AI request, no revision cap (ADR 0016).
 import { db } from '$lib/database';
-import { toIsoDate } from '$lib/utils/iso-week';
+import { toIsoDate, fromIsoDate } from '$lib/utils/iso-week';
 import { isSchoolId } from '$lib/planner/schools/catalogue';
 import { recut, type RecutInput, type RecutPlan, type RecutResult } from '$lib/planner/core/recut';
-import { WEEKDAYS, type AvailabilityMap } from '$lib/planner/wizard';
-import type { SchoolId } from '$lib/planner/schools/types';
+import { WEEKDAYS } from '$lib/planner/wizard';
 import { anchorFromContext, recentRunningVolume } from './build-plan';
+import { readAvailability } from './stored';
 import { getPlanningContext, laidWeekRow, type ActivePlan } from './repository';
-
-const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
 
 export type RecutChange = RecutInput['change'];
 
@@ -31,7 +29,7 @@ export async function planRecut(userId: string, plan: ActivePlan, today: string,
             name: p.name,
             intent: p.intent,
             source: p.source,
-            school: p.school as SchoolId,
+            school: p.school,
             volumeUnit: p.volumeUnit,
             startDate: toIsoDate(p.startDate),
             endDate: toIsoDate(p.endDate),
@@ -54,7 +52,7 @@ export async function planRecut(userId: string, plan: ActivePlan, today: string,
             pulled: w.aiRequestId != null,
             timeTrialDistanceM: w.timeTrialDistanceM,
         }));
-    const availability = plan.availability as unknown as AvailabilityMap;
+    const availability = readAvailability(plan.availability);
     return recut({
         today,
         endDate: toIsoDate(plan.endDate),
@@ -75,7 +73,7 @@ export async function planRecut(userId: string, plan: ActivePlan, today: string,
  */
 export async function applyRecut(plan: ActivePlan, result: RecutPlan): Promise<void> {
     const userId = plan.userId;
-    const relayFrom = asDate(result.relayFrom);
+    const relayFrom = fromIsoDate(result.relayFrom);
     const kept = plan.phases
         .map((p) => ({ phase: p, weeks: p.weeks.filter((w) => w.startDate < relayFrom) }))
         .filter((k) => k.weeks.length > 0);
@@ -84,7 +82,7 @@ export async function applyRecut(plan: ActivePlan, result: RecutPlan): Promise<v
         weeks.reduce((end, w) => (w.endDate > end ? w.endDate : end), weeks[0].endDate);
     const [first, ...rest] = result.phases;
     const continues = last && first.key === last.phase.key && first.school === last.phase.school;
-    const nextOrdinal = Math.max(...kept.map((k) => k.phase.ordinal)) + 1;
+    const nextOrdinal = Math.max(-1, ...kept.map((k) => k.phase.ordinal)) + 1;
     const weeksOf = (ordinal: number) =>
         result.weeks.filter((w) => w.phaseOrdinal === ordinal).map((w) => laidWeekRow(userId, w, result.timeTrial));
 
@@ -105,7 +103,7 @@ export async function applyRecut(plan: ActivePlan, result: RecutPlan): Promise<v
         if (continues) {
             await tx.planPhase.update({
                 where: { id: last.phase.id },
-                data: { endDate: asDate(first.endDate), weeks: { create: weeksOf(first.ordinal) } },
+                data: { endDate: fromIsoDate(first.endDate), weeks: { create: weeksOf(first.ordinal) } },
             });
         }
         const created = continues ? rest : result.phases;
@@ -116,8 +114,8 @@ export async function applyRecut(plan: ActivePlan, result: RecutPlan): Promise<v
                     key: p.key,
                     name: p.name,
                     ordinal: nextOrdinal + i,
-                    startDate: asDate(p.startDate),
-                    endDate: asDate(p.endDate),
+                    startDate: fromIsoDate(p.startDate),
+                    endDate: fromIsoDate(p.endDate),
                     intent: p.intent,
                     source: p.source,
                     school: p.school,
@@ -127,11 +125,11 @@ export async function applyRecut(plan: ActivePlan, result: RecutPlan): Promise<v
             });
         }
 
-        await tx.plan.update({ where: { id: plan.id }, data: { endDate: asDate(result.endDate) } });
+        await tx.plan.update({ where: { id: plan.id }, data: { endDate: fromIsoDate(result.endDate) } });
         if (plan.goal.targetEventDate && toIsoDate(plan.goal.targetEventDate) !== result.endDate) {
             await tx.runningGoal.update({
                 where: { id: plan.goalId },
-                data: { targetEventDate: asDate(result.endDate) },
+                data: { targetEventDate: fromIsoDate(result.endDate) },
             });
         }
     });

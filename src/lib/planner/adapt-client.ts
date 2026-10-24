@@ -1,6 +1,8 @@
 // Browser side of revisions and check-ins (ADR 0015). Like week generation, the browser holds only
 // ids: it asks the proxy to run a revision's AI request, then asks the app to finalize it.
 import { runOnProxy } from './generation-client';
+import type { RecutResult } from './core/recut';
+import type { SchoolId } from './schools/types';
 
 export type RevisionRunResult =
     { revision: 'GENERATED' } | { revision: 'FAILED'; retriesLeft: number } | { revision: 'PENDING' };
@@ -69,7 +71,7 @@ export async function dismissRecutSuggestion(userId: string): Promise<void> {
 
 export interface RecutAnswer {
     applied: boolean;
-    kind: 'absorbed' | 'relaid';
+    kind: Exclude<RecutResult['kind'], 'refused'>;
     summary: string;
     losses: string[];
 }
@@ -77,7 +79,7 @@ export interface RecutAnswer {
 /** Previews a recut (or applies it with `confirm`); an absorbed goal-date move is applied at once. */
 export async function recutPlan(
     userId: string,
-    change: { endDate?: string; schoolId?: string },
+    change: { endDate?: string; schoolId?: SchoolId },
     confirm = false,
 ): Promise<RecutAnswer | { error: string }> {
     const { ok, json } = await post(`/api/user/${userId}/plan/recut`, { ...change, confirm });
