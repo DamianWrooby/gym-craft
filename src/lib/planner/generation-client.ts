@@ -2,6 +2,7 @@
 // to finalize it. The browser holds only ids; a closed tab loses nothing because the proxy writes
 // the output to the row and the next visit finalizes it.
 import { appConfig } from '@/constants/app.constants';
+import type { DecisionOption } from './core/conflict';
 import { isProduction } from '$lib/utils/environment';
 
 export type WeekGenerationResult =
@@ -64,7 +65,7 @@ export async function pullWeek(
 export async function answerDecision(
     userId: string,
     weekId: string,
-    choice: 'DROP' | 'DOWNGRADE' | 'KEEP',
+    choice: DecisionOption,
 ): Promise<{ ok: true } | { error: string }> {
     const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/decision`, {
         method: 'POST',

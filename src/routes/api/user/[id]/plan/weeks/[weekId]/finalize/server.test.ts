@@ -300,4 +300,40 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/finalize', () => {
             expect(tx.planWeek.updateMany.mock.calls[0][0].data.conflict.budget.schoolFit).toBe(true);
         });
     });
+
+    describe('a placement ask (story 60)', () => {
+        // The long run on Thursday: off the long-run day and the day after the hard session.
+        const misplaced = JSON.stringify({
+            sessions: JSON.parse(validOutput).sessions.map((s: { title: string }) =>
+                s.title === 'Long run' ? { ...s, date: '2026-10-15' } : s,
+            ),
+        });
+
+        it('stores the week without the key session and asks: drop it or rewrite the week', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(week({}, { output: misplaced }));
+            await post();
+            const rows = tx.plannedSession.createMany.mock.calls[0][0].data;
+            expect(rows.map((r: { body: { title: string } }) => r.body.title)).toEqual(['Lift', 'Hard']);
+            const { data } = tx.planWeek.updateMany.mock.calls[0][0];
+            expect(data.decision).toBe('PENDING');
+            expect(data.conflict.placement.asked).toMatchObject({
+                title: 'Long run',
+                keySession: 'long',
+                options: ['DROP', 'REWRITE'],
+            });
+        });
+
+        it('offers only a drop when no retry is left', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(week({}, { output: misplaced, retryCount: 2 }));
+            await post();
+            expect(tx.planWeek.updateMany.mock.calls[0][0].data.conflict.placement.asked.options).toEqual(['DROP']);
+        });
+
+        it('keeps one ask per week: the budget only trims while the placement ask is open', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(week({ recoveryBudget: 50 }, { output: misplaced }));
+            await post();
+            const { conflict } = tx.planWeek.updateMany.mock.calls[0][0].data;
+            expect(conflict.budget).toMatchObject({ kind: 'TRIM', facts: { offered: null } });
+        });
+    });
 });

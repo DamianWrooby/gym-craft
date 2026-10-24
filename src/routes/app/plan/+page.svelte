@@ -62,7 +62,8 @@
             userId={$page.data.user.id}
             proxySession={data.proxySession}
             activities={onCurrent ? data.activities : null}
-            adapt={onCurrent ? adapt : null} />
+            adapt={onCurrent ? adapt : null}
+            on:recut={() => (recutOpen = true)} />
     {:else}
         <section class="gc-panel p-8 text-center space-y-4">
             <h1 class="text-3xl font-black tracking-wide">Build your plan</h1>

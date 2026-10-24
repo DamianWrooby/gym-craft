@@ -86,7 +86,12 @@
     </div>
 
     {#if week.generation === 'GENERATED'}
-        <ConflictNote {week} schoolName={plan.school.name} {userId} />
+        <ConflictNote
+            {week}
+            schoolName={plan.school.name}
+            {userId}
+            keptWeeks={plan.weeks.filter((w) => w.decision === 'KEPT').length}
+            on:recut />
         {#if adapt?.revision}
             {#key adapt.revision.request?.id}
                 <RevisionPanel

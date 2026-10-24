@@ -8,6 +8,7 @@ vi.mock('$lib/prisma/prisma', () => prismaMocks);
 const tx = vi.hoisted(() => ({
     planWeek: { updateMany: vi.fn() },
     plannedSession: { deleteMany: vi.fn(), update: vi.fn() },
+    aiRequest: { update: vi.fn() },
 }));
 const db = vi.hoisted(() => ({ $transaction: vi.fn(), planWeek: { findUnique: vi.fn() } }));
 vi.mock('$lib/database', () => ({ db }));
@@ -153,5 +154,63 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/decision', () => {
         tx.planWeek.updateMany.mockResolvedValueOnce({ count: 0 });
         expect((await post({ choice: 'DROP' })).status).toBe(409);
         expect(tx.plannedSession.deleteMany).not.toHaveBeenCalled();
+    });
+
+    describe('a placement ask (story 60)', () => {
+        const placementWeek = (options = ['DROP', 'REWRITE']) =>
+            week({
+                aiRequestId: 'request-1',
+                conflict: {
+                    placement: {
+                        removed: [],
+                        violations: ['Two key sessions fall on consecutive days'],
+                        cutOrder: ['foundation'],
+                        protected: ['Hard'],
+                        asked: { title: 'Long run', plannedLoad: 90, keySession: 'long', options },
+                    },
+                    budget: null,
+                },
+            });
+
+        it('records a drop and touches no session: the key session is already out', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(placementWeek());
+            expect(await (await post({ choice: 'DROP' })).json()).toEqual({ data: { decision: 'DROPPED' } });
+            expect(tx.planWeek.updateMany).toHaveBeenCalledWith({
+                where: { id: 'week-1', decision: 'PENDING' },
+                data: { decision: 'DROPPED' },
+            });
+            expect(tx.plannedSession.deleteMany).not.toHaveBeenCalled();
+        });
+
+        it('fails the week and its request on a rewrite, so the athlete can retry it', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(placementWeek());
+            expect(await (await post({ choice: 'REWRITE' })).json()).toEqual({
+                data: { decision: null, generation: 'FAILED' },
+            });
+            expect(tx.planWeek.updateMany).toHaveBeenCalledWith(
+                expect.objectContaining({ data: expect.objectContaining({ decision: null, generation: 'FAILED' }) }),
+            );
+            expect(tx.plannedSession.deleteMany).toHaveBeenCalledWith({
+                where: { planWeekId: 'week-1', status: 'PLANNED' },
+            });
+            expect(tx.aiRequest.update).toHaveBeenCalledWith({
+                where: { id: 'request-1' },
+                data: { status: 'FAILED', error: expect.stringMatching(/rewrite/i) },
+            });
+        });
+
+        it('refuses a rewrite when no retry is left', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(placementWeek(['DROP']));
+            expect((await post({ choice: 'REWRITE' })).status).toBe(400);
+        });
+
+        it('refuses a keep: a rule-breaking week is never stored', async () => {
+            db.planWeek.findUnique.mockResolvedValueOnce(placementWeek());
+            expect((await post({ choice: 'KEEP' })).status).toBe(400);
+        });
+    });
+
+    it('refuses a rewrite on a budget ask', async () => {
+        expect((await post({ choice: 'REWRITE' })).status).toBe(409);
     });
 });

@@ -2,7 +2,7 @@
 // rejected whole. Nothing uncostable and nothing that breaks a placement rule is ever stored.
 import type { SchoolDefinition } from '../schools/types';
 import { costSession } from './cost';
-import { cutCandidates } from './conflict';
+import { cutCandidates, type PlacementAsk } from './conflict';
 import { placementViolations, type PlacementContext } from './placement';
 import { BODY_VERSION, type Exercise, type RunBlock, type RunStep, type TypedSession } from './session';
 
@@ -19,6 +19,8 @@ export interface PlacementTrim {
     violations: string[];
     cutOrder: string[];
     protected: string[];
+    /** The key session left out so the week places; the athlete decides (story 60). */
+    asked: PlacementAsk | null;
 }
 
 export type GenerationResult =
@@ -181,8 +183,9 @@ const keyOf = (s: TypedSession) => (s.kind === 'RUNNING' ? s.body.keySession : n
 const cutOf = (s: TypedSession) => (s.kind === 'RUNNING' ? s.body.cutKey : null);
 
 /**
- * Removes non-key runs in cut order until the week places; never a key session, never a broken
- * rule. A week that still breaks a rule is rejected whole, as before.
+ * Removes non-key runs in cut order until the week places. When that is not enough, leaves out one
+ * key session, the cheapest that places the week, and the athlete decides (story 60). A week no
+ * such removal places is rejected whole, as before.
  */
 function trimForPlacement(sessions: TypedSession[], violations: string[], ctx: GenerationContext): GenerationResult {
     const cutOrder = ctx.school.cutOrder.value;
@@ -191,26 +194,37 @@ function trimForPlacement(sessions: TypedSession[], violations: string[], ctx: G
         sessions.map((s, i) => ({ kind: s.kind, keySession: keyOf(s), cutKey: cutOf(s), plannedLoad: loads[i] })),
         cutOrder,
     );
+    const keyRuns = sessions
+        .map((s, i) => ({ i, key: keyOf(s) }))
+        .filter(({ key }) => key != null)
+        .sort((a, b) => loads[a.i] - loads[b.i]);
 
-    const removed = new Set<number>();
-    for (const i of candidates) {
-        removed.add(i);
-        const kept = sessions.filter((_, j) => !removed.has(j));
-        if (placementViolations(kept, ctx.placement).length > 0) continue;
-        return {
-            ok: true,
-            sessions: kept,
-            placementTrim: {
-                removed: [...removed].map((j) => ({
-                    title: sessions[j].body.title,
-                    plannedLoad: loads[j],
-                    cutKey: cutOf(sessions[j]),
-                })),
-                violations,
-                cutOrder,
-                protected: kept.filter((s) => keyOf(s) != null).map((s) => s.body.title),
-            },
-        };
+    for (const asked of [null, ...keyRuns]) {
+        const removed = new Set<number>();
+        for (const i of [null, ...candidates]) {
+            if (i != null) removed.add(i);
+            const kept = sessions.filter((_, j) => !removed.has(j) && j !== asked?.i);
+            if (placementViolations(kept, ctx.placement).length > 0) continue;
+            return {
+                ok: true,
+                sessions: kept,
+                placementTrim: {
+                    removed: [...removed].map((j) => ({
+                        title: sessions[j].body.title,
+                        plannedLoad: loads[j],
+                        cutKey: cutOf(sessions[j]),
+                    })),
+                    violations,
+                    cutOrder,
+                    protected: kept.filter((s) => keyOf(s) != null).map((s) => s.body.title),
+                    asked: asked && {
+                        title: sessions[asked.i].body.title,
+                        plannedLoad: loads[asked.i],
+                        keySession: asked.key!,
+                    },
+                },
+            };
+        }
     }
     return { ok: false, errors: violations };
 }
