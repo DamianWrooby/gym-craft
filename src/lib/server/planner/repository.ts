@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client';
 import type { NewPlanRecord, PlanningContext } from './build-plan';
 import type { AiRequestInput } from './week-prompt';
 import type { StruckBudget } from './budget';
+import type { LaidWeek, Layout } from '$lib/planner/core/layout';
 
 export class ActivePlanExistsError extends Error {
     constructor() {
@@ -19,6 +20,22 @@ export class MissingProfileError extends Error {
 }
 
 const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
+
+/** A laid-out week as a `PlanWeek` row; shared by plan creation and the recut. */
+export function laidWeekRow(userId: string, w: LaidWeek, timeTrial: Layout['timeTrial']) {
+    return {
+        userId,
+        startDate: asDate(w.startDate),
+        endDate: asDate(w.endDate),
+        inHorizonDays: w.inHorizonDays,
+        isCutback: w.isCutback,
+        isTaper: w.isTaper,
+        timeTrialDistanceM: timeTrial?.weekIndex === w.index ? timeTrial.distanceM : null,
+        volumeTarget: w.volumeTarget,
+        volumeUnit: w.volumeUnit,
+        strengthSessionTarget: w.strengthSessionTarget,
+    };
+}
 
 export async function getPlanningContext(userId: string, today: string): Promise<PlanningContext> {
     const [goals, raceResults, activities] = await Promise.all([
@@ -97,19 +114,7 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord, week
                             weeks: {
                                 create: layout.weeks
                                     .filter((w) => w.phaseOrdinal === p.ordinal)
-                                    .map((w) => ({
-                                        userId,
-                                        startDate: asDate(w.startDate),
-                                        endDate: asDate(w.endDate),
-                                        inHorizonDays: w.inHorizonDays,
-                                        isCutback: w.isCutback,
-                                        isTaper: w.isTaper,
-                                        timeTrialDistanceM:
-                                            layout.timeTrial?.weekIndex === w.index ? layout.timeTrial.distanceM : null,
-                                        volumeTarget: w.volumeTarget,
-                                        volumeUnit: w.volumeUnit,
-                                        strengthSessionTarget: w.strengthSessionTarget,
-                                    })),
+                                    .map((w) => laidWeekRow(userId, w, layout.timeTrial)),
                             },
                         })),
                     },
