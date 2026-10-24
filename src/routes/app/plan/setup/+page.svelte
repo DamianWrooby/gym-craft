@@ -4,7 +4,8 @@
     import PlannerShell from '$lib/components/planner/PlannerShell.svelte';
     import SchoolDetailsModal from '$lib/components/planner/SchoolDetailsModal.svelte';
     import type { SchoolDefinition } from '$lib/planner/schools/types';
-    import RunningGoalForm from '$lib/components/running-goal/RunningGoalForm.svelte';
+    import GoalForm from '$lib/components/running-goal/GoalForm.svelte';
+    import type { GoalInput, GoalRank } from '$lib/running-goal/goal-form';
     import { readApiError } from '$lib/utils/api-error';
     import { generateWeek } from '$lib/planner/generation-client';
     import { addDays } from '$lib/utils/iso-week';
@@ -37,6 +38,7 @@
               today: string;
               proxySession: string | null;
               goals: Goal[];
+              goalRanks: GoalRank[];
               zoneProposal: { source: ZoneSource; zones: HrZoneBound[] } | null;
               recentVolume: RecentVolume;
               raceResults: { id: string; date: string; distanceM: number; timeSec: number }[];
@@ -125,7 +127,12 @@
         state = { ...state, goalId: g.id, goalDate: g.date, endDate: null, compression: null };
     }
 
-    async function addGoal(e: CustomEvent<Record<string, unknown>>) {
+    function cancelGoal() {
+        addingGoal = false;
+        goalError = null;
+    }
+
+    async function addGoal(e: CustomEvent<GoalInput>) {
         savingGoal = true;
         goalError = null;
         const response = await fetch(`/api/user/${$page.data.user.id}/running-goals`, {
@@ -301,10 +308,12 @@
             {#if addingGoal}
                 <section class="gc-panel p-5 space-y-3">
                     <h2 class="font-bold">New goal</h2>
-                    <RunningGoalForm
+                    <GoalForm
+                        others={ready?.goalRanks ?? []}
+                        today={ready?.today ?? ''}
                         saving={savingGoal}
                         on:save={addGoal}
-                        on:cancel={() => ((addingGoal = false), (goalError = null))} />
+                        on:cancel={cancelGoal} />
                     {#if goalError}<p class="text-rose-400 text-sm">{goalError}</p>{/if}
                 </section>
             {:else}

@@ -1,5 +1,6 @@
 // Turns the athlete's stored context plus their wizard answers into a plan record.
 // Pure: the route loads the context, this lays the horizon out, the repository writes it.
+import type { GoalType } from '@prisma/client';
 import { addDays, toIsoDate } from '$lib/utils/iso-week';
 import { isRunningTypeKey } from '$lib/utils/activity-type';
 import { getSchool } from '$lib/planner/schools/catalogue';
@@ -14,11 +15,12 @@ import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 
 export interface ContextGoal {
     id: string;
-    goalType: string;
+    goalType: GoalType;
     targetEventName: string | null;
     targetEventDate: Date | null;
     targetDistanceM: number | null;
     archivedAt: Date | null;
+    priority: number;
 }
 
 export interface ContextActivity {

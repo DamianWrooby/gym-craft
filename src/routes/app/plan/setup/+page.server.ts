@@ -51,6 +51,8 @@ export const load = async ({
             })),
             today,
         ),
+        // Every active goal, dated or not: they set a new goal's class and order.
+        goalRanks: context.goals.map((g) => ({ goalType: g.goalType, priority: g.priority })),
         zoneProposal: proposeZones({
             existing: profile.hrZoneBounds,
             maxHR: profile.maxHR,

@@ -5,7 +5,8 @@
     import Card from '@components/card/Card.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
     import AthleteProfileForm from '$lib/components/athlete-profile/AthleteProfileForm.svelte';
-    import RunningGoalForm from '$lib/components/running-goal/RunningGoalForm.svelte';
+    import GoalForm from '$lib/components/running-goal/GoalForm.svelte';
+    import { todayInTimezone } from '$lib/utils/iso-week';
     import { makeToast } from '$lib/utils/toasts';
     import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
     import { to } from 'await-to-js';
@@ -37,6 +38,7 @@
     const user: User = $page.data.user;
     $: profile = $page.data.profile as ProfileRow | null;
     $: goals = $page.data.goals as GoalRow[];
+    $: today = todayInTimezone(profile?.timezone ?? 'UTC');
 
     const toastStore = getToastStore();
     let savingProfile = false;
@@ -114,7 +116,9 @@
 
         {#if editingGoalId === 'new'}
             <div class="border border-surface-300 dark:border-surface-700 rounded-xl p-4 mb-4">
-                <RunningGoalForm
+                <GoalForm
+                    others={goals}
+                    {today}
                     saving={savingGoal}
                     on:save={(e) => saveGoal(e, 'new')}
                     on:cancel={() => (editingGoalId = null)} />
@@ -128,8 +132,10 @@
                 {#each goals as goal (goal.id)}
                     <li class="border border-surface-300 dark:border-surface-700 rounded-xl p-4">
                         {#if editingGoalId === goal.id}
-                            <RunningGoalForm
+                            <GoalForm
                                 {goal}
+                                others={goals.filter((g) => g.id !== goal.id)}
+                                {today}
                                 saving={savingGoal}
                                 on:save={(e) => saveGoal(e, goal.id)}
                                 on:cancel={() => (editingGoalId = null)} />
