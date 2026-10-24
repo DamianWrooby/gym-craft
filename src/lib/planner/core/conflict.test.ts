@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getSchool } from '../schools/catalogue';
-import { downgradeSteps, resolveConflict, type ConflictSession } from './conflict';
+import { athleteSessionsAsk, downgradeSteps, resolveConflict, type ConflictSession } from './conflict';
 
 const school = getSchool('POLARIZED');
 
@@ -136,5 +136,32 @@ describe('downgradeSteps', () => {
                 ],
             },
         ]);
+    });
+});
+
+describe('athleteSessionsAsk', () => {
+    const totals = { executedLoad: 200, budget: 300 };
+
+    it('offers the hardest non-long key session and removes nothing', () => {
+        const ask = athleteSessionsAsk(week, totals, school);
+        expect(ask.removed).toEqual([]);
+        expect(ask.keySessionIndex).toBe(0);
+        expect(ask.schoolFit).toBe(false);
+        expect(ask.facts).toMatchObject({
+            plannedTotal: 600,
+            budget: 300,
+            overspend: 300,
+            stillOver: 300,
+            removed: [],
+            offered: { title: 'Intervals', plannedLoad: 120, options: ['DROP', 'DOWNGRADE', 'KEEP'] },
+            protected: ['Long run'],
+        });
+    });
+
+    it('offers the biggest session when none is key, without a downgrade it cannot make', () => {
+        const ask = athleteSessionsAsk([week[2], week[3], week[4]], totals, school);
+        expect(ask.keySessionIndex).toBe(0);
+        expect(ask.facts.offered).toEqual({ title: 'Foundation', plannedLoad: 60, options: ['DROP', 'KEEP'] });
+        expect(ask.facts.protected).toEqual([]);
     });
 });

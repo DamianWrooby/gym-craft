@@ -128,6 +128,43 @@ export function resolveConflict(
     };
 }
 
+/**
+ * The ask when only the athlete's own sessions remain and the week is over budget (ADR 0015: the app
+ * never overrides the athlete). Nothing is cut silently; one session is offered, the hardest
+ * non-long key session first, else the biggest. The numbers cover the whole week, executed included.
+ */
+export function athleteSessionsAsk(
+    sessions: ConflictSession[],
+    week: { executedLoad: number; budget: number },
+    school: Pick<SchoolDefinition, 'cutOrder'>,
+): Extract<Resolution, { kind: 'ask' }> {
+    const plannedTotal = round1(week.executedLoad + sum(sessions));
+    const overspend = Math.max(0, round1(plannedTotal - week.budget));
+    const indexed = sessions.map((s, i) => ({ s, i }));
+    const keys = indexed.filter(({ s }) => s.keySession != null);
+    const offerable = keys.filter(({ s }) => s.keySession !== LONG_RUN_KEY);
+    const pool = offerable.length > 0 ? offerable : keys.length > 0 ? keys : indexed;
+    const offered = pool.reduce((a, b) => (b.s.plannedLoad > a.s.plannedLoad ? b : a));
+    const options: DecisionOption[] = offered.s.canDowngrade ? ['DROP', 'DOWNGRADE', 'KEEP'] : ['DROP', 'KEEP'];
+    return {
+        kind: 'ask',
+        removed: [],
+        keySessionIndex: offered.i,
+        schoolFit: false,
+        facts: {
+            plannedTotal,
+            budget: week.budget,
+            overspend,
+            stillOver: overspend,
+            removed: [],
+            offered: { title: offered.s.title, plannedLoad: offered.s.plannedLoad, options },
+            cutOrder: school.cutOrder.value,
+            protected: keys.filter(({ i }) => i !== offered.i).map(({ s }) => s.title),
+            fallbackShare: fallbackShare(sessions.map((s) => ({ load: s.plannedLoad, method: s.method }))),
+        },
+    };
+}
+
 /** Labels from easiest to hardest by the school's Edwards weight. */
 function labelLadder(school: Pick<SchoolDefinition, 'intensityLabels'>): string[] {
     return [...school.intensityLabels].sort((a, b) => a.edwardsWeight.value - b.edwardsWeight.value).map((l) => l.key);
