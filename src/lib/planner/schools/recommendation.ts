@@ -1,5 +1,5 @@
 // Recommendation table (ADR 0019, #380 §7). First match wins. Rows naming a school the
-// catalogue does not ship yet (Pfitzinger, Lydiard) are kept so they activate when it lands.
+// catalogue does not ship yet (Lydiard) are kept so they activate when it lands.
 import { judged } from './types';
 
 export interface RecommendationRule {

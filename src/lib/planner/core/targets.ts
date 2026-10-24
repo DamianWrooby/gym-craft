@@ -30,7 +30,35 @@ function secPerKmAt(vo2: number): number {
     return Math.round(60000 / v);
 }
 
+/**
+ * Pfitzinger labels as multiples of LT seconds per km (fast, slow). Pfitzinger does not use VDOT;
+ * MP "a couple of percent slower than lactate threshold" is sourced, the rest judged from his zones.
+ */
+export const PFITZINGER_LT_MULTIPLES = judged<Record<string, [number, number]>>({
+    REC: [1.3, 1.4],
+    GA: [1.15, 1.27],
+    MP: [1.02, 1.04],
+    LT: [0.99, 1.01],
+    VO2: [0.92, 0.96],
+});
+
+/** Riegel exponent, the form of the race-equivalence appendices in Advanced Marathoning. */
+const RIEGEL_EXPONENT = judged(1.06);
+/** LT pace is taken as the pace the athlete could race for an hour. */
+const LT_RACE_SEC = judged(3600);
+
+function ltSecPerKm(anchor: AnchorEffort): number {
+    const ltDistanceM = anchor.distanceM * (LT_RACE_SEC.value / anchor.timeSec) ** (1 / RIEGEL_EXPONENT.value);
+    return (LT_RACE_SEC.value / ltDistanceM) * 1000;
+}
+
 function paceRange(school: SchoolDefinition, anchor: AnchorEffort, label: string) {
+    if (school.id === 'PFITZINGER') {
+        const multiples = PFITZINGER_LT_MULTIPLES.value[label];
+        if (!multiples) return null;
+        const lt = ltSecPerKm(anchor);
+        return { minSecPerKm: Math.round(lt * multiples[0]), maxSecPerKm: Math.round(lt * multiples[1]) };
+    }
     const fractions = school.id === 'DANIELS' ? DANIELS_VO2_FRACTIONS.value[label] : undefined;
     if (!fractions) return null;
     const vdot = vdotOf(anchor.distanceM, anchor.timeSec);
