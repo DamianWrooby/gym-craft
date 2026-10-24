@@ -1,6 +1,7 @@
 <script lang="ts">
     // Drift suggests a recut; it never regenerates (ADR 0015, story 79). Dismissed, it returns only if
     // drift continues into a new week.
+    import { createEventDispatcher } from 'svelte';
     import { invalidateAll } from '$app/navigation';
     import { dismissRecutSuggestion } from '$lib/planner/adapt-client';
 
@@ -8,6 +9,7 @@
     export let userId: string;
 
     let busy = false;
+    const dispatch = createEventDispatcher<{ recut: void }>();
 
     async function keepGoing() {
         busy = true;
@@ -24,5 +26,13 @@
     <p class="text-sm text-slate-300">
         Options: move the goal date, change the training school, or keep going as planned.
     </p>
-    <button type="button" class="gc-ghost" disabled={busy} on:click={keepGoing}>Keep going</button>
+    <div class="flex flex-wrap gap-2">
+        <button type="button" class="gc-ghost" disabled={busy} on:click={() => dispatch('recut')}>
+            Move the goal date
+        </button>
+        <button type="button" class="gc-ghost" disabled={busy} on:click={() => dispatch('recut')}>
+            Change school
+        </button>
+        <button type="button" class="gc-ghost" disabled={busy} on:click={keepGoing}>Keep going</button>
+    </div>
 </section>
