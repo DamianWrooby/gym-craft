@@ -88,4 +88,14 @@ describe('reevaluateCurrentWeek over athlete sessions', () => {
         expect(data.decision).toBeUndefined();
         expect(data.conflict).toBeUndefined();
     });
+
+    it('asks again after an earlier ask was answered with a drop', async () => {
+        db.plan.findFirst.mockResolvedValue(planWith(weekWith({ decision: 'DROPPED' })));
+
+        await reevaluateCurrentWeek('user-1', 'UNSCHEDULED');
+
+        const { data } = db.planWeek.update.mock.calls[0][0];
+        expect(data.decision).toBe('PENDING');
+        expect(data.conflict.budget.kind).toBe('ASK');
+    });
 });

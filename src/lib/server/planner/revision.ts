@@ -17,14 +17,17 @@ import {
 } from '$lib/planner/core/conflict';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 import type { AvailabilityMap } from '$lib/planner/wizard';
-import type { PlannedLoadMethod, RunningBody } from '$lib/planner/core/session';
 import type { Prisma } from '@prisma/client';
 import { MAX_RETRIES, readWeekOutput, retriesLeft, type WeekOutput } from './week-generation';
 import { buildWeekPrompt, type AiRequestInput, type PromptSession } from './week-prompt';
 import { athleteTimezone, weekOn } from './current-week';
 import {
     keySessionOf,
+    plannedMethodOf,
+    readAnchor,
+    readConflict,
     readRevisionScope,
+    readRunningBody,
     titleOf,
     toJson,
     type RevisionCause,
@@ -229,7 +232,7 @@ async function buildRevisionInput(
     const weekEnd = addDays(startDate, 6);
     const to = planEnd < weekEnd ? planEnd : weekEnd;
     const goals = await db.runningGoal.findMany({ where: { userId, archivedAt: null } });
-    const anchor = (week.aiRequest?.input as Partial<AiRequestInput> | null)?.anchor ?? null;
+    const anchor = readAnchor(week.aiRequest?.input);
 
     const prompt = buildWeekPrompt({
         school: getSchool(phase.school),
@@ -295,44 +298,37 @@ function claimRevision(claim: RevisionClaim): Promise<string | null> {
 }
 
 /**
- * 0013's ask over the athlete's own remaining sessions, when the week is over budget and has no
- * answer yet; null otherwise. An earlier answer stands: a kept week is not asked again.
+ * 0013's ask over the athlete's own remaining sessions, when the week is over budget; null otherwise.
+ * A week kept over budget, or with a question still open, is not asked again.
  */
 function athleteAsk({ phase, week }: CurrentWeek, today: string, reason: RevisionReason): ConflictRecord | null {
-    if (week.recoveryBudget == null || reason.overspend <= 0 || week.decision != null) return null;
+    if (week.recoveryBudget == null || reason.overspend <= 0) return null;
+    if (week.decision === 'KEPT' || week.decision === 'PENDING') return null;
     if (!isSchoolId(phase.school)) return null;
     const school = getSchool(phase.school);
     const remaining = week.sessions.filter((s) => s.status === 'PLANNED' && toIsoDate(s.scheduledDate) >= today);
     if (remaining.length === 0) return null;
     const ask = athleteSessionsAsk(
         remaining.map((s) => {
-            const running = s.kind === 'RUNNING' ? (s.body as unknown as RunningBody) : null;
+            const running = readRunningBody(s.kind, s.body);
             return {
                 title: titleOf(s.body),
                 kind: s.kind,
                 plannedLoad: s.plannedLoad,
-                // A planned row is costed before it is run: its method is always a planned one.
-                method: s.loadMethod as PlannedLoadMethod,
+                method: plannedMethodOf(s.loadMethod),
                 keySession: keySessionOf(s.kind, s.body),
                 cutKey: running?.cutKey ?? null,
-                canDowngrade: running != null && canDowngrade(running.steps ?? [], school),
+                canDowngrade: running != null && canDowngrade(running.steps, school),
             };
         }),
         { executedLoad: reason.executedLoad, budget: week.recoveryBudget },
         school,
     );
-    const key = remaining[ask.keySessionIndex];
-    const placement = (week.conflict as unknown as ConflictRecord | null)?.placement ?? null;
-    return {
-        placement,
-        budget: {
-            kind: 'ASK',
-            facts: ask.facts,
-            schoolFit: ask.schoolFit,
-            removed: [],
-            keySession: { scheduledDate: toIsoDate(key.scheduledDate), sequence: key.sequence },
-        },
-    };
+    const ref = (i: number): SessionRef => ({
+        scheduledDate: toIsoDate(remaining[i].scheduledDate),
+        sequence: remaining[i].sequence,
+    });
+    return askRecordOf(ask, ref, readConflict(week.conflict)?.placement ?? null);
 }
 
 /**
@@ -366,27 +362,15 @@ export async function reevaluateCurrentWeek(
         scope: verdict.scope,
         from: today,
     });
-    const storeVerdict = (outcome: 'ask' | 'capped') =>
+    const storeVerdict = (outcome: 'ask' | 'capped', extra: Prisma.PlanWeekUpdateInput = {}) =>
         db.planWeek.update({
             where: { id: week.id },
-            data: { revisionCause: toJson(revisionCause), revisionReason: toJson(reasonFor(outcome)) },
+            data: { revisionCause: toJson(revisionCause), revisionReason: toJson(reasonFor(outcome)), ...extra },
         });
 
     if (verdict.kind === 'ask') {
         const conflict = athleteAsk(found, today, verdict.reason);
-        if (!conflict) {
-            await storeVerdict('ask');
-            return { kind: 'ask' };
-        }
-        await db.planWeek.update({
-            where: { id: week.id },
-            data: {
-                revisionCause: toJson(revisionCause),
-                revisionReason: toJson(reasonFor('ask')),
-                conflict: toJson(conflict),
-                decision: 'PENDING',
-            },
-        });
+        await storeVerdict('ask', conflict ? { conflict: toJson(conflict), decision: 'PENDING' } : {});
         return { kind: 'ask' };
     }
 
@@ -481,10 +465,14 @@ function placeRevision(week: RevisedWeek, target: RevisionScope, written: Writte
     return { replaced: replaced.map((s) => s.id), supersedes, sequenceOf };
 }
 
-function askRecordOf(resolution: Resolution, ref: (i: number) => SessionRef): ConflictRecord | null {
+function askRecordOf(
+    resolution: Resolution,
+    ref: (i: number) => SessionRef,
+    placement: ConflictRecord['placement'] = null,
+): ConflictRecord | null {
     if (resolution.kind !== 'ask') return null;
     return {
-        placement: null,
+        placement,
         budget: {
             kind: 'ASK',
             facts: resolution.facts,

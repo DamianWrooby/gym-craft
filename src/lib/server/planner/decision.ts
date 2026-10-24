@@ -4,13 +4,13 @@ import { db } from '$lib/database';
 import { getAthleteProfile } from '$lib/prisma/prisma';
 import { toIsoDate } from '$lib/utils/iso-week';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
-import { downgradeSteps, type ConflictRecord, type DecisionOption, type SessionRef } from '$lib/planner/core/conflict';
+import { downgradeSteps, type DecisionOption, type SessionRef } from '$lib/planner/core/conflict';
 import { costSession } from '$lib/planner/core/cost';
 import { attachTargets, labelPaces } from '$lib/planner/core/targets';
 import { isValidZones } from '$lib/planner/core/zones';
 import type { RunningBody } from '$lib/planner/core/session';
-import type { Prisma, WeekDecision } from '@prisma/client';
-import type { AiRequestInput } from './week-prompt';
+import type { WeekDecision } from '@prisma/client';
+import { readAnchor, readConflict, readRunningBody, toJson } from './stored';
 
 export type DecisionOutcome =
     { kind: 'not-found' } | { kind: 'no-ask' } | { kind: 'not-offered' } | { kind: 'answered'; decision: WeekDecision };
@@ -31,7 +31,7 @@ export async function answerDecision(userId: string, weekId: string, choice: Dec
     });
     if (!week || week.userId !== userId) return { kind: 'not-found' };
 
-    const ask = (week.conflict as unknown as ConflictRecord | null)?.budget;
+    const ask = readConflict(week.conflict)?.budget;
     if (week.decision !== 'PENDING' || ask?.kind !== 'ASK') return { kind: 'no-ask' };
     if (!ask.facts.offered?.options.includes(choice)) return { kind: 'not-offered' };
 
@@ -44,10 +44,11 @@ export async function answerDecision(userId: string, weekId: string, choice: Dec
     if (choice === 'DOWNGRADE' && key?.kind === 'RUNNING') {
         if (!isSchoolId(week.phase.school)) throw new Error(`Unknown school on phase: ${week.phase.school}`);
         const school = getSchool(week.phase.school);
-        const anchor = (week.aiRequest?.input as unknown as Partial<AiRequestInput> | null)?.anchor ?? null;
+        const anchor = readAnchor(week.aiRequest?.input);
         const profile = await getAthleteProfile(userId);
         const zones = isValidZones(profile?.hrZoneBounds) ? profile.hrZoneBounds : null;
-        const body = key.body as unknown as RunningBody;
+        const body = readRunningBody(key.kind, key.body);
+        if (!body) throw new Error(`Running session ${key.id} has no steps`);
         const [session] = attachTargets(
             [
                 {
@@ -81,7 +82,7 @@ export async function answerDecision(userId: string, weekId: string, choice: Dec
                 await tx.plannedSession.update({
                     where: { id: key.id },
                     data: {
-                        body: downgraded.body as unknown as Prisma.InputJsonValue,
+                        body: toJson(downgraded.body),
                         plannedLoad: downgraded.plannedLoad,
                     },
                 });
