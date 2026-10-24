@@ -6,38 +6,37 @@ import { addDays, currentMonthStartIso, dateInTimezone, toIsoDate, todayInTimezo
 import { getLimit, resolveAiModel, type SubscriptionTier } from '@/constants/subscription.constants';
 import { resolveTier } from '$lib/server/subscription/tier';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
-import { reevaluate, type RevisionReason, type RevisionTrigger } from '$lib/planner/core/revision';
-import { canDowngrade, resolveConflict, type ConflictRecord, type SessionRef } from '$lib/planner/core/conflict';
+import { reevaluate, type Reevaluation, type RevisionReason, type RevisionTrigger } from '$lib/planner/core/revision';
+import {
+    canDowngrade,
+    resolveConflict,
+    type ConflictRecord,
+    type Resolution,
+    type SessionRef,
+} from '$lib/planner/core/conflict';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 import type { AvailabilityMap } from '$lib/planner/wizard';
 import type { Prisma } from '@prisma/client';
-import { MAX_RETRIES, readWeekOutput, retriesLeft } from './week-generation';
+import { MAX_RETRIES, readWeekOutput, retriesLeft, type WeekOutput } from './week-generation';
 import { buildWeekPrompt, type AiRequestInput, type PromptSession } from './week-prompt';
+import { athleteTimezone, weekOn } from './current-week';
+import {
+    keySessionOf,
+    readRevisionScope,
+    titleOf,
+    toJson,
+    type RevisionCause,
+    type RevisionScope,
+    type StoredRevisionReason,
+} from './stored';
 
 /** Well past the proxy's 150 s OpenAI timeout: a RUNNING row this old lost its proxy call. */
 const STALE_RUNNING_MS = 5 * 60 * 1000;
 
-/** What started a re-evaluation, for the "what changed" view (ADR 0015). */
-export interface RevisionCause {
-    trigger: RevisionTrigger;
-    activityIds?: string[];
-    plannedSessionId?: string;
-}
-
-/** The stored verdict: the numbers, plus what the app did with them. */
-export interface StoredRevisionReason extends RevisionReason {
-    outcome: 'revise' | 'ask' | 'capped';
-    scope: string[];
-    /** The first day the revision rewrites. */
-    from: string;
-}
-
-/**
- * What a revision request rewrites, stored on the request itself: a later verdict may overwrite the
- * week's reason while a failed request still waits for a retry.
- */
+/** What a revision request rewrites, stored on the request itself: a later verdict may overwrite the
+ * week's reason while a failed request still waits for a retry. */
 interface RevisionRequestInput extends AiRequestInput {
-    revisionScope: { scope: string[]; from: string; executedLoad: number };
+    revisionScope: RevisionScope;
 }
 
 /** The budget a revision may still spend: never re-struck, only read (ADR 0015). */
@@ -72,9 +71,6 @@ export type RevisionRetryOutcome =
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
-export const titleOf = (body: unknown) => (body as { title?: string } | null)?.title ?? 'Session';
-export const keySessionOf = (kind: string, body: unknown) =>
-    kind === 'RUNNING' ? ((body as { keySession?: string | null } | null)?.keySession ?? null) : null;
 
 /** Tier and model from the stored subscription, so the sync path needs no request locals. */
 async function aiAccount(userId: string): Promise<AiAccount> {
@@ -119,13 +115,11 @@ async function currentWeek(userId: string, today: string) {
             },
         },
     });
-    if (!plan) return null;
-    for (const phase of plan.phases) {
-        const week = phase.weeks[0];
-        if (week) return { plan, phase, week };
-    }
-    return null;
+    const found = plan && weekOn(plan.phases, today);
+    return found ? { plan, ...found } : null;
 }
+
+type CurrentWeek = NonNullable<Awaited<ReturnType<typeof currentWeek>>>;
 
 /** Loads of linked activities, and the load of activities in the week linked to no session. */
 async function executedLoads(userId: string, week: { startDate: Date; endDate: Date }, timezone: string) {
@@ -166,27 +160,29 @@ function describeReason(r: RevisionReason, trigger: RevisionTrigger): string {
     return `${parts.join('; ')}.`;
 }
 
-/**
- * Re-evaluates the current plan week (ADR 0015). At most one revision is in flight per week. At the
- * cap the verdict is stored and shown, but no AI rewrite happens.
- */
-export async function reevaluateCurrentWeek(
+interface JudgedSession {
+    id: string;
+    status: string;
+    scheduledDate: string;
+    title: string;
+    plannedLoad: number;
+    actualLoad: number | null;
+}
+
+interface JudgedWeek {
+    sessions: JudgedSession[];
+    unscheduledLoad: number;
+    verdict: Reevaluation;
+}
+
+/** The current week's sessions with their executed loads, and the verdict on them. */
+async function judgeWeek(
     userId: string,
+    week: CurrentWeek['week'],
+    today: string,
+    timezone: string,
     trigger: RevisionTrigger,
-    cause: Omit<RevisionCause, 'trigger'> = {},
-    account?: AiAccount,
-): Promise<ReevaluationOutcome> {
-    const profile = await db.athleteProfile.findUnique({ where: { userId }, select: { timezone: true } });
-    const timezone = profile?.timezone ?? 'UTC';
-    const today = todayInTimezone(timezone);
-    const found = await currentWeek(userId, today);
-    if (!found || found.week.generation !== 'GENERATED') return { kind: 'no-week' };
-    const { plan, phase, week } = found;
-
-    const running = week.revisionRequest;
-    const stale = running?.status === 'RUNNING' && Date.now() - running.updatedAt.getTime() > STALE_RUNNING_MS;
-    if (week.revisionGeneration === 'PENDING' && !stale) return { kind: 'in-flight' };
-
+): Promise<JudgedWeek> {
     const { loadOf, unscheduledLoad } = await executedLoads(userId, week, timezone);
     const sessions = week.sessions.map((s) => ({
         id: s.id,
@@ -206,34 +202,20 @@ export async function reevaluateCurrentWeek(
         trigger,
         lastRevisedOn: week.revisedAt ? dateInTimezone(week.revisedAt, timezone) : null,
     });
-    if (verdict.kind === 'no-change') return { kind: 'no-change' };
+    return { sessions, unscheduledLoad, verdict };
+}
 
-    const storedCause = { trigger, ...cause } as unknown as Prisma.InputJsonValue;
-    const stored = (outcome: StoredRevisionReason['outcome']) =>
-        ({ ...verdict.reason, outcome, scope: verdict.scope, from: today }) as unknown as Prisma.InputJsonValue;
-
-    if (verdict.kind === 'ask') {
-        await db.planWeek.update({
-            where: { id: week.id },
-            data: { revisionCause: storedCause, revisionReason: stored('ask') },
-        });
-        return { kind: 'ask' };
-    }
-
-    const { tier, model } = account ?? (await aiAccount(userId));
-    const cap = getLimit(tier, 'planRevisionsPerMonth');
-    const used = await revisionsUsed(userId);
-    if (used >= cap) {
-        await db.planWeek.update({
-            where: { id: week.id },
-            data: { revisionCause: storedCause, revisionReason: stored('capped') },
-        });
-        return { kind: 'capped', used, cap };
-    }
-
+/** The revision prompt: what is done, what stays fixed, and the load left for the scope. */
+async function buildRevisionInput(
+    userId: string,
+    { plan, phase, week }: CurrentWeek,
+    { sessions, unscheduledLoad, verdict }: JudgedWeek,
+    today: string,
+    trigger: RevisionTrigger,
+): Promise<RevisionRequestInput> {
     if (!isSchoolId(phase.school)) throw new Error(`Unknown school on phase: ${phase.school}`);
     const inScope = new Set(verdict.scope);
-    const line = (s: (typeof sessions)[number]): PromptSession => ({
+    const line = (s: JudgedSession): PromptSession => ({
         date: s.scheduledDate,
         title: s.title,
         load: round1(s.actualLoad ?? s.plannedLoad),
@@ -264,27 +246,42 @@ export async function reevaluateCurrentWeek(
             unwell: trigger === 'CHECK_IN',
         },
     });
-
-    const input: RevisionRequestInput = {
+    return {
         ...prompt,
         revisionScope: { scope: verdict.scope, from: today, executedLoad: verdict.reason.executedLoad },
     };
-    const aiRequestId = await db.$transaction(async (tx) => {
+}
+
+interface RevisionClaim {
+    userId: string;
+    weekId: string;
+    /** A stale in-flight revision may be replaced. */
+    replaceStale: boolean;
+    model: string;
+    input: RevisionRequestInput;
+    cause: RevisionCause;
+    reason: StoredRevisionReason;
+}
+
+/** Writes the request and claims the week for it; null when another revision got there first. */
+function claimRevision(claim: RevisionClaim): Promise<string | null> {
+    const { userId, weekId } = claim;
+    return db.$transaction(async (tx) => {
         const request = await tx.aiRequest.create({
-            data: { userId, model, input: input as unknown as Prisma.InputJsonValue },
+            data: { userId, model: claim.model, input: toJson(claim.input) },
             select: { id: true },
         });
         // Claiming only a week with no revision in flight keeps it to one, even under a race.
         const claimed = await tx.planWeek.updateMany({
-            // A stale in-flight revision may be replaced; `not` alone would skip the null column.
-            where: stale
-                ? { id: week.id }
-                : { id: week.id, OR: [{ revisionGeneration: null }, { revisionGeneration: { not: 'PENDING' } }] },
+            // `not` alone would skip the null column.
+            where: claim.replaceStale
+                ? { id: weekId }
+                : { id: weekId, OR: [{ revisionGeneration: null }, { revisionGeneration: { not: 'PENDING' } }] },
             data: {
                 revisionRequestId: request.id,
                 revisionGeneration: 'PENDING',
-                revisionCause: storedCause,
-                revisionReason: stored('revise'),
+                revisionCause: toJson(claim.cause),
+                revisionReason: toJson(claim.reason),
             },
         });
         if (claimed.count === 0) {
@@ -292,6 +289,67 @@ export async function reevaluateCurrentWeek(
             return null;
         }
         return request.id;
+    });
+}
+
+/**
+ * Re-evaluates the current plan week (ADR 0015). At most one revision is in flight per week. At the
+ * cap the verdict is stored and shown, but no AI rewrite happens.
+ */
+export async function reevaluateCurrentWeek(
+    userId: string,
+    trigger: RevisionTrigger,
+    cause: Omit<RevisionCause, 'trigger'> = {},
+    account?: AiAccount,
+): Promise<ReevaluationOutcome> {
+    const timezone = await athleteTimezone(userId);
+    const today = todayInTimezone(timezone);
+    const found = await currentWeek(userId, today);
+    if (!found || found.week.generation !== 'GENERATED') return { kind: 'no-week' };
+    const { week } = found;
+
+    const running = week.revisionRequest;
+    const stale = running?.status === 'RUNNING' && Date.now() - running.updatedAt.getTime() > STALE_RUNNING_MS;
+    if (week.revisionGeneration === 'PENDING' && !stale) return { kind: 'in-flight' };
+
+    const judged = await judgeWeek(userId, week, today, timezone, trigger);
+    const { verdict } = judged;
+    if (verdict.kind === 'no-change') return { kind: 'no-change' };
+
+    const revisionCause: RevisionCause = { trigger, ...cause };
+    const reasonFor = (outcome: StoredRevisionReason['outcome']): StoredRevisionReason => ({
+        ...verdict.reason,
+        outcome,
+        scope: verdict.scope,
+        from: today,
+    });
+    const storeVerdict = (outcome: 'ask' | 'capped') =>
+        db.planWeek.update({
+            where: { id: week.id },
+            data: { revisionCause: toJson(revisionCause), revisionReason: toJson(reasonFor(outcome)) },
+        });
+
+    if (verdict.kind === 'ask') {
+        await storeVerdict('ask');
+        return { kind: 'ask' };
+    }
+
+    const { tier, model } = account ?? (await aiAccount(userId));
+    const cap = getLimit(tier, 'planRevisionsPerMonth');
+    const used = await revisionsUsed(userId);
+    if (used >= cap) {
+        await storeVerdict('capped');
+        return { kind: 'capped', used, cap };
+    }
+
+    const aiRequestId = await claimRevision({
+        userId,
+        weekId: week.id,
+        replaceStale: stale,
+        model,
+        input: await buildRevisionInput(userId, found, judged, today, trigger),
+        cause: revisionCause,
+        reason: reasonFor('revise'),
     });
     if (!aiRequestId) return { kind: 'in-flight' };
     return { kind: 'requested', weekId: week.id, aiRequestId };
@@ -318,42 +376,18 @@ async function failRevision(week: RevisedWeek, requestId: string, error: string 
     });
 }
 
+type WrittenWeek = Extract<WeekOutput, { ok: true }>;
+
 /**
- * Stores a finished revision: the scope's still-planned sessions become SUPERSEDED and the new rows
- * point at them. Idempotent. Counts one `plan_revision` only here, at DONE; a failure is free.
+ * The week's budget is read, never re-struck (ADR 0015). Easy volume is trimmed silently; when a
+ * key session would have to go, the week is stored as written and 0013's ask decides.
  */
-export async function finalizeRevision(userId: string, weekId: string): Promise<RevisionFinalizeOutcome> {
-    const week = await loadRevisedWeek(userId, weekId);
-    if (!week) return { kind: 'not-found' };
-    if (week.revisionGeneration === 'GENERATED') return { kind: 'generated' };
-    const request = week.revisionRequest;
-    if (!request) return { kind: 'pending', requestStatus: 'NONE' };
-    if (request.status === 'RUNNING' && Date.now() - request.updatedAt.getTime() > STALE_RUNNING_MS) {
-        await failRevision(week, request.id, 'Stalled: the proxy never wrote a result');
-        return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
-    }
-    if (request.status === 'FAILED') {
-        if (week.revisionGeneration !== 'FAILED') await failRevision(week, request.id, null);
-        return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
-    }
-    if (request.status !== 'DONE') return { kind: 'pending', requestStatus: request.status };
-
-    const { revisionScope: target } = request.input as unknown as RevisionRequestInput;
-    const read = await readWeekOutput(userId, week, request, target.from);
-    if (!read.ok) {
-        await failRevision(week, request.id, read.errors.join('; ').slice(0, 1000));
-        return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
-    }
-    const { school, anchor, written, costs } = read;
-
-    // The week's budget is read, never re-struck (ADR 0015). Easy volume is trimmed silently; when
-    // a key session would have to go, the week is stored as written and 0013's ask decides.
+function resolveBudget(week: RevisedWeek, target: RevisionScope, { school, written, costs }: WrittenWeek): Resolution {
     const scope = new Set(target.scope);
     const fixedLoad = week.sessions
         .filter((s) => s.status === 'PLANNED' && !scope.has(s.id) && toIsoDate(s.scheduledDate) >= target.from)
         .reduce((t, s) => t + s.plannedLoad, 0);
-    const loadLeft = loadLeftOf(week.recoveryBudget, target.executedLoad, fixedLoad);
-    const resolution = resolveConflict(
+    return resolveConflict(
         written.map((s, i) => ({
             title: s.body.title,
             kind: s.kind,
@@ -363,11 +397,14 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
             cutKey: s.kind === 'RUNNING' ? s.body.cutKey : null,
             canDowngrade: s.kind === 'RUNNING' && canDowngrade(s.body.steps, school),
         })),
-        loadLeft,
+        loadLeftOf(week.recoveryBudget, target.executedLoad, fixedLoad),
         school,
     );
-    const kept = written.map((_, i) => i).filter((i) => resolution.kind !== 'trim' || !resolution.removed.includes(i));
+}
 
+/** Where the kept rows go: which old row each supersedes, and its sequence on the day. */
+function placeRevision(week: RevisedWeek, target: RevisionScope, written: WrittenWeek['written'], kept: number[]) {
+    const scope = new Set(target.scope);
     // Sessions the revision keeps sit first on their day; the new ones follow.
     const replaced = week.sessions
         .filter((s) => scope.has(s.id) && s.status === 'PLANNED')
@@ -385,68 +422,123 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
         return at < 0 ? null : unpaired.splice(at, 1)[0].id;
     });
     const sequenceOf = (i: number) => (occupied.get(written[i].scheduledDate) ?? 0) + written[i].sequence;
-    const ref = (i: number): SessionRef => ({ scheduledDate: written[i].scheduledDate, sequence: sequenceOf(i) });
-    const ask: ConflictRecord | null =
-        resolution.kind === 'ask'
-            ? {
-                  placement: null,
-                  budget: {
-                      kind: 'ASK',
-                      facts: resolution.facts,
-                      schoolFit: resolution.schoolFit,
-                      removed: resolution.removed.map(ref),
-                      keySession: ref(resolution.keySessionIndex),
-                  },
-              }
-            : null;
-    const anchorRecord = anchor
-        ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }
-        : null;
-    const monthKey = currentMonthStartIso();
+    return { replaced: replaced.map((s) => s.id), supersedes, sequenceOf };
+}
 
+function askRecordOf(resolution: Resolution, ref: (i: number) => SessionRef): ConflictRecord | null {
+    if (resolution.kind !== 'ask') return null;
+    return {
+        placement: null,
+        budget: {
+            kind: 'ASK',
+            facts: resolution.facts,
+            schoolFit: resolution.schoolFit,
+            removed: resolution.removed.map(ref),
+            keySession: ref(resolution.keySessionIndex),
+        },
+    };
+}
+
+interface StoredRevision {
+    userId: string;
+    weekId: string;
+    requestId: string;
+    replaced: string[];
+    rows: Prisma.PlannedSessionCreateManyInput[];
+    ask: ConflictRecord | null;
+}
+
+/** One transaction: claim the week, supersede, insert, and count the revision. */
+async function storeRevision({ userId, weekId, requestId, replaced, rows, ask }: StoredRevision): Promise<void> {
+    const monthKey = currentMonthStartIso();
     await db.$transaction(async (tx) => {
         // The conditional update is the idempotency guard: a second finalize finds nothing to claim.
         const claimed = await tx.planWeek.updateMany({
-            where: { id: week.id, revisionRequestId: request.id, revisionGeneration: { not: 'GENERATED' } },
+            where: { id: weekId, revisionRequestId: requestId, revisionGeneration: { not: 'GENERATED' } },
             data: {
                 revisionGeneration: 'GENERATED',
                 revision: { increment: 1 },
                 revisedAt: new Date(),
-                ...(ask && { conflict: ask as unknown as Prisma.InputJsonValue, decision: 'PENDING' as const }),
+                ...(ask && { conflict: toJson(ask), decision: 'PENDING' as const }),
             },
         });
         if (claimed.count === 0) return;
 
         await tx.plannedSession.updateMany({
-            where: { id: { in: replaced.map((s) => s.id) }, status: 'PLANNED' },
+            where: { id: { in: replaced }, status: 'PLANNED' },
             data: { status: 'SUPERSEDED' },
         });
-        await tx.plannedSession.createMany({
-            data: kept.map((i, n) => {
-                const s = written[i];
-                const cost = costs[i];
-                return {
-                    userId,
-                    planWeekId: week.id,
-                    kind: s.kind,
-                    scheduledDate: asDate(s.scheduledDate),
-                    sequence: sequenceOf(i),
-                    origin: 'AI' as const,
-                    plannedLoad: cost.plannedLoad,
-                    loadMethod: cost.method,
-                    supersedesId: supersedes[n],
-                    anchor: s.kind === 'RUNNING' && anchorRecord ? anchorRecord : undefined,
-                    body: s.body as unknown as Prisma.InputJsonValue,
-                    bodyVersion: s.body.bodyVersion,
-                };
-            }),
-        });
+        await tx.plannedSession.createMany({ data: rows });
         // Counted once, here at DONE: the revision cap reads this (ADR 0016).
         await tx.aiUsage.upsert({
             where: { userId_kind_day: { userId, kind: 'plan_revision', day: monthKey } },
             create: { userId, kind: 'plan_revision', day: monthKey, count: 1 },
             update: { count: { increment: 1 } },
         });
+    });
+}
+
+/**
+ * Stores a finished revision: the scope's still-planned sessions become SUPERSEDED and the new rows
+ * point at them. Idempotent. Counts one `plan_revision` only here, at DONE; a failure is free.
+ */
+export async function finalizeRevision(userId: string, weekId: string): Promise<RevisionFinalizeOutcome> {
+    const week = await loadRevisedWeek(userId, weekId);
+    if (!week) return { kind: 'not-found' };
+    if (week.revisionGeneration === 'GENERATED') return { kind: 'generated' };
+    const request = week.revisionRequest;
+    if (!request) return { kind: 'pending', requestStatus: 'NONE' };
+    const failed = async (error: string | null) => {
+        await failRevision(week, request.id, error);
+        return { kind: 'failed' as const, retriesLeft: retriesLeft(request.retryCount) };
+    };
+    if (request.status === 'RUNNING' && Date.now() - request.updatedAt.getTime() > STALE_RUNNING_MS) {
+        return failed('Stalled: the proxy never wrote a result');
+    }
+    if (request.status === 'FAILED') {
+        if (week.revisionGeneration === 'FAILED')
+            return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
+        return failed(null);
+    }
+    if (request.status !== 'DONE') return { kind: 'pending', requestStatus: request.status };
+
+    const target = readRevisionScope(request.input);
+    if (!target) return failed('The request has no revision scope');
+    const read = await readWeekOutput(userId, week, request, target.from);
+    if (!read.ok) return failed(read.errors.join('; ').slice(0, 1000));
+
+    const { anchor, written, costs } = read;
+    const resolution = resolveBudget(week, target, read);
+    const kept = written.map((_, i) => i).filter((i) => resolution.kind !== 'trim' || !resolution.removed.includes(i));
+    const { replaced, supersedes, sequenceOf } = placeRevision(week, target, written, kept);
+    const ask = askRecordOf(resolution, (i) => ({ scheduledDate: written[i].scheduledDate, sequence: sequenceOf(i) }));
+    const anchorRecord = anchor
+        ? { provenance: anchor.provenance, sourceId: anchor.sourceId, date: anchor.date, stale: anchor.stale }
+        : null;
+
+    await storeRevision({
+        userId,
+        weekId: week.id,
+        requestId: request.id,
+        replaced,
+        ask,
+        rows: kept.map((i, n) => {
+            const s = written[i];
+            return {
+                userId,
+                planWeekId: week.id,
+                kind: s.kind,
+                scheduledDate: asDate(s.scheduledDate),
+                sequence: sequenceOf(i),
+                origin: 'AI' as const,
+                plannedLoad: costs[i].plannedLoad,
+                loadMethod: costs[i].method,
+                supersedesId: supersedes[n],
+                anchor: s.kind === 'RUNNING' && anchorRecord ? anchorRecord : undefined,
+                body: toJson(s.body),
+                bodyVersion: s.body.bodyVersion,
+            };
+        }),
     });
     return { kind: 'generated' };
 }

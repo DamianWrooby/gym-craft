@@ -222,12 +222,16 @@ export async function retryWeek(userId: string, weekId: string): Promise<RetryOu
     if (request.retryCount >= MAX_RETRIES) return { kind: 'limit' };
 
     const retryCount = request.retryCount + 1;
-    await db.$transaction(async (tx) => {
-        await tx.aiRequest.update({
-            where: { id: request.id },
+    const reopened = await db.$transaction(async (tx) => {
+        // Claiming the row at the retry count read keeps two parallel retries to one.
+        const claimed = await tx.aiRequest.updateMany({
+            where: { id: request.id, status: 'FAILED', retryCount: request.retryCount },
             data: { status: 'PENDING', output: null, error: null, retryCount },
         });
+        if (claimed.count === 0) return false;
         await tx.planWeek.update({ where: { id: week.id }, data: { generation: 'PENDING' } });
+        return true;
     });
+    if (!reopened) return { kind: 'not-failed' };
     return { kind: 'retrying', aiRequestId: request.id, retriesLeft: retriesLeft(retryCount) };
 }

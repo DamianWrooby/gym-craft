@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$env/static/public', () => ({ PUBLIC_APP_ENV: 'test' }));
 vi.mock('$lib/prisma/prisma', () => ({ getAthleteProfile: vi.fn() }));
 
-const tx = vi.hoisted(() => ({ planWeek: { update: vi.fn() }, aiRequest: { update: vi.fn() } }));
+const tx = vi.hoisted(() => ({ planWeek: { update: vi.fn() }, aiRequest: { updateMany: vi.fn() } }));
 const db = vi.hoisted(() => ({ $transaction: vi.fn(), planWeek: { findUnique: vi.fn() } }));
 vi.mock('$lib/database', () => ({ db }));
 
@@ -27,6 +27,7 @@ function post(id = userId) {
 beforeEach(() => {
     db.$transaction.mockImplementation((fn: (t: typeof tx) => unknown) => fn(tx));
     db.planWeek.findUnique.mockResolvedValue(failedWeek());
+    tx.aiRequest.updateMany.mockResolvedValue({ count: 1 });
 });
 
 afterEach(() => vi.clearAllMocks());
@@ -45,8 +46,8 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/retry', () => {
         const response = await post();
         expect(response.status).toBe(200);
         expect(await response.json()).toEqual({ data: { aiRequestId: 'request-1', retriesLeft: 1 } });
-        expect(tx.aiRequest.update).toHaveBeenCalledWith({
-            where: { id: 'request-1' },
+        expect(tx.aiRequest.updateMany).toHaveBeenCalledWith({
+            where: { id: 'request-1', status: 'FAILED', retryCount: 0 },
             data: { status: 'PENDING', output: null, error: null, retryCount: 1 },
         });
         expect(tx.planWeek.update).toHaveBeenCalledWith({ where: { id: 'week-1' }, data: { generation: 'PENDING' } });
@@ -57,7 +58,13 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/retry', () => {
         const response = await post();
         expect(response.status).toBe(429);
         expect(await response.json()).toMatchObject({ code: 'RETRY_LIMIT' });
-        expect(tx.aiRequest.update).not.toHaveBeenCalled();
+        expect(tx.aiRequest.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses a retry that lost the race to a parallel one', async () => {
+        tx.aiRequest.updateMany.mockResolvedValueOnce({ count: 0 });
+        expect((await post()).status).toBe(409);
+        expect(tx.planWeek.update).not.toHaveBeenCalled();
     });
 
     it('refuses a week that has not failed', async () => {
