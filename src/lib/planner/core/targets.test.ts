@@ -6,6 +6,7 @@ import type { TypedSession } from './session';
 
 const daniels = getSchool('DANIELS');
 const polarized = getSchool('POLARIZED');
+const pfitzinger = getSchool('PFITZINGER');
 // A 20:00 5 km is VDOT ≈ 49.8.
 const anchor = { distanceM: 5000, timeSec: 1200 };
 
@@ -20,6 +21,20 @@ describe('labelPaces', () => {
         expect(paces.E).toBeGreaterThan(paces.M);
         expect(paces.M).toBeGreaterThan(paces.T);
         expect(paces.R).toBeLessThan(paces.I);
+    });
+
+    it('derives Pfitzinger paces from LT pace, never from VDOT', () => {
+        const paces = labelPaces(pfitzinger, anchor)!;
+        // A 20:00 5 km runner holds about 4:15/km for an hour; VO2max work sits near 5 km pace (4:00/km).
+        expect(paces.LT).toBeGreaterThan(245);
+        expect(paces.LT).toBeLessThan(265);
+        expect(paces.VO2).toBeGreaterThan(230);
+        expect(paces.VO2).toBeLessThan(250);
+        // Marathon pace is "a couple of percent slower than lactate threshold".
+        expect(paces.MP / paces.LT).toBeGreaterThan(1.01);
+        expect(paces.MP / paces.LT).toBeLessThan(1.06);
+        expect(paces.REC).toBeGreaterThan(paces.GA);
+        expect(paces.GA).toBeGreaterThan(paces.MP);
     });
 
     it('gives no paces without an anchor, and none for a heart-rate school', () => {
