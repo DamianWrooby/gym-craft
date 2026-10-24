@@ -151,3 +151,19 @@ describe('what blocks save', () => {
         expect(goalFormIssue({ ...valid, isRace: false, date: '', time: 'bad' }, today)).toBeNull();
     });
 });
+
+describe('review fixes', () => {
+    it('gives a no-race goal switched to a race the default class, not its stored priority', () => {
+        const base = { ...race, goalType: 'BASE_BUILDING' as const, targetEventDate: null, priority: 1 };
+        const others = [{ goalType: 'RACE' as const, priority: 1 }];
+        const form = { ...fromGoal(base, others), isRace: true };
+        expect(form.raceClass).toBe('B');
+        expect(toGoalInput(form, others).priority).toBe(2);
+    });
+
+    it('reads a comma as the decimal mark in a custom distance', () => {
+        const form = { ...fromGoal(race, []), distance: 'custom' as const, customKm: '1,5' };
+        expect(goalFormIssue(form, '2026-10-24')).toBeNull();
+        expect(toGoalInput(form, []).targetDistanceM).toBe(1500);
+    });
+});

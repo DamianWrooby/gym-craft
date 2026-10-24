@@ -2,6 +2,7 @@
 // metres, seconds and a priority number. Pure, client-importable.
 
 import type { GoalType } from '@prisma/client';
+import { RACE_MAX_M, RACE_MIN_M, distanceName, formatDuration } from '$lib/utils/race';
 
 const DURATION = /^(?:(\d+):)?([0-5]?\d):([0-5]\d)$/;
 
@@ -15,12 +16,7 @@ export function parseDuration(text: string): number | null {
     return sec > 0 ? sec : null;
 }
 
-export function formatDuration(sec: number): string {
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = String(sec % 60).padStart(2, '0');
-    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
-}
+export { formatDuration };
 
 export type RaceClass = 'A' | 'B' | 'C';
 
@@ -43,12 +39,17 @@ export const defaultClass = (others: GoalRank[]): RaceClass =>
 export type DistanceKey = '5k' | '10k' | 'half' | 'marathon' | 'custom';
 export type Focus = Exclude<GoalType, 'RACE'>;
 
-export const DISTANCES: { key: Exclude<DistanceKey, 'custom'>; label: string; metres: number }[] = [
-    { key: '5k', label: '5 km', metres: 5000 },
-    { key: '10k', label: '10 km', metres: 10000 },
-    { key: 'half', label: 'Half marathon', metres: 21097 },
-    { key: 'marathon', label: 'Marathon', metres: 42195 },
-];
+const PRESETS: Record<Exclude<DistanceKey, 'custom'>, number> = {
+    '5k': 5000,
+    '10k': 10000,
+    half: 21097,
+    marathon: 42195,
+};
+
+export const DISTANCES = Object.entries(PRESETS).map(([key, metres]) => {
+    const name = distanceName(metres);
+    return { key: key as Exclude<DistanceKey, 'custom'>, label: name[0].toUpperCase() + name.slice(1), metres };
+});
 
 /** What the form holds: text as the athlete typed it, plus the stored priority to keep. */
 export interface GoalFormState {
@@ -88,7 +89,8 @@ export function fromGoal(goal: StoredGoal | null, others: GoalRank[]): GoalFormS
         customKm: !known && metres != null ? String(metres / 1000) : '',
         date: goal?.targetEventDate ?? '',
         name: goal?.targetEventName ?? '',
-        raceClass: goal ? classOf(goal.priority) : defaultClass(others),
+        // A goal that was not a race has no class yet: it gets the default, like a new one.
+        raceClass: goal?.goalType === 'RACE' ? classOf(goal.priority) : defaultClass(others),
         time: goal?.targetTimeSec ? formatDuration(goal.targetTimeSec) : '',
         focus: goal && goal.goalType !== 'RACE' ? goal.goalType : 'BASE_BUILDING',
         notes: goal?.notes ?? '',
@@ -98,7 +100,7 @@ export function fromGoal(goal: StoredGoal | null, others: GoalRank[]): GoalFormS
 
 function distanceMetres(form: GoalFormState): number | null {
     if (form.distance !== 'custom') return DISTANCES.find((d) => d.key === form.distance)!.metres;
-    const km = Number(form.customKm);
+    const km = Number(form.customKm.replace(',', '.'));
     return form.customKm.trim() && Number.isFinite(km) ? Math.round(km * 1000) : null;
 }
 
@@ -127,7 +129,8 @@ export function toGoalInput(form: GoalFormState, others: GoalRank[]): GoalInput 
     };
 }
 
-export const CUSTOM_KM = { min: 1.5, max: 42.2 };
+/** The race bounds in km, as the athlete types them: 1.5–42.2. */
+export const CUSTOM_KM = { min: RACE_MIN_M / 1000, max: Math.ceil(RACE_MAX_M / 100) / 10 };
 export const NOTES_MAX = 500;
 
 /** The one reason save is blocked, or null. `today` is the athlete's local YYYY-MM-DD. */

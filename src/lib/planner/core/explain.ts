@@ -1,6 +1,7 @@
 // Explain plan: how the athlete's data shaped the laid-out horizon. Pure; built once at creation
 // and stored with the plan, because the inputs (recent running, anchor) change afterwards.
 import { formatVolume } from '../plan-view';
+import { distanceName, formatDuration } from '$lib/utils/race';
 import { getSchool, isSchoolId } from '../schools/catalogue';
 import { CUTBACK_CAP } from '../schools/gymcraft-rules';
 import type { SchoolDefinition } from '../schools/types';
@@ -31,25 +32,6 @@ export interface PlanRationale {
 }
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const NAMED_DISTANCES: Record<number, string> = {
-    1500: '1500 m',
-    5000: '5 km',
-    10000: '10 km',
-    21097: 'half marathon',
-    42195: 'marathon',
-};
-
-export function distanceName(metres: number): string {
-    return NAMED_DISTANCES[metres] ?? `${(metres / 1000).toFixed(1)} km`;
-}
-
-export function formatDuration(sec: number): string {
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = String(sec % 60).padStart(2, '0');
-    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
-}
-
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 function listWeeks(numbers: number[]): string {

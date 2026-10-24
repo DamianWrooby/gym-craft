@@ -5,8 +5,7 @@ import { WEEKDAYS, type AvailabilityMap } from '$lib/planner/wizard';
 import type { SchoolId } from '$lib/planner/schools/types';
 import type { Compression } from '$lib/planner/core/layout';
 
-export const RACE_RESULT_MIN_M = 1500;
-export const RACE_RESULT_MAX_M = 42195;
+import { RACE_MAX_M, RACE_MIN_M } from '$lib/utils/race';
 
 export interface RaceResultInput {
     date: string;
@@ -36,10 +35,10 @@ export function validateRaceResultInput(body: unknown, today: string): Result<Ra
     if (
         typeof b.distanceM !== 'number' ||
         !Number.isInteger(b.distanceM) ||
-        b.distanceM < RACE_RESULT_MIN_M ||
-        b.distanceM > RACE_RESULT_MAX_M
+        b.distanceM < RACE_MIN_M ||
+        b.distanceM > RACE_MAX_M
     ) {
-        return { error: `distanceM must be an integer from ${RACE_RESULT_MIN_M} to ${RACE_RESULT_MAX_M}` };
+        return { error: `distanceM must be an integer from ${RACE_MIN_M} to ${RACE_MAX_M}` };
     }
     if (typeof b.timeSec !== 'number' || !Number.isInteger(b.timeSec) || b.timeSec <= 0) {
         return { error: 'timeSec must be a positive integer' };
