@@ -8,7 +8,9 @@ import { detectDrift, recutSuggestionShown } from '$lib/planner/core/revision';
 import type { AdaptRevision, AdaptView } from '$lib/planner/adapt-view';
 import type { ActivePlan } from './repository';
 import { retriesLeft } from './week-generation';
-import { finalizeRevision, revisionsUsed, titleOf, type RevisionCause, type StoredRevisionReason } from './revision';
+import { finalizeRevision, revisionsUsed } from './revision';
+import { readRevisionCause, readRevisionReason, titleOf } from './stored';
+import { weekOn } from './current-week';
 import { driftWeeksOf } from './check-ins';
 
 type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
@@ -16,12 +18,7 @@ type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
 const asDate = (yyyymmdd: string) => new Date(`${yyyymmdd}T00:00:00Z`);
 
 function currentWeekOf(plan: ActivePlan, today: string): StoredWeek | null {
-    for (const phase of plan.phases) {
-        for (const week of phase.weeks) {
-            if (toIsoDate(week.startDate) <= today && toIsoDate(week.endDate) >= today) return week;
-        }
-    }
-    return null;
+    return weekOn(plan.phases, today)?.week ?? null;
 }
 
 /** A revision request that finished while no tab was open. */
@@ -40,8 +37,8 @@ export async function finalizePendingRevision(userId: string, plan: ActivePlan, 
 }
 
 function revisionOf(week: StoredWeek): AdaptRevision {
-    const cause = week.revisionCause as unknown as RevisionCause | null;
-    const reason = week.revisionReason as unknown as StoredRevisionReason | null;
+    const cause = readRevisionCause(week.revisionCause);
+    const reason = readRevisionReason(week.revisionReason);
     const request = week.revisionRequest;
     return {
         weekId: week.id,
