@@ -241,7 +241,7 @@ const PFITZINGER: SchoolDefinition = {
             intent: 'VO2max and tune-up races.',
             lossLine: 'Fewer Race Preparation weeks means less VO2max work and fewer tune-up races.',
             idealWeeks: sourced(4, 'Advanced Marathoning 18-week table: weeks-to-goal 6→3.'),
-            floorWeeks: sourced(3, 'Transcribed 12-week plan; one reviewer reads 2. 3 makes the floors sum to 12.'),
+            floorWeeks: judged(3, 'Reviewers of the 12-week plan read 2 or 3; 3 makes the floors sum to 12.'),
             droppable: sourced(false, 'All four mesocycles survive into the 12-week plan.'),
             volumeUnit: 'METRES',
             strengthKind: 'sharpen',
@@ -276,11 +276,14 @@ const PFITZINGER: SchoolDefinition = {
         startFractionOfPeak: sourced(0.6, '18-week / 55 mi table opens at 33 mi, 0.60 of peak.'),
         maxStepFraction: judged(0.08, 'The table steps +2 to +4 mi a week, about 5–11 %.'),
     },
-    cutbackCadence: sourced(4, '18-week table: recovery weeks at weeks-to-goal 12 and 8.'),
+    cutbackCadence: sourced(3, '18-week table: recovery at weeks-to-goal 12 and 8, three loading weeks between.'),
     cutbackDepth: judged(0.15, 'The table cuts back 10–18 % below the prior loading week.'),
-    taperFractions: sourced([0.8, 0.58, 0.4], '18-week / 55 mi table: 43–45, 32, then 22 mi plus the race.'),
+    taperFractions: judged(
+        [0.58, 0.4],
+        '18-week / 55 mi table ends 0.80, 0.58, 0.40; only the last two, so the taper fits its 2-week floor.',
+    ),
     leadIn: {
-        split: sourced('100/0: general aerobic running only', 'Plans have no on-ramp; at least 24 km a week to start.'),
+        split: judged('100/0: general aerobic running only', 'Plans have no on-ramp; at least 24 km a week to start.'),
         touch: sourced('strides', 'General aerobic runs carry strides.'),
     },
     intensityLabels: [

@@ -31,8 +31,8 @@ function secPerKmAt(vo2: number): number {
 }
 
 /**
- * Pfitzinger labels as multiples of LT seconds per km (fast, slow). Pfitzinger does not use VDOT;
- * MP "a couple of percent slower than lactate threshold" is sourced, the rest judged from his zones.
+ * Pfitzinger labels as multiples of LT seconds per km (fast, slow). Pfitzinger does not use VDOT.
+ * Every band is judged; MP is read from his "a couple of percent slower than lactate threshold".
  */
 export const PFITZINGER_LT_MULTIPLES = judged<Record<string, [number, number]>>({
     REC: [1.3, 1.4],
