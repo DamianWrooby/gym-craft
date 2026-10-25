@@ -1,5 +1,4 @@
 {
-    "$schema": "https://inlang.com/schema/inlang-message-format",
     "account_language_heading": "Language",
     "account_language_description": "The language GymCraft uses for you.",
     "account_language_not_saved": "The language has not been saved.",
