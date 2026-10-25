@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getLocale } from '$lib/paraglide/runtime.js';
     import { afterNavigate, goto } from '$app/navigation';
     import { page } from '$app/stores';
@@ -86,12 +87,12 @@
                     openGarminLoginModal();
                     return;
                 }
-                detailError = payload?.message ?? 'Could not load activity details.';
+                detailError = payload?.message ?? m.activity_detail_failed();
                 return;
             }
             detail = payload?.data?.detail ?? null;
         } catch (err) {
-            detailError = err instanceof Error ? err.message : 'Could not load activity details.';
+            detailError = err instanceof Error ? err.message : m.activity_detail_failed();
         } finally {
             detailLoading = false;
         }
@@ -99,8 +100,8 @@
 
     function openGarminLoginModal() {
         triggerGarminLoginModal(modalStore, {
-            body: "Your Garmin session expired. Sign in again to load this activity's splits and chart.",
-            confirmText: 'Login and load',
+            body: m.activity_garmin_login_body(),
+            confirmText: m.activity_garmin_login_confirm(),
             response: handleGarminLoginResponse,
         });
     }
@@ -108,7 +109,7 @@
     async function handleGarminLoginResponse(loginFormData: GarminLoginResponse) {
         if (!loginFormData) return;
         if (validateGarminLoginFormData(loginFormData)) {
-            makeToast(toastStore, 'Invalid form data', 'variant-filled-error');
+            makeToast(toastStore, m.common_invalid_form(), 'variant-filled-error');
             return;
         }
         await loadDetail(loginFormData.password);
@@ -154,7 +155,7 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">
-        <button type="button" on:click={() => goto(backTarget)} aria-label="Go back">
+        <button type="button" on:click={() => goto(backTarget)} aria-label={m.common_go_back()}>
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
     </div>
@@ -171,64 +172,66 @@
     </header>
 
     <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-        <StatCard label="Distance" value={formatDistance(activity.distanceM)} />
-        <StatCard label="Duration" value={formatDuration(activity.durationSec)} />
+        <StatCard label={m.activity_distance()} value={formatDistance(activity.distanceM)} />
+        <StatCard label={m.activity_duration()} value={formatDuration(activity.durationSec)} />
         <StatCard
-            label="Avg {isRunning ? 'pace' : 'speed'}"
+            label={isRunning ? m.activity_avg_pace() : m.activity_avg_speed()}
             value={formatPaceOrSpeed(activity.averageSpeed, activity.activityType)} />
-        <StatCard label="Avg HR" value={activity.averageHr != null ? `${activity.averageHr} bpm` : '—'} />
-        <StatCard label="Max HR" value={activity.maxHr != null ? `${activity.maxHr} bpm` : '—'} />
+        <StatCard label={m.activity_avg_hr()} value={activity.averageHr != null ? `${activity.averageHr} bpm` : '—'} />
+        <StatCard label={m.activity_max_hr()} value={activity.maxHr != null ? `${activity.maxHr} bpm` : '—'} />
         <StatCard
-            label="Training load"
+            label={m.activity_training_load()}
             value={activity.trimpLoad != null ? `${Math.round(activity.trimpLoad)}` : '—'} />
-        <StatCard label="Calories" value={activity.calories != null ? `${activity.calories} kcal` : '—'} />
+        <StatCard label={m.activity_calories()} value={activity.calories != null ? `${activity.calories} kcal` : '—'} />
         <StatCard
-            label="Elevation"
+            label={m.activity_elevation()}
             value={activity.elevationGainM != null ? `↑${Math.round(activity.elevationGainM)} m` : '—'} />
         {#if activity.movingDurationSec != null && activity.movingDurationSec < activity.durationSec}
-            <StatCard label="Stopped time" value={formatDuration(activity.durationSec - activity.movingDurationSec)} />
+            <StatCard
+                label={m.activity_stopped_time()}
+                value={formatDuration(activity.durationSec - activity.movingDurationSec)} />
         {/if}
         {#if isRunning && activity.avgStrideLength != null}
-            <StatCard label="Stride length" value={`${activity.avgStrideLength.toFixed(2)} m`} />
+            <StatCard label={m.activity_stride_length()} value={`${activity.avgStrideLength.toFixed(2)} m`} />
         {/if}
         {#if decoupling != null}
-            <StatCard label="Aerobic decoupling" value={`${decoupling}%`} />
+            <StatCard label={m.activity_aerobic_decoupling()} value={`${decoupling}%`} />
         {/if}
     </section>
 
     {#if activity.hrZoneSeconds}
         <section class="mb-10">
-            <h2 class="h3 font-semibold mb-3">Heart-rate zones</h2>
+            <h2 class="h3 font-semibold mb-3">{m.activity_hr_zones()}</h2>
             <HrZoneDonut hrZoneSeconds={activity.hrZoneSeconds} {hrZonePercents} />
         </section>
     {/if}
 
     {#if detail}
         <section class="mb-10">
-            <h2 class="h3 font-semibold mb-3">HR & pace over time</h2>
+            <h2 class="h3 font-semibold mb-3">{m.activity_hr_pace_over_time()}</h2>
             <HrPaceOverlayChart samples={detail.samples} />
         </section>
 
         {#if isRunning && detail.dynamics}
             <section class="mb-10">
-                <h2 class="h3 font-semibold mb-3">Running dynamics</h2>
+                <h2 class="h3 font-semibold mb-3">{m.activity_running_dynamics()}</h2>
                 <RunningDynamicsCards dynamics={detail.dynamics} />
             </section>
         {/if}
 
         {#if detail.splits.length > 0}
             <section class="mb-10">
-                <h2 class="h3 font-semibold mb-3">Split pace</h2>
+                <h2 class="h3 font-semibold mb-3">{m.activity_split_pace()}</h2>
                 <SplitsBarChart splits={detail.splits} activityType={activity.activityType} />
             </section>
         {/if}
 
         <section class="mb-10">
-            <h2 class="h3 font-semibold mb-3">Splits</h2>
+            <h2 class="h3 font-semibold mb-3">{m.activity_splits()}</h2>
             <SplitsTable splits={detail.splits} activityType={activity.activityType} />
         </section>
     {:else if detailLoading}
-        <section class="mb-10" aria-busy="true" aria-label="Loading activity details">
+        <section class="mb-10" aria-busy="true" aria-label={m.activity_loading_details()}>
             <div class="placeholder animate-pulse mb-6" style="height: 16rem;" />
             <div class="space-y-2">
                 {#each [0, 1, 2, 3] as row (row)}
@@ -239,10 +242,10 @@
     {:else}
         <aside class="card variant-soft-surface p-4 mb-10">
             <p class="text-sm opacity-80 mb-3">
-                {detailError ?? "Detailed splits and time-series for this activity haven't been loaded yet."}
+                {detailError ?? m.activity_detail_not_loaded()}
             </p>
             <button type="button" class="btn btn-sm variant-soft-primary" on:click={() => loadDetail()}>
-                Load details
+                {m.activity_load_details()}
             </button>
         </aside>
     {/if}

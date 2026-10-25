@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { SvelteComponent } from 'svelte';
     import { ChevronsRightIcon } from 'svelte-feather-icons';
@@ -29,7 +30,7 @@
         <header class={cHeader}>{$modalStore[0].title ?? '(title missing)'}</header>
         <article>{$modalStore[0].body ?? '(body missing)'}</article>
         <div class="p-1 max-w-sm m-auto">
-            <label class="label" for="email">Email</label>
+            <label class="label" for="email">{m.auth_email()}</label>
             <input
                 class="input"
                 id="email"
@@ -41,7 +42,7 @@
         </div>
 
         <div class="p-1 max-w-sm m-auto pb-5">
-            <label class="label" for="password">Password</label>
+            <label class="label" for="password">{m.auth_password()}</label>
             <input
                 class="input"
                 id="password"

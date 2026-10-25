@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { GarminActivityHrZones } from '@/models/garmin/activity.model';
 
     export let hrZoneSeconds: GarminActivityHrZones | null;
@@ -97,9 +98,9 @@
     }
 
     function ariaLabel(s: Slice[]): string {
-        if (s.length === 0) return 'HR zone breakdown unavailable';
+        if (s.length === 0) return m.zones_unavailable();
         const parts = s.filter((x) => x.percent > 0).map((x) => `${x.label} ${x.percent}%`);
-        return `Heart rate zone distribution: ${parts.join(', ')}`;
+        return m.zones_aria({ parts: parts.join(', ') });
     }
 </script>
 

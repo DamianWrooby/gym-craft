@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import { goto } from '$app/navigation';
     import { REPORT_NOTES_MAX_LENGTH } from '@/constants/training-report.constants';
@@ -39,7 +40,7 @@
 
     function onSubmit() {
         if (!isMonday(periodStart)) {
-            dateError = 'Period start must be a Monday';
+            dateError = m.report_modal_not_monday();
             return;
         }
         dateError = '';
@@ -66,10 +67,10 @@
 
 {#if $modalStore[0]}
     <div class="card p-6 w-full max-w-lg shadow-xl space-y-4">
-        <h2 class="h3 font-bold">Generate weekly report</h2>
+        <h2 class="h3 font-bold">{m.report_modal_heading()}</h2>
 
         <label class="label">
-            <span>Week starting (Monday)</span>
+            <span>{m.report_modal_week_start()}</span>
             <input type="date" class="input" bind:value={periodStart} />
             <span class="text-xs opacity-70">Ends {periodEnd}</span>
         </label>
@@ -78,10 +79,10 @@
         {/if}
 
         <div>
-            <p class="text-sm font-semibold mb-2">Goals to include</p>
+            <p class="text-sm font-semibold mb-2">{m.report_modal_goals()}</p>
             {#if goals.length === 0}
                 <p class="text-sm opacity-70 italic">
-                    No active running goals. The report will still generate, but coaching context will be limited.
+                    {m.report_modal_no_goals()}
                 </p>
             {:else}
                 <div class="flex flex-wrap gap-2">
@@ -98,24 +99,26 @@
                 </div>
             {/if}
             <div class="mt-2">
-                <button type="button" class="btn btn-sm variant-soft" on:click={goToGoals}> Manage goals → </button>
+                <button type="button" class="btn btn-sm variant-soft" on:click={goToGoals}
+                    >{m.report_modal_manage_goals()}</button>
             </div>
         </div>
 
         <label class="label">
-            <span>Notes (optional)</span>
+            <span>{m.report_modal_notes()}</span>
             <textarea
                 class="textarea"
                 rows="3"
                 maxlength={REPORT_NOTES_MAX_LENGTH}
                 bind:value={notes}
-                placeholder="Anything contextual for the coach — deload week, travel, illness…"></textarea>
+                placeholder={m.report_modal_notes_placeholder()}></textarea>
             <span class="text-xs opacity-60">{notes.length}/{REPORT_NOTES_MAX_LENGTH}</span>
         </label>
 
         <div class="flex justify-end gap-2 pt-2">
-            <button type="button" class="btn variant-soft" on:click={onCancel}>Cancel</button>
-            <button type="button" class="btn variant-filled-primary" on:click={onSubmit}>Generate</button>
+            <button type="button" class="btn variant-soft" on:click={onCancel}>{m.common_cancel()}</button>
+            <button type="button" class="btn variant-filled-primary" on:click={onSubmit}
+                >{m.report_modal_generate()}</button>
         </div>
     </div>
 {/if}

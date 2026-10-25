@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { ActivityDynamics } from '$lib/server/garmin/fetch-activity-detail';
     import StatCard from '$lib/components/stat-card/StatCard.svelte';
 
@@ -12,11 +13,19 @@
 
     $: fields = (
         [
-            { value: dynamics.avgCadence, label: 'Avg cadence', fmt: (v) => `${Math.round(v)} spm` },
-            { value: dynamics.avgGroundContactTimeMs, label: 'Ground contact', fmt: (v) => `${Math.round(v)} ms` },
-            { value: dynamics.avgVerticalOscillationCm, label: 'Vert. oscillation', fmt: (v) => `${v.toFixed(1)} cm` },
-            { value: dynamics.avgVerticalRatioPct, label: 'Vert. ratio', fmt: (v) => `${v.toFixed(1)} %` },
-            { value: dynamics.avgPowerW, label: 'Avg power', fmt: (v) => `${Math.round(v)} W` },
+            { value: dynamics.avgCadence, label: m.dynamics_cadence(), fmt: (v) => `${Math.round(v)} spm` },
+            {
+                value: dynamics.avgGroundContactTimeMs,
+                label: m.dynamics_ground_contact(),
+                fmt: (v) => `${Math.round(v)} ms`,
+            },
+            {
+                value: dynamics.avgVerticalOscillationCm,
+                label: m.dynamics_vert_oscillation(),
+                fmt: (v) => `${v.toFixed(1)} cm`,
+            },
+            { value: dynamics.avgVerticalRatioPct, label: m.dynamics_vert_ratio(), fmt: (v) => `${v.toFixed(1)} %` },
+            { value: dynamics.avgPowerW, label: m.dynamics_power(), fmt: (v) => `${Math.round(v)} W` },
         ] as Field[]
     ).filter((f) => f.value != null);
 </script>

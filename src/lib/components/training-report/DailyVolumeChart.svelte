@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getLocale } from '$lib/paraglide/runtime.js';
     import { max } from 'd3-array';
     import type { MetricsBundle } from '$lib/server/analytics/types';
@@ -49,7 +50,7 @@
 
     function weekdayLabel(yyyymmdd: string): string {
         const d = new Date(`${yyyymmdd}T00:00:00Z`);
-        return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()];
+        return d.toLocaleDateString(getLocale(), { weekday: 'short', timeZone: 'UTC' });
     }
 
     function formatTick(km: number): string {
@@ -106,13 +107,13 @@
 
     function summary(d: typeof data): string {
         const total = d.reduce((sum, e) => sum + e.km, 0);
-        return `Daily distance over ${d.length} days, total ${total.toFixed(2)} km`;
+        return m.volume_chart_aria({ days: d.length, total: total.toFixed(2) });
     }
 </script>
 
 <div class="chart-root" role="img" aria-label={summary(data)}>
     <div class="flex gap-2 items-stretch">
-        <div class="y-axis-title">Distance (km)</div>
+        <div class="y-axis-title">{m.chart_distance_km()}</div>
         <div
             class="chart-wrapper flex-1"
             style="height:{chartHeight}px"
@@ -201,15 +202,15 @@
                 <div class="tooltip" style={tooltipStyle}>
                     <p class="font-semibold text-sm">{formatFullDate(activeBar.date)}</p>
                     {#if activeBar.km === 0}
-                        <p class="text-xs opacity-80 mt-1">Rest day</p>
+                        <p class="text-xs opacity-80 mt-1">{m.chart_rest_day()}</p>
                     {:else}
                         <dl class="tooltip-grid">
-                            <dt>Distance</dt>
+                            <dt>{m.activity_distance()}</dt>
                             <dd>{formatDistance(activeBar.km)}</dd>
-                            <dt>Duration</dt>
+                            <dt>{m.activity_duration()}</dt>
                             <dd>{formatDuration(activeBar.durationSec)}</dd>
                             {#if formatPace(activeBar.km, activeBar.durationSec)}
-                                <dt>Avg pace</dt>
+                                <dt>{m.activity_avg_pace()}</dt>
                                 <dd>{formatPace(activeBar.km, activeBar.durationSec)}</dd>
                             {/if}
                         </dl>
@@ -218,7 +219,7 @@
             {/if}
         </div>
     </div>
-    <p class="day-axis-title">Day of week</p>
+    <p class="day-axis-title">{m.chart_day_of_week()}</p>
 </div>
 
 <style>
