@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { MetricsBundle } from '$lib/server/analytics/types';
 
     export let deltas: MetricsBundle['deltas'];
@@ -26,17 +27,17 @@
 
     $: cards = deltas
         ? ([
-              { label: 'Distance vs prev week', value: formatDistance(deltas.distanceM), delta: deltas.distanceM },
-              { label: 'Duration vs prev week', value: formatDuration(deltas.durationSec), delta: deltas.durationSec },
+              { label: m.deltas_distance(), value: formatDistance(deltas.distanceM), delta: deltas.distanceM },
+              { label: m.deltas_duration(), value: formatDuration(deltas.durationSec), delta: deltas.durationSec },
               {
-                  label: 'Vigorous minutes vs prev week',
+                  label: m.deltas_vigorous(),
                   value: formatMinutes(deltas.vigorousMinutes),
                   delta: deltas.vigorousMinutes,
               },
               ...(deltas.avgHRDelta !== null
                   ? [
                         {
-                            label: 'Avg HR vs prev week',
+                            label: m.deltas_avg_hr(),
                             value: formatHr(deltas.avgHRDelta),
                             // For HR, lower is generally "better" (improved efficiency at same load).
                             // We don't invert the color here — caller can read the value.
@@ -49,7 +50,7 @@
 </script>
 
 {#if deltas}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" role="group" aria-label="Week-over-week stat deltas">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" role="group" aria-label={m.deltas_aria()}>
         {#each cards as card}
             <div
                 class="rounded-xl border border-surface-300 dark:border-surface-700 p-3 bg-surface-100 dark:bg-surface-800">

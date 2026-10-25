@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getLocale } from '$lib/paraglide/runtime.js';
     import { createEventDispatcher } from 'svelte';
     import { PlusIcon } from 'svelte-feather-icons';
@@ -39,10 +40,10 @@
     function weekTitle(cell: WeekCell): string {
         const range = formatReportPeriod(cell.periodStart, cell.periodEnd);
         if (cell.state === 'report') {
-            return `${range} · Load ${cell.weeklyTotalLoad ?? '—'} · ${statusLabel(cell.acwrStatus)}`;
+            return `${range} · ${m.load_chart_cell_load({ load: cell.weeklyTotalLoad ?? '—' })} · ${statusLabel(cell.acwrStatus)}`;
         }
-        if (cell.state === 'gap') return `${range} · Trained, no report — click to generate`;
-        return `${range} · No training`;
+        if (cell.state === 'gap') return `${range} · ${m.load_chart_cell_gap()}`;
+        return `${range} · ${m.load_chart_cell_empty()}`;
     }
 
     function onCellClick(cell: WeekCell) {
@@ -53,12 +54,12 @@
         }
     }
 
-    const legend = Object.entries(STATUS_LABEL);
+    const legend = Object.entries(STATUS_LABEL).map(([status, label]) => [status, label()] as const);
 </script>
 
 <div class="card p-4">
     <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold">Training load — last 12 weeks</h3>
+        <h3 class="font-semibold">{m.load_chart_heading()}</h3>
         <div class="hidden sm:flex flex-wrap gap-x-3 gap-y-1 text-xs opacity-80">
             {#each legend as [status, label]}
                 <span class="inline-flex items-center gap-1">
@@ -109,7 +110,6 @@
     </div>
 
     <p class="text-xs opacity-60 mt-2">
-        Bars are weeks with a report (height = weekly load). Dashed slots are weeks you trained but have no report —
-        click to generate one.
+        {m.load_chart_legend()}
     </p>
 </div>

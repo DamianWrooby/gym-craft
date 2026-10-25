@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
 import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
 
@@ -13,10 +14,10 @@ export function triggerGarminLoginModal(
 ): void {
     const modal: ModalSettings = {
         type: 'component',
-        title: 'Sign in to Garmin Connect',
+        title: m.garmin_login_title(),
         body: options.body,
-        buttonTextCancel: 'Cancel',
-        buttonTextConfirm: options.confirmText ?? 'Login and sync',
+        buttonTextCancel: m.common_cancel(),
+        buttonTextConfirm: options.confirmText ?? m.garmin_login_confirm(),
         component: { ref: GarminLoginForm },
         response: options.response as (value: unknown) => void,
     };

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { ActivitySample } from '$lib/server/garmin/fetch-activity-detail';
 
     export let samples: ActivitySample[];
@@ -84,20 +85,20 @@
 </script>
 
 {#if samples.length === 0}
-    <p class="text-sm opacity-70 italic">No time-series data available for this activity.</p>
+    <p class="text-sm opacity-70 italic">{m.overlay_none()}</p>
 {:else}
     <div
         class="rounded-xl border border-surface-300 dark:border-surface-700 p-3 bg-surface-100 dark:bg-surface-800 overflow-x-auto">
-        <svg viewBox="0 0 {WIDTH} {HEIGHT}" class="w-full h-auto" aria-label="Heart rate, pace and elevation over time">
+        <svg viewBox="0 0 {WIDTH} {HEIGHT}" class="w-full h-auto" aria-label={m.overlay_aria()}>
             {#if elevAreaD}
                 <path d={elevAreaD} class="fill-tertiary-500 opacity-15" />
                 <text x={PADDING.left} y={HEIGHT - PADDING.bottom - 4} class="fill-tertiary-500 text-[10px] opacity-70"
                     >Elevation {Math.round(elevRange.min)}–{Math.round(elevRange.max)} m</text>
             {/if}
 
-            <text x={PADDING.left} y={12} class="fill-error-500 text-xs">Heart rate (bpm)</text>
+            <text x={PADDING.left} y={12} class="fill-error-500 text-xs">{m.overlay_hr()}</text>
             <text x={WIDTH - PADDING.right} y={12} class="fill-primary-500 text-xs" text-anchor="end"
-                >Pace (min/km)</text>
+                >{m.overlay_pace()}</text>
 
             <line
                 x1={PADDING.left}

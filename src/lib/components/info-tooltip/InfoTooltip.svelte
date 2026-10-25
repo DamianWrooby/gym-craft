@@ -1,9 +1,10 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { HelpCircleIcon } from 'svelte-feather-icons';
     import { popup, type PopupSettings } from '@skeletonlabs/skeleton';
 
     export let id: string;
-    export let ariaLabel = 'More info';
+    export let ariaLabel = m.common_more_info();
     export let placement: PopupSettings['placement'] = 'top';
 
     $: settings = {

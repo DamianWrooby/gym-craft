@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getLocale } from '$lib/paraglide/runtime.js';
     import Seo from '$lib/components/seo/Seo.svelte';
     import { afterNavigate, goto } from '$app/navigation';
@@ -35,15 +36,15 @@
 
     function validateDates(): boolean {
         if (!startDate || !endDate) {
-            dateError = 'Please select both start and end dates';
+            dateError = m.activities_dates_required();
             return false;
         }
         if (startDate > endDate) {
-            dateError = 'Start date must be before or equal to end date';
+            dateError = m.activities_start_after_end();
             return false;
         }
         if (endDate > maxDate) {
-            dateError = 'End date cannot be in the future';
+            dateError = m.activities_end_in_future();
             return false;
         }
         dateError = '';
@@ -75,24 +76,25 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-2">
-        <button type="button" on:click={() => goto('/app/running/analytics')} aria-label="Back to analytics">
+        <button type="button" on:click={() => goto('/app/running/analytics')} aria-label={m.activities_back()}>
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
     </div>
 
     <div class="md:w-3/4 m-auto pb-8">
-        <h2 class="h2 text-center text-xl py-4">Garmin Activities</h2>
+        <h2 class="h2 text-center text-xl py-4">{m.activities_heading()}</h2>
 
         <div class="flex flex-col md:flex-row gap-4 justify-center items-center md:items-end mb-2">
             <label class="label">
-                <span>Start date</span>
+                <span>{m.activities_start_date()}</span>
                 <input type="date" class="input" bind:value={startDate} max={endDate || maxDate} />
             </label>
             <label class="label">
-                <span>End date</span>
+                <span>{m.activities_end_date()}</span>
                 <input type="date" class="input" bind:value={endDate} min={startDate} max={maxDate} />
             </label>
-            <button type="button" class="btn variant-filled-primary" on:click={applyFilter}>Apply filter</button>
+            <button type="button" class="btn variant-filled-primary" on:click={applyFilter}
+                >{m.activities_apply_filter()}</button>
         </div>
         {#if dateError}
             <p class="text-error-500 text-center mb-2">{dateError}</p>
@@ -108,20 +110,20 @@
             </ul>
             <div class="flex flex-col justify-center items-center gap-2 mt-4">
                 <p class="text-sm opacity-70" aria-live="polite">
-                    Showing {data.activities.length} of {data.total} in range
+                    {m.activities_showing({ shown: data.activities.length, total: data.total })}
                 </p>
                 {#if data.atMaxShown}
                     <p class="text-sm text-center opacity-70">
-                        That is as far as this list goes — narrow the date range to see older activities.
+                        {m.activities_max_shown()}
                     </p>
                 {:else if data.hasMore}
                     <button type="button" class="btn btn-sm variant-soft" disabled={loadingMore} on:click={loadMore}>
-                        {loadingMore ? 'Loading…' : 'Load more'}
+                        {loadingMore ? m.common_loading() : m.common_load_more()}
                     </button>
                 {/if}
             </div>
         {:else}
-            <p class="text-center mt-4">No activities in the selected date range.</p>
+            <p class="text-center mt-4">{m.activities_none_in_range()}</p>
         {/if}
     </div>
 </Card>

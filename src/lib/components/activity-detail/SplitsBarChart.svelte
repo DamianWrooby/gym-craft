@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { ActivitySplit } from '$lib/server/garmin/fetch-activity-detail';
     import { formatPaceOrSpeed } from '$lib/utils/pace';
 
@@ -39,7 +40,7 @@
     function splitTitle(s: ActivitySplit): string {
         const pace = formatPaceOrSpeed(splitSpeed(s), activityType);
         const hr = s.averageHr != null ? ` · ${Math.round(s.averageHr)} bpm` : '';
-        return `Split ${s.splitIndex + 1}: ${pace}${hr}`;
+        return `${m.splits_split({ n: s.splitIndex + 1 })}: ${pace}${hr}`;
     }
 
     // The unit-less value shown inside each bar on desktop (e.g. "5:00" or "24.1").
@@ -51,7 +52,7 @@
 {#if usable.length > 0}
     <div
         class="rounded-xl border border-surface-300 dark:border-surface-700 p-4 bg-surface-100 dark:bg-surface-800 overflow-x-auto">
-        <div class="flex items-end gap-1.5 h-40" role="img" aria-label="Pace by split, coloured by average heart rate">
+        <div class="flex items-end gap-1.5 h-40" role="img" aria-label={m.splits_chart_aria()}>
             {#each usable as s (s.splitIndex)}
                 <div class="flex flex-col items-center justify-end flex-1 min-w-[1.5rem] h-full">
                     <div
@@ -67,8 +68,8 @@
                 </div>
             {/each}
         </div>
-        <p class="text-xs opacity-60 mt-2">Taller = faster · colour = avg HR (light → dark = low → high)</p>
+        <p class="text-xs opacity-60 mt-2">{m.splits_chart_legend()}</p>
     </div>
 {:else}
-    <p class="text-sm opacity-70 italic">No split data available for this activity.</p>
+    <p class="text-sm opacity-70 italic">{m.splits_none()}</p>
 {/if}

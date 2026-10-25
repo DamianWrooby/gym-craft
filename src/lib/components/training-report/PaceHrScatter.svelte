@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getLocale } from '$lib/paraglide/runtime.js';
     import type { MetricsBundle } from '$lib/server/analytics/types';
 
@@ -100,20 +101,26 @@
         activeId = null;
     }
     function dotAria(p: Point): string {
-        const dateStr = formatDate(p.startTimeLocal) || 'Activity';
+        const dateStr = formatDate(p.startTimeLocal) || m.chart_activity();
         return `${dateStr}: ${paceLabel(p.pace)}/km at ${Math.round(p.hr)} bpm`;
     }
 
     function ariaLabel(): string {
-        if (points.length === 0) return 'Pace vs HR plot — no data points';
-        return `Pace vs HR plot with ${points.length} activities. Pace ranges ${paceLabel(paceDomain[0])} to ${paceLabel(paceDomain[1])} per km, HR ${Math.round(hrDomain[0])} to ${Math.round(hrDomain[1])} bpm.`;
+        if (points.length === 0) return m.scatter_aria_empty();
+        return m.scatter_aria({
+            count: points.length,
+            paceFrom: paceLabel(paceDomain[0]),
+            paceTo: paceLabel(paceDomain[1]),
+            hrFrom: Math.round(hrDomain[0]),
+            hrTo: Math.round(hrDomain[1]),
+        });
     }
 </script>
 
 {#if points.length > 0}
     <div class="chart-root" role="img" aria-label={ariaLabel()}>
         <div class="flex gap-2 items-stretch">
-            <div class="y-axis-title">Avg HR (bpm)</div>
+            <div class="y-axis-title">{m.chart_avg_hr_bpm()}</div>
             <div class="y-axis-labels flex flex-col justify-between text-xs opacity-70">
                 <span>{Math.round(hrDomain[1])}</span>
                 <span>{Math.round(hrDomain[0])}</span>
@@ -155,16 +162,16 @@
                         {/if}
                         <dl class="tooltip-grid">
                             {#if activePoint.distanceM !== undefined}
-                                <dt>Distance</dt>
+                                <dt>{m.activity_distance()}</dt>
                                 <dd>{formatDistance(activePoint.distanceM)}</dd>
                             {/if}
                             {#if activePoint.durationSec !== undefined}
-                                <dt>Duration</dt>
+                                <dt>{m.activity_duration()}</dt>
                                 <dd>{formatDuration(activePoint.durationSec)}</dd>
                             {/if}
-                            <dt>Pace</dt>
+                            <dt>{m.chart_pace()}</dt>
                             <dd>{paceLabel(activePoint.pace)}/km</dd>
-                            <dt>Avg HR</dt>
+                            <dt>{m.activity_avg_hr()}</dt>
                             <dd>{Math.round(activePoint.hr)} bpm</dd>
                         </dl>
                     </div>
@@ -173,14 +180,14 @@
         </div>
 
         <div class="flex gap-2 mt-1">
-            <div class="y-axis-title invisible" aria-hidden="true">Avg HR (bpm)</div>
+            <div class="y-axis-title invisible" aria-hidden="true">{m.chart_avg_hr_bpm()}</div>
             <div class="y-axis-labels" aria-hidden="true"></div>
             <div class="flex-1">
                 <div class="flex justify-between text-xs opacity-70">
-                    <span>{paceLabel(paceDomain[1])}/km (slow)</span>
-                    <span>{paceLabel(paceDomain[0])}/km (fast)</span>
+                    <span>{paceLabel(paceDomain[1])}/km ({m.chart_slow()})</span>
+                    <span>{paceLabel(paceDomain[0])}/km ({m.chart_fast()})</span>
                 </div>
-                <p class="text-xs opacity-70 text-center mt-1">Pace (min:sec / km)</p>
+                <p class="text-xs opacity-70 text-center mt-1">{m.chart_pace_axis()}</p>
             </div>
         </div>
 
