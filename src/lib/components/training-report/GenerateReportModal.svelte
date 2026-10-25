@@ -1,7 +1,8 @@
 <script lang="ts">
     import { getModalStore } from '@skeletonlabs/skeleton';
     import { goto } from '$app/navigation';
-    import { GOAL_TYPE_LABELS, REPORT_NOTES_MAX_LENGTH } from '@/constants/training-report.constants';
+    import { REPORT_NOTES_MAX_LENGTH } from '@/constants/training-report.constants';
+    import { goalTypeLabel } from '$lib/i18n/labels';
     import { addDays, isMonday, mondayOf, toIsoDate } from '$lib/utils/iso-week';
     import type { GoalType } from '@prisma/client';
 
@@ -91,7 +92,7 @@
                             class:variant-filled-primary={selectedGoalIds.includes(goal.id)}
                             class:variant-soft={!selectedGoalIds.includes(goal.id)}
                             on:click={() => toggleGoal(goal.id)}>
-                            {GOAL_TYPE_LABELS[goal.goalType]}{goal.targetEventName ? ` — ${goal.targetEventName}` : ''}
+                            {goalTypeLabel(goal.goalType)}{goal.targetEventName ? ` — ${goal.targetEventName}` : ''}
                         </button>
                     {/each}
                 </div>
