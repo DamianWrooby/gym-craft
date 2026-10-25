@@ -6,11 +6,14 @@ import crypto from 'crypto';
 import { sendVerificationToken } from '$lib/server/mail';
 import { validateRegisterFormData, isString } from '$lib/utils/form-validation';
 import { to } from 'await-to-js';
+import { SUPPORTED_LOCALES, pickLocale } from '@/constants/locale.constants';
 
 import { db } from '$lib/database';
 import { hashSessionToken } from '$lib/server/session-token';
 
 const register: Action = async ({ request }) => {
+    // Best supported match, not just enabled: an athlete seeded now reads Polish once it is released.
+    const locale = pickLocale(request.headers.get('accept-language'), SUPPORTED_LOCALES);
     const data = await request.formData();
     const username = data.get('username');
     const email = data.get('email');
@@ -49,6 +52,7 @@ const register: Action = async ({ request }) => {
             email,
             emailVerified: false,
             marketingAgreement,
+            locale,
             passwordHash: await bcrypt.hash(password, 12),
             userAuthToken: hashSessionToken(crypto.randomUUID()),
             role: { connect: { name: Role.USER } },

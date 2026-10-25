@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import Seo from '$lib/components/seo/Seo.svelte';
     import { afterNavigate, goto } from '$app/navigation';
     import { ArrowLeftIcon } from 'svelte-feather-icons';
@@ -66,7 +67,7 @@
 
     function formatLastSynced(iso: string | null): string {
         if (!iso) return 'never';
-        return new Date(iso).toLocaleString();
+        return new Date(iso).toLocaleString(getLocale());
     }
 </script>
 

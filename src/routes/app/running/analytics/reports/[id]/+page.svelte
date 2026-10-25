@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import { page } from '$app/stores';
     import { afterNavigate, goto } from '$app/navigation';
     import { ArrowLeftIcon, DownloadIcon } from 'svelte-feather-icons';
@@ -66,7 +67,7 @@
 
     function formatPeriod(start: string, end: string): string {
         const fmt = (s: string) =>
-            new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', {
+            new Date(`${s}T00:00:00Z`).toLocaleDateString(getLocale(), {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -111,7 +112,7 @@
                     <span>Export</span>
                 </button>
             {/if}
-            <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString('en-US')}</p>
+            <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString(getLocale())}</p>
         </div>
     </div>
 

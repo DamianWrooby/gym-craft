@@ -28,6 +28,8 @@ model User {
     currentPeriodEnd     DateTime?
     // Account-wide AI model setting; null = tier default. Resolved per request (ADR 0016).
     aiModelPreference    String?
+    // Language the athlete reads GymCraft in (ADR 0028). Seeded from Accept-Language at signup.
+    locale               String              @default("en") @db.VarChar(8)
     plans                Plan[]
     planWeeks            PlanWeek[]
     raceResults          RaceResult[]

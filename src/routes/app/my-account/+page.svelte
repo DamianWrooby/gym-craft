@@ -11,6 +11,9 @@
     import BillingPanel from '$lib/components/billing/BillingPanel.svelte';
     import SupporterBadge from '$lib/components/billing/SupporterBadge.svelte';
     import { getLimit } from '@/constants/subscription.constants';
+    import { PUBLIC_APP_ENV } from '$env/static/public';
+    import { enabledLocales, LOCALE_NAMES } from '@/constants/locale.constants';
+    import { m } from '$lib/paraglide/messages.js';
 
     // Reactive: the tier flips without a manual reload after the post-checkout invalidateAll.
     $: user = $page.data.user as User;
@@ -63,6 +66,31 @@
         } finally {
             isModelSaving = false;
         }
+    };
+
+    const locales = enabledLocales(PUBLIC_APP_ENV);
+    let isLocaleSaving = false;
+
+    const saveLocale = async (event: Event) => {
+        const locale = (event.currentTarget as HTMLSelectElement).value;
+        isLocaleSaving = true;
+        try {
+            const response = await fetch(`/api/user/${user.id}/locale`, {
+                method: 'PUT',
+                body: JSON.stringify({ locale }),
+            });
+            if (response.ok) {
+                // Every rendered string is in the old locale, so render the page again.
+                window.location.reload();
+                return;
+            }
+            const { message } = await response.json();
+            makeToast(toastStore, message, 'variant-filled-error');
+        } catch (err) {
+            console.error({ err });
+            makeToast(toastStore, m.account_language_not_saved(), 'variant-filled-error');
+        }
+        isLocaleSaving = false;
     };
 
     const openDeleteAccountPanel = () => {
@@ -150,6 +178,27 @@
                 <p><span class="font-bold">{user.aiModel}</span> — Supporters can switch to a smarter model.</p>
             {/if}
         </section>
+
+        {#if locales.length > 1}
+            <section
+                class="rounded-container-token border border-surface-500/40 p-5"
+                aria-labelledby="language-heading">
+                <h3 id="language-heading" class="h3 mb-2">{m.account_language_heading()}</h3>
+                <p class="mb-4 text-sm opacity-75">{m.account_language_description()}</p>
+                <label class="label">
+                    <span class="sr-only">{m.account_language_heading()}</span>
+                    <select
+                        class="select max-w-xs"
+                        value={user.locale}
+                        disabled={isLocaleSaving}
+                        on:change={saveLocale}>
+                        {#each locales as locale}
+                            <option value={locale}>{LOCALE_NAMES[locale]}</option>
+                        {/each}
+                    </select>
+                </label>
+            </section>
+        {/if}
 
         <BillingPanel tier={user.subscriptionTier} />
 

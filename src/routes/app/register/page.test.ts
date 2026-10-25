@@ -110,6 +110,7 @@ function mockRequestWithFormData({
     return {
         request: {
             formData: async () => formData,
+            headers: new Headers({ 'accept-language': 'pl-PL,pl;q=0.9,en;q=0.8' }),
         },
     };
 }
@@ -200,6 +201,7 @@ describe('register action', () => {
                     email: 'john@example.com',
                     emailVerified: false,
                     marketingAgreement: false,
+                    locale: 'pl',
                     passwordHash: 'hashed',
                     role: {
                         connect: {
