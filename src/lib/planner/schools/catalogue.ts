@@ -331,7 +331,7 @@ const PFITZINGER: SchoolDefinition = {
     ],
     cutOrder: sourced(
         ['recovery', 'general-aerobic'],
-        "Recovery runs, then general aerobic; never make up lost time. The medium-long run is shortened, not removed.",
+        'Recovery runs, then general aerobic; never make up lost time. The medium-long run is shortened, not removed.',
     ),
     strengthTemplates: [
         { key: 'heavy-full-body', name: 'Heavy full body', tag: 'heavy' },

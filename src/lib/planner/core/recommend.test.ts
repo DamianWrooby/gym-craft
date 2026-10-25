@@ -59,7 +59,9 @@ describe('recommendSchool', () => {
     it('filters Pfitzinger below its 12-week floor, so a short marathon falls back', () => {
         const r = recommendSchool({ ...base, goal: { isRace: true, distanceM: 42195 }, horizonWeeks: 11 });
         expect(r.offered).toEqual(['POLARIZED', 'DANIELS']);
-        expect(r.filtered).toEqual([{ schoolId: 'PFITZINGER', reason: 'Needs at least 12 weeks; your horizon has 11.' }]);
+        expect(r.filtered).toEqual([
+            { schoolId: 'PFITZINGER', reason: 'Needs at least 12 weeks; your horizon has 11.' },
+        ]);
         expect(r.recommended?.schoolId).toBe('POLARIZED');
     });
 
