@@ -31,7 +31,7 @@ import {
 } from '$lib/planner/core/conflict';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 import type { Prisma } from '@prisma/client';
-import { MAX_RETRIES, readWeekOutput, retriesLeft, type WeekOutput } from './week-generation';
+import { MAX_RETRIES, readWeekOutput, retriesLeft, staleReason, type WeekOutput } from './week-generation';
 import { buildWeekPrompt, type AiRequestInput, type PromptSession } from './week-prompt';
 import { athleteTimezone, weekOn } from './current-week';
 import {
@@ -50,9 +50,6 @@ import {
     type StoredRevisionReason,
     readAvailability,
 } from './stored';
-
-/** Well past the proxy's 150 s OpenAI timeout: a RUNNING row this old lost its proxy call. */
-const STALE_RUNNING_MS = 5 * 60 * 1000;
 
 /** What a revision request rewrites, stored on the request itself: a later verdict may overwrite the
  * week's reason while a failed request still waits for a retry. */
@@ -363,7 +360,7 @@ export async function reevaluateCurrentWeek(
     const { week } = found;
 
     const running = week.revisionRequest;
-    const stale = running?.status === 'RUNNING' && Date.now() - running.updatedAt.getTime() > STALE_RUNNING_MS;
+    const stale = running != null && staleReason(running) != null;
     if (week.revisionGeneration === 'PENDING' && !stale) return { kind: 'in-flight' };
 
     const judged = await judgeWeek(userId, week, today, timezone, trigger);
@@ -563,9 +560,8 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
         await failRevision(week, request.id, error);
         return { kind: 'failed' as const, retriesLeft: retriesLeft(request.retryCount) };
     };
-    if (request.status === 'RUNNING' && Date.now() - request.updatedAt.getTime() > STALE_RUNNING_MS) {
-        return failed('Stalled: the proxy never wrote a result');
-    }
+    const stalled = staleReason(request);
+    if (stalled) return failed(stalled);
     if (request.status === 'FAILED') {
         if (week.revisionGeneration === 'FAILED')
             return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
