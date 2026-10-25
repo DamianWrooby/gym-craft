@@ -11,7 +11,7 @@ export const TERMS = {
     acuteLoad: { en: 'Acute load', pl: 'Obciążenie krótkoterminowe' },
     chronicLoad: { en: 'Chronic load', pl: 'Obciążenie długoterminowe' },
     monotony: { en: 'Monotony', pl: 'Monotonia' },
-    strain: { en: 'Strain', pl: 'Obciążenie' },
+    strain: { en: 'Strain', pl: 'Stres treningowy' },
     crossTraining: { en: 'Cross-training', pl: 'Trening krzyżowy' },
     raceResult: { en: 'Race result', pl: 'Wynik zawodów' },
     anchor: { en: 'Anchor', pl: 'Punkt odniesienia' },
