@@ -20,6 +20,13 @@ afterEach(() => {
 });
 
 describe('PUT /api/user/[id]/locale', () => {
+    it('accepts Polish in production', async () => {
+        env.PUBLIC_APP_ENV = 'production';
+        const res = await call('user-1', { locale: 'pl' }).response;
+        env.PUBLIC_APP_ENV = 'development';
+        expect(res.status).toBe(200);
+    });
+
     it('returns 403 for another user', async () => {
         const res = await call('someone-else', { locale: 'pl' }).response;
         expect(res.status).toBe(403);
@@ -38,12 +45,5 @@ describe('PUT /api/user/[id]/locale', () => {
         const res = await call('user-1', { locale: 'de' }).response;
         expect(res.status).toBe(400);
         expect(db.user.update).not.toHaveBeenCalled();
-    });
-
-    it('rejects Polish in production while it is unreleased', async () => {
-        env.PUBLIC_APP_ENV = 'production';
-        const res = await call('user-1', { locale: 'pl' }).response;
-        env.PUBLIC_APP_ENV = 'development';
-        expect(res.status).toBe(400);
     });
 });
