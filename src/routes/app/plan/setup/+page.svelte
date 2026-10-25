@@ -259,7 +259,7 @@
     }
 </script>
 
-<svelte:head><title>Plan setup | GymCraft</title></svelte:head>
+<svelte:head><title>{m.setup_progress()} | GymCraft</title></svelte:head>
 
 <PlannerShell fullscreen>
     {#if generating}

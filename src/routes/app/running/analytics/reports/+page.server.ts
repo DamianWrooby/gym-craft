@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { error } from '@sveltejs/kit';
 import { to } from 'await-to-js';
 import {
@@ -12,7 +13,7 @@ import { toIsoDate } from '$lib/utils/iso-week';
 
 export async function load({ locals }) {
     const userId = locals.user?.id;
-    if (!userId) error(401, 'Unauthorized');
+    if (!userId) error(401, m.api_unauthorized());
 
     const asOf = toIsoDate(new Date());
     const weeks = enumerateWeeks(asOf, TIMELINE_WEEKS);
@@ -27,7 +28,7 @@ export async function load({ locals }) {
             getTimelineActivities(userId, new Date(`${oldestMonday}T00:00:00Z`)),
         ]),
     );
-    if (err || !results) error(500, 'Cannot load reports');
+    if (err || !results) error(500, m.page_reports_load_failed());
     const [reports, monthlyReportCount, profile, goals, timelineActivities] = results;
 
     const timeline = buildWeekTimeline({ asOf, count: TIMELINE_WEEKS, reports, activities: timelineActivities });

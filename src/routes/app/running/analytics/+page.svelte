@@ -120,7 +120,7 @@
     }
 </script>
 
-<Seo title="Analytics | GymCraft™" metaDescription="Training analytics dashboard." />
+<Seo title={`${m.running_analytics()} | GymCraft™`} metaDescription="Training analytics dashboard." />
 
 <Card width="3/4">
     <div class="md:w-5/6 m-auto pb-8 pt-4">

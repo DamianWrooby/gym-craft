@@ -102,7 +102,9 @@
     }
 </script>
 
-<Seo title="Running | GymCraft™" metaDescription="Running hub — review your activity analytics from Garmin Connect." />
+<Seo
+    title={`${m.nav_running()} | GymCraft™`}
+    metaDescription="Running hub — review your activity analytics from Garmin Connect." />
 
 <Card width="3/4">
     <div class="flex flex-col items-center text-center gap-3 pb-8">

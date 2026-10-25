@@ -28,7 +28,7 @@
     $: onCurrent = plan != null && shown === plan.currentWeekIndex;
 </script>
 
-<svelte:head><title>Plan | GymCraft</title></svelte:head>
+<svelte:head><title>{m.nav_plan()} | GymCraft</title></svelte:head>
 
 <PlannerShell>
     {#if plan && shown != null}

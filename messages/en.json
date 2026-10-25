@@ -836,5 +836,10 @@
     "api_user_not_found": "User not found",
     "api_verify_not_sent": "Verification email not sent",
     "api_explain_limit": "Daily limit of {limit} explanations reached. Try again tomorrow.",
-    "api_garmin_too_many_steps": "This session has {count} steps; Garmin takes at most {max}"
+    "api_garmin_too_many_steps": "This session has {count} steps; Garmin takes at most {max}",
+    "report_modal_heading_short": "Weekly report",
+    "common_play_video": "Play video",
+    "page_profile_load_failed": "Cannot load profile",
+    "page_reports_load_failed": "Cannot load reports",
+    "page_report_load_failed": "Cannot load report"
 }

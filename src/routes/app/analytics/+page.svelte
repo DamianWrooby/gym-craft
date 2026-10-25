@@ -4,7 +4,7 @@
     import Card from '@components/card/Card.svelte';
 </script>
 
-<Seo title="Analytics | GymCraft™" metaDescription="Training analytics and insights." />
+<Seo title={`${m.running_analytics()} | GymCraft™`} metaDescription="Training analytics and insights." />
 
 <Card width="3/4">
     <div class="md:w-3/4 m-auto pb-8">

@@ -6,7 +6,9 @@
     import Seo from '$lib/components/seo/Seo.svelte';
 </script>
 
-<Seo title="Gym | GymCraft™" metaDescription="Gym hub — strength sessions now live in your training plan." />
+<Seo
+    title={`${m.nav_gym()} | GymCraft™`}
+    metaDescription="Gym hub — strength sessions now live in your training plan." />
 
 <Card width="3/4">
     <div class="flex flex-col items-center text-center gap-3 pb-8">

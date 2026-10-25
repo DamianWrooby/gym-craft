@@ -78,7 +78,7 @@
     }
 </script>
 
-<Seo title="Weekly report | GymCraft™" metaDescription="Coach-style weekly training review." />
+<Seo title={`${m.report_modal_heading_short()} | GymCraft™`} metaDescription="Coach-style weekly training review." />
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">

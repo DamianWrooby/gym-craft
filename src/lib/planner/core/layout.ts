@@ -2,6 +2,7 @@
 // Pure arithmetic over the school's declared data. No AI call, no I/O.
 import { m } from '$lib/paraglide/messages.js';
 import { displaySchool } from '$lib/i18n/school-text';
+import { LEAD_IN_NAME } from './lead-in-name';
 import { addDays, daysBetween, mondayOf } from '$lib/utils/iso-week';
 import type { PhaseDefinition, SchoolDefinition, SchoolId, VolumeUnit } from '../schools/types';
 import {
@@ -90,10 +91,9 @@ export interface Layout {
     losses: string[];
 }
 
-export type LayoutResult = { ok: true; layout: Layout } | { ok: false; reason: string };
-
-import { LEAD_IN_NAME } from './lead-in-name';
 export { LEAD_IN_NAME };
+
+export type LayoutResult = { ok: true; layout: Layout } | { ok: false; reason: string };
 
 /** Number of Monday–Sunday weeks the horizon touches; partial weeks count as one. */
 export function horizonWeekCount(startDate: string, endDate: string): number {
