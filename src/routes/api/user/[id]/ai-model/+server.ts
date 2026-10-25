@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { db } from '$lib/database';
 import { createResponse } from '$lib/utils/response';
 import { getLimit } from '@/constants/subscription.constants';
@@ -13,7 +14,7 @@ export async function PUT({
     locals: App.Locals;
 }): Promise<Response> {
     if (params.id !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json().catch(() => null);

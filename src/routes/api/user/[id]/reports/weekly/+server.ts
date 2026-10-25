@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import {
     findExistingReport,
@@ -35,7 +36,7 @@ export async function POST({
     const userId = params.id;
 
     if (userId !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json();
@@ -53,7 +54,7 @@ export async function POST({
     ]);
 
     if (!profile) {
-        return createResponse(412, { code: 'PROFILE_REQUIRED', message: 'Athlete profile must be set up first' });
+        return createResponse(412, { code: 'PROFILE_REQUIRED', message: m.api_profile_required() });
     }
 
     const dateValidation = validateDates(periodStart, periodEnd, profile.timezone);
@@ -65,14 +66,14 @@ export async function POST({
     if (count >= reportLimit) {
         return createResponse(403, {
             code: 'REPORT_LIMIT_REACHED',
-            message: 'Monthly report generation limit reached',
+            message: m.api_report_limit(),
         });
     }
 
     if (existing && !overwrite) {
         return createResponse(409, {
             code: 'REPORT_EXISTS',
-            message: 'A report for this period already exists',
+            message: m.api_report_exists(),
             existingId: existing.id,
         });
     }
@@ -80,7 +81,7 @@ export async function POST({
     if (goals.length !== goalIds.length) {
         return createResponse(400, {
             code: 'INVALID_GOAL_IDS',
-            message: 'One or more goal IDs are unknown or archived',
+            message: m.api_unknown_goals(),
         });
     }
 
@@ -151,7 +152,7 @@ export async function POST({
     if (!proxy.ok || !proxy.summary) {
         // proxy.error carries OpenAI's own wording — diagnostics, not copy. Log it, show our own.
         console.error(`[weekly-report] proxy failed for user ${userId}: ${proxy.error}`);
-        return createResponse(502, { code: 'LLM_FAILED', message: 'Coach service is temporarily unavailable' });
+        return createResponse(502, { code: 'LLM_FAILED', message: m.api_coach_unavailable() });
     }
 
     const report = await persistTrainingReport({ ...baseInput, summary: proxy.summary });

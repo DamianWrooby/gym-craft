@@ -1,6 +1,7 @@
 // A week job: the AI request that fills one slot of a plan week, its generation or its revision
 // (ADR 0014). Owns the lifecycle both slots share: staleness, failing, the finalize gate and the
 // retry claim (ADR 0016). What a DONE output means stays with the slot's own module.
+import { m } from '$lib/paraglide/messages.js';
 import { db } from '$lib/database';
 import { createResponse } from '$lib/utils/response';
 import type { AiRequest } from '@prisma/client';
@@ -146,7 +147,7 @@ export function finalizeResponse(slot: WeekSlot, outcome: FinalizeOutcome): Resp
     const { key } = WORDING[slot];
     switch (outcome.kind) {
         case 'not-found':
-            return createResponse(404, { code: 'NOT_FOUND', message: 'Plan week not found' });
+            return createResponse(404, { code: 'NOT_FOUND', message: m.api_week_not_found() });
         case 'generated':
             return createResponse(200, { data: { [key]: 'GENERATED' } });
         case 'pending':
@@ -160,7 +161,7 @@ export function retryResponse(slot: WeekSlot, outcome: RetryOutcome): Response {
     const { noun } = WORDING[slot];
     switch (outcome.kind) {
         case 'not-found':
-            return createResponse(404, { code: 'NOT_FOUND', message: 'Plan week not found' });
+            return createResponse(404, { code: 'NOT_FOUND', message: m.api_week_not_found() });
         case 'not-failed':
             return createResponse(409, { code: 'NOT_FAILED', message: `Only a failed ${noun} can be retried` });
         case 'limit':

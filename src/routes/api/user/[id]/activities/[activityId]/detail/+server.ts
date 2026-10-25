@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { db } from '$lib/database';
 import { ensureActivityDetail } from '$lib/server/garmin/ensure-activity-detail';
@@ -13,7 +14,7 @@ export async function POST({
     const activityId = params.activityId;
 
     if (userId !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const activity = await db.activity.findFirst({
@@ -31,7 +32,7 @@ export async function POST({
     });
 
     if (!activity) {
-        return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: 'Activity not found' });
+        return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: m.api_activity_not_found() });
     }
 
     const result = await ensureActivityDetail(userId, activity);

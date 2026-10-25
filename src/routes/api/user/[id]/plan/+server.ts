@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile, invalidateAthleteProfile } from '$lib/prisma/prisma';
@@ -13,7 +14,7 @@ import {
     persistNewPlan,
 } from '$lib/server/planner/repository';
 
-const PROFILE_REQUIRED = { code: 'PROFILE_REQUIRED', message: 'Set up your athlete profile first' };
+const PROFILE_REQUIRED = { code: 'PROFILE_REQUIRED', message: m.api_profile_required_short() };
 
 /** Create a plan: lay out the whole horizon, write it, and record week 1's AI request (ADR 0014). */
 export async function POST({
@@ -26,7 +27,7 @@ export async function POST({
     locals: App.Locals;
 }): Promise<Response> {
     if (params.id !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
     const userId = params.id;
 

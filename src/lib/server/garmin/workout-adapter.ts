@@ -1,5 +1,6 @@
 // The one outbound adapter from a planned session to a Garmin Connect workout (spec #409).
 // Pure: pace as m/s, repeats one level deep, a step ceiling, strength load in the step description.
+import { m } from '$lib/paraglide/messages.js';
 import { isRepeat, type RunBlock, type RunStep, type TypedSession } from '$lib/planner/core/session';
 
 /** Garmin refuses or truncates long workouts; a planned session never needs more. */
@@ -130,7 +131,7 @@ export function toGarminWorkout(session: GarminSource): AdaptResult {
             ]),
         );
     } else {
-        return { ok: false, code: 'UNSUPPORTED_KIND', message: 'Only running and strength sessions go to Garmin' };
+        return { ok: false, code: 'UNSUPPORTED_KIND', message: m.api_garmin_kinds_only() };
     }
 
     const count = assignStepOrder(steps);
@@ -138,7 +139,7 @@ export function toGarminWorkout(session: GarminSource): AdaptResult {
         return {
             ok: false,
             code: 'TOO_MANY_STEPS',
-            message: `This session has ${count} steps; Garmin takes at most ${GARMIN_STEP_CEILING}`,
+            message: m.api_garmin_too_many_steps({ count, max: GARMIN_STEP_CEILING }),
         };
     }
     return {

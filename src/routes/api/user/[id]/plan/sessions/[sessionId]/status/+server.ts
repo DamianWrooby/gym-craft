@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { SESSION_MARKS, markSession, sessionResponse, type SessionMark } from '$lib/server/planner/sessions';
 import { reevaluateCurrentWeek } from '$lib/server/planner/revision';
@@ -12,11 +13,11 @@ export async function POST({
     params: { id: string; sessionId: string };
     locals: App.Locals;
 }): Promise<Response> {
-    if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
+    if (params.id !== locals.user?.id) return createResponse(403, { message: m.api_unauthorized() });
 
     const body = await request.json().catch(() => null);
     if (!SESSION_MARKS.includes(body?.status)) {
-        return createResponse(400, { code: 'INVALID_BODY', message: 'Mark the session done, skipped or planned' });
+        return createResponse(400, { code: 'INVALID_BODY', message: m.api_mark_session() });
     }
     const mark = body.status as SessionMark;
     const outcome = await markSession(params.id, params.sessionId, mark);

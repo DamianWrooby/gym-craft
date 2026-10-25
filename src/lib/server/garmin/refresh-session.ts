@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { to } from 'await-to-js';
 import { getGarminEmail, getGarminSessionToken, saveGarminSessionToken } from '$lib/prisma/prisma';
 import { garminApiUrl, garminApiHeaders } from './config';
@@ -47,7 +48,7 @@ export async function refreshGarminSession(
             ok: false,
             status: 400,
             code: 'GARMIN_EMAIL_NOT_CONFIGURED',
-            message: 'Garmin email not configured',
+            message: m.api_garmin_email_missing(),
         };
     }
 
@@ -74,7 +75,7 @@ export async function refreshGarminSession(
             ok: false,
             status: 502,
             code: 'GARMIN_SERVICE_ERROR',
-            message: 'Invalid response from Garmin service',
+            message: m.api_garmin_invalid_response(),
         };
     }
 
@@ -85,7 +86,7 @@ export async function refreshGarminSession(
     const sessionToken: string = data.session_token;
     const [saveError] = await to(saveGarminSessionToken(userId, sessionToken));
     if (saveError) {
-        return { ok: false, status: 500, code: 'GARMIN_SERVICE_ERROR', message: 'Failed to persist Garmin session' };
+        return { ok: false, status: 500, code: 'GARMIN_SERVICE_ERROR', message: m.api_garmin_session_failed() };
     }
 
     return { ok: true, sessionToken, minted: true };

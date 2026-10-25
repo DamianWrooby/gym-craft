@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { saveCheckIn } from '$lib/server/planner/check-ins';
 
@@ -11,7 +12,7 @@ export async function POST({
     params: { id: string };
     locals: App.Locals;
 }): Promise<Response> {
-    if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
+    if (params.id !== locals.user?.id) return createResponse(403, { message: m.api_unauthorized() });
 
     const body = await request.json().catch(() => null);
     const saved = await saveCheckIn(params.id, body);
