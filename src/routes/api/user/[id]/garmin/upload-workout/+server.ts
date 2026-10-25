@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { to } from 'await-to-js';
 import { createResponse } from '$lib/utils/response';
 import { garminApiUrl, garminBearerKeyHeaders } from '$lib/server/garmin/config';
@@ -18,7 +19,7 @@ export async function POST({
     const userId = params.id;
 
     if (userId !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     // The browser names a planned session and nothing else; the server builds the workout (spec #409).
@@ -29,7 +30,7 @@ export async function POST({
     }
 
     const session = await getUploadableSession(userId, body.plannedSessionId);
-    if (!session) return createResponse(404, { code: 'NOT_FOUND', message: 'Session not found' });
+    if (!session) return createResponse(404, { code: 'NOT_FOUND', message: m.api_session_not_found() });
     const adapted = toGarminWorkout(session);
     if (!adapted.ok) return createResponse(422, { code: adapted.code, message: adapted.message });
     const workout = adapted.workout;
@@ -74,7 +75,7 @@ async function uploadWorkout(
             ok: false,
             status: 502,
             code: 'GARMIN_SERVICE_PARSE_ERROR',
-            message: 'Invalid response from Garmin service',
+            message: m.api_garmin_invalid_response(),
         };
     }
 

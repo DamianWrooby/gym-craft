@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { db } from '$lib/database';
 import { isRunningTypeKey } from '$lib/utils/activity-type';
@@ -24,7 +25,7 @@ export async function POST({
 }): Promise<Response> {
     const userId = params.id;
     if (userId !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json().catch(() => null);
@@ -47,7 +48,7 @@ export async function POST({
         select: { id: true, activityType: true },
     });
     if (!activity) {
-        return createResponse(404, { code: 'NOT_FOUND', message: 'Activity not found' });
+        return createResponse(404, { code: 'NOT_FOUND', message: m.api_activity_not_found() });
     }
 
     await storeActivityDetail(activity.id, detail);

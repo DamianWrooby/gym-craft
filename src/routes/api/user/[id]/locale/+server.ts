@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import type { Cookies } from '@sveltejs/kit';
 import { PUBLIC_APP_ENV } from '$env/static/public';
 import { db } from '$lib/database';
@@ -18,7 +19,7 @@ export async function PUT({
     cookies: Cookies;
 }): Promise<Response> {
     if (params.id !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json().catch(() => null);

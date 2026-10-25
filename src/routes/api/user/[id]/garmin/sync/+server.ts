@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { db } from '$lib/database';
 import { syncUserActivities, persistActivities } from '$lib/server/garmin/sync-activities';
@@ -21,7 +22,7 @@ export async function POST({
     const userId = params.id;
 
     if (userId !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json().catch(() => ({}));
@@ -59,7 +60,7 @@ async function persistFromClient(
     const activities = body.activities as unknown[];
 
     if (activities.length > MAX_SYNC_ACTIVITIES) {
-        return createResponse(400, { code: 'INVALID_PAYLOAD', message: 'Too many activities in a single sync' });
+        return createResponse(400, { code: 'INVALID_PAYLOAD', message: m.api_too_many_activities() });
     }
     if (!activities.every(isWellFormedRawActivity)) {
         return createResponse(400, { code: 'INVALID_PAYLOAD', message: 'Malformed activity payload' });
@@ -72,7 +73,7 @@ async function persistFromClient(
 
     const clientMode = body.mode;
     if ((clientMode === 'backfill' || clientMode === 'incremental') && clientMode !== serverMode) {
-        return createResponse(409, { code: 'STALE_STATE', message: 'Sync state changed, please retry' });
+        return createResponse(409, { code: 'STALE_STATE', message: m.api_sync_state_changed() });
     }
 
     try {

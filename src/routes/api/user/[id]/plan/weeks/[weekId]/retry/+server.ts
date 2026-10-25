@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { retryJob, retryResponse } from '$lib/server/planner/week-job';
 
@@ -10,6 +11,6 @@ export async function POST({
     params: { id: string; weekId: string };
     locals: App.Locals;
 }): Promise<Response> {
-    if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
+    if (params.id !== locals.user?.id) return createResponse(403, { message: m.api_unauthorized() });
     return retryResponse('generation', await retryJob(params.id, params.weekId, 'generation'));
 }

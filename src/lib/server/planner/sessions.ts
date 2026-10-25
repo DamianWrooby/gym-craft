@@ -1,5 +1,6 @@
 // Athlete-owned changes to planned sessions (spec #409, stories 33–38, 65). The app never
 // overwrites an athlete session: editing an AI session supersedes it with an `ATHLETE` row.
+import { m } from '$lib/paraglide/messages.js';
 import { db } from '$lib/database';
 import { toIsoDate, fromIsoDate } from '$lib/utils/iso-week';
 import { getSchool, isSchoolId } from '$lib/planner/schools/catalogue';
@@ -206,11 +207,11 @@ export function sessionResponse(
 ): { status: number; body: Record<string, unknown> } {
     switch (outcome.kind) {
         case 'not-found':
-            return { status: 404, body: { code: 'NOT_FOUND', message: 'Session not found' } };
+            return { status: 404, body: { code: 'NOT_FOUND', message: m.api_session_not_found() } };
         case 'invalid':
             return { status: 400, body: { code: 'INVALID_SESSION', message: outcome.errors.join('; ') } };
         case 'outside-plan':
-            return { status: 400, body: { code: 'OUTSIDE_PLAN', message: 'The date is outside your plan' } };
+            return { status: 400, body: { code: 'OUTSIDE_PLAN', message: m.api_date_outside_plan() } };
         case 'locked':
             return { status: 409, body: { code: 'LOCKED', message: outcome.reason } };
         case 'saved':

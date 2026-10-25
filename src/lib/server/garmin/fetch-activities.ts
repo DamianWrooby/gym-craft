@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { to } from 'await-to-js';
 import { mapGarminActivities } from './activity-mapper';
 import { classifyGarminFailure } from '$lib/garmin/garmin-failure';
@@ -62,7 +63,7 @@ async function requestActivities(
             ok: false,
             status: 502,
             code: 'GARMIN_SERVICE_PARSE_ERROR',
-            message: 'Invalid response from Garmin service',
+            message: m.api_garmin_invalid_response(),
         };
     }
 

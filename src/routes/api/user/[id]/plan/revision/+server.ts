@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { reevaluateCurrentWeek } from '$lib/server/planner/revision';
 
@@ -14,7 +15,7 @@ export async function POST({
     params: { id: string };
     locals: App.Locals;
 }): Promise<Response> {
-    if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
+    if (params.id !== locals.user?.id) return createResponse(403, { message: m.api_unauthorized() });
 
     const body = await request.json().catch(() => null);
     const trigger = body?.trigger;
@@ -26,9 +27,9 @@ export async function POST({
     const outcome = await reevaluateCurrentWeek(params.id, trigger, {}, account);
     switch (outcome.kind) {
         case 'no-week':
-            return createResponse(404, { code: 'NO_WEEK', message: 'No written week is running today' });
+            return createResponse(404, { code: 'NO_WEEK', message: m.api_no_written_week_today() });
         case 'in-flight':
-            return createResponse(409, { code: 'IN_FLIGHT', message: 'A revision of this week is already running' });
+            return createResponse(409, { code: 'IN_FLIGHT', message: m.api_revision_running() });
         default:
             return createResponse(200, { data: outcome });
     }

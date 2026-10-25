@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { answerDecision } from '$lib/server/planner/decision';
 import { DECISION_OPTIONS, type DecisionOption } from '$lib/planner/core/conflict';
@@ -15,22 +16,22 @@ export async function POST({
     params: { id: string; weekId: string };
     locals: App.Locals;
 }): Promise<Response> {
-    if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
+    if (params.id !== locals.user?.id) return createResponse(403, { message: m.api_unauthorized() });
 
     const body = await request.json().catch(() => null);
     const choice = body?.choice;
     if (!DECISION_OPTIONS.includes(choice)) {
-        return createResponse(400, { code: 'INVALID_BODY', message: 'Choose drop, downgrade, keep or rewrite' });
+        return createResponse(400, { code: 'INVALID_BODY', message: m.api_choose_decision() });
     }
 
     const outcome = await answerDecision(params.id, params.weekId, choice as DecisionOption);
     switch (outcome.kind) {
         case 'not-found':
-            return createResponse(404, { code: 'NOT_FOUND', message: 'Plan week not found' });
+            return createResponse(404, { code: 'NOT_FOUND', message: m.api_week_not_found() });
         case 'no-ask':
-            return createResponse(409, { code: 'NO_PENDING_DECISION', message: 'This week has no open question' });
+            return createResponse(409, { code: 'NO_PENDING_DECISION', message: m.api_week_no_question() });
         case 'not-offered':
-            return createResponse(400, { code: 'NOT_OFFERED', message: 'That choice was not offered for this week' });
+            return createResponse(400, { code: 'NOT_OFFERED', message: m.api_choice_not_offered() });
         case 'answered':
             return createResponse(200, { data: { decision: outcome.decision } });
         case 'rewrite':
