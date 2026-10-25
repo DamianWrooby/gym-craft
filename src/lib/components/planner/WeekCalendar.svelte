@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import SessionCard from './SessionCard.svelte';
     import { addDays } from '$lib/utils/iso-week';
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import type { PlanViewActivity, PlanViewWeek } from '$lib/planner/plan-view';
     import type { TuneUpFixture } from '$lib/planner/core/fixtures';
     import type { SchoolDefinition } from '$lib/planner/schools/types';
@@ -14,13 +16,11 @@
         activities: PlanViewActivity[] | null;
     } | null = null;
 
-    const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
     // Both session kinds share one day, interleaved: the week reads as one plan.
-    $: days = DAY_NAMES.map((name, i) => {
+    $: days = [0, 1, 2, 3, 4, 5, 6].map((i) => {
         const date = addDays(week.startDate, i);
         return {
-            name,
+            name: new Date(`${date}T00:00:00Z`).toLocaleDateString(getLocale(), { weekday: 'short', timeZone: 'UTC' }),
             date,
             sessions: week.sessions.filter((s) => s.scheduledDate === date),
             fixtures: fixtures.filter((f) => f.date === date),
@@ -28,7 +28,7 @@
     });
 </script>
 
-<ol class="grid gap-2 md:grid-cols-7" aria-label="Sessions by day">
+<ol class="grid gap-2 md:grid-cols-7" aria-label={m.calendar_aria()}>
     {#each days as day}
         <li class="space-y-1.5">
             <div class="text-xs uppercase tracking-widest text-slate-500">
@@ -36,17 +36,17 @@
             </div>
             <!-- A tune-up race is a fixed session: the athlete's, never moved or rewritten (story 36). -->
             {#each day.fixtures as fixture (fixture.goalId)}
-                <article class="gc-fixture" aria-label="Tune-up race">
-                    <p class="font-semibold text-amber-300">⚑ {fixture.name ?? 'Tune-up race'}</p>
+                <article class="gc-fixture" aria-label={m.calendar_tune_up()}>
+                    <p class="font-semibold text-amber-300">⚑ {fixture.name ?? m.calendar_tune_up()}</p>
                     <p class="text-xs text-slate-400">
-                        {fixture.distanceM ? `${fixture.distanceM / 1000} km · ` : ''}fixed
+                        {fixture.distanceM ? `${fixture.distanceM / 1000} km · ` : ''}{m.calendar_fixed()}
                     </p>
                 </article>
             {/each}
             {#each day.sessions as session (session.id)}
                 <SessionCard {session} {schoolId} actions={actions && { ...actions, week }} />
             {:else}
-                {#if day.fixtures.length === 0}<p class="text-xs text-slate-600">Rest</p>{/if}
+                {#if day.fixtures.length === 0}<p class="text-xs text-slate-600">{m.calendar_rest()}</p>{/if}
             {/each}
         </li>
     {/each}

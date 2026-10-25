@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
+    import { otherEffortLabel, otherModalityLabel } from '$lib/i18n/labels';
     // One form for adding and editing (story 33): kind is a field, and the server costs the session
     // before it is kept. Editing an AI session makes it the athlete's own (story 35).
     import { createEventDispatcher } from 'svelte';
@@ -76,21 +78,21 @@
 <form class="gc-session-form space-y-2 text-sm" on:submit|preventDefault={save}>
     <div class="flex flex-wrap gap-2">
         <label class="space-y-1">
-            <span class="block text-slate-400">Kind</span>
+            <span class="block text-slate-400">{m.form_kind()}</span>
             <select bind:value={kind} disabled={session != null}>
-                <option value="RUNNING">Run</option>
-                <option value="STRENGTH">Strength</option>
-                <option value="OTHER">Other training</option>
+                <option value="RUNNING">{m.form_kind_run()}</option>
+                <option value="STRENGTH">{m.form_kind_strength()}</option>
+                <option value="OTHER">{m.form_kind_other()}</option>
             </select>
         </label>
         <label class="space-y-1">
-            <span class="block text-slate-400">Day</span>
+            <span class="block text-slate-400">{m.form_day()}</span>
             <select bind:value={date}>
                 {#each dates as d}<option value={d}>{d}</option>{/each}
             </select>
         </label>
         <label class="space-y-1 grow">
-            <span class="block text-slate-400">Title</span>
+            <span class="block text-slate-400">{m.form_title()}</span>
             <input class="w-full" type="text" maxlength="120" bind:value={title} />
         </label>
     </div>
@@ -98,41 +100,50 @@
     {#if kind === 'OTHER'}
         <div class="flex flex-wrap gap-2">
             <label class="space-y-1">
-                <span class="block text-slate-400">Activity</span>
+                <span class="block text-slate-400">{m.form_activity()}</span>
                 <select bind:value={modality}>
-                    {#each OTHER_MODALITIES as m}<option value={m}>{m}</option>{/each}
+                    {#each OTHER_MODALITIES as mod}<option value={mod}>{otherModalityLabel(mod)}</option>{/each}
                 </select>
             </label>
             <label class="space-y-1">
-                <span class="block text-slate-400">Minutes</span>
+                <span class="block text-slate-400">{m.common_minutes()}</span>
                 <input class="w-20" type="number" min="1" max="1440" bind:value={durationMin} />
             </label>
             <label class="space-y-1">
-                <span class="block text-slate-400">Effort</span>
+                <span class="block text-slate-400">{m.form_effort()}</span>
                 <select bind:value={effort}>
-                    {#each OTHER_EFFORTS as e}<option value={e}>{e}</option>{/each}
+                    {#each OTHER_EFFORTS as e}<option value={e}>{otherEffortLabel(e)}</option>{/each}
                 </select>
             </label>
         </div>
     {:else if kind === 'STRENGTH'}
         <div class="flex flex-wrap gap-2">
             <label class="space-y-1">
-                <span class="block text-slate-400">Template</span>
+                <span class="block text-slate-400">{m.form_template()}</span>
                 <select bind:value={template}>
                     {#each school?.strengthTemplates ?? [] as t}<option value={t.key}>{t.name}</option>{/each}
                 </select>
             </label>
             <label class="space-y-1">
-                <span class="block text-slate-400">Minutes</span>
+                <span class="block text-slate-400">{m.common_minutes()}</span>
                 <input class="w-20" type="number" min="1" bind:value={durationMin} />
             </label>
         </div>
         {#if !session}
             <div class="flex flex-wrap gap-2">
-                <input type="text" placeholder="Exercise" aria-label="Exercise" bind:value={exercise.name} />
-                <input class="w-16" type="number" min="1" aria-label="Sets" bind:value={exercise.sets} />
-                <input class="w-16" type="text" aria-label="Reps" bind:value={exercise.reps} />
-                <input class="w-24" type="text" placeholder="Load" aria-label="Load" bind:value={exercise.load} />
+                <input
+                    type="text"
+                    placeholder={m.form_exercise()}
+                    aria-label={m.form_exercise()}
+                    bind:value={exercise.name} />
+                <input class="w-16" type="number" min="1" aria-label={m.form_sets()} bind:value={exercise.sets} />
+                <input class="w-16" type="text" aria-label={m.form_reps()} bind:value={exercise.reps} />
+                <input
+                    class="w-24"
+                    type="text"
+                    placeholder={m.form_load()}
+                    aria-label={m.form_load()}
+                    bind:value={exercise.load} />
             </div>
         {/if}
     {:else if session}
@@ -148,7 +159,7 @@
                                 class="w-20"
                                 type="number"
                                 min="1"
-                                aria-label="Minutes"
+                                aria-label={m.common_minutes()}
                                 value={Math.round(step.durationSec / 60)}
                                 on:input={(e) => (step.durationSec = Number(e.currentTarget.value) * 60)} />
                             <span class="text-slate-500">min</span>
@@ -157,7 +168,7 @@
                                 class="w-24"
                                 type="number"
                                 min="1"
-                                aria-label="Metres"
+                                aria-label={m.form_metres()}
                                 value={step.distanceM}
                                 on:input={(e) => (step.distanceM = Number(e.currentTarget.value))} />
                             <span class="text-slate-500">m</span>
@@ -169,13 +180,13 @@
     {:else}
         <div class="flex flex-wrap gap-2">
             <label class="space-y-1">
-                <span class="block text-slate-400">Intensity</span>
+                <span class="block text-slate-400">{m.form_intensity()}</span>
                 <select bind:value={label}>
                     {#each school?.intensityLabels ?? [] as l}<option value={l.key}>{l.name}</option>{/each}
                 </select>
             </label>
             <label class="space-y-1">
-                <span class="block text-slate-400">Minutes</span>
+                <span class="block text-slate-400">{m.common_minutes()}</span>
                 <input class="w-20" type="number" min="1" bind:value={durationMin} />
             </label>
         </div>
@@ -183,7 +194,8 @@
 
     {#if error}<p class="text-red-400" role="alert">{error}</p>{/if}
     <div class="flex gap-2">
-        <button type="submit" class="gc-button" disabled={saving}>{session ? 'Save edit' : 'Add session'}</button>
-        <button type="button" class="gc-ghost" on:click={() => dispatch('close')}>Cancel</button>
+        <button type="submit" class="gc-button" disabled={saving}
+            >{session ? m.form_save_edit() : m.form_add_session()}</button>
+        <button type="button" class="gc-ghost" on:click={() => dispatch('close')}>{m.common_cancel()}</button>
     </div>
 </form>

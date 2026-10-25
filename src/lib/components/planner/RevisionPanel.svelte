@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     // The current week's revision (stories 69–75): runs one in flight, shows the verdict in numbers,
     // lets the athlete ask for one, and keeps the "what changed" view.
     import { onDestroy } from 'svelte';
@@ -64,7 +65,7 @@
         message = null;
         const result = await requestRevision(userId, 'ATHLETE');
         if ('error' in result) message = result.error;
-        else if (result.kind === 'no-change') message = 'Nothing is left to rewrite this week.';
+        else if (result.kind === 'no-change') message = m.revision_nothing_left();
         await invalidateAll();
         busy = false;
     }
@@ -83,25 +84,25 @@
     });
 </script>
 
-<section class="space-y-2" aria-label="Revision">
+<section class="space-y-2" aria-label={m.revision_aria()}>
     {#if pending && !stalled}
         <div class="flex items-center gap-3" aria-live="polite">
             <span class="gc-pulse" aria-hidden="true">◆</span>
-            <p class="text-sm text-slate-300">Rewriting the rest of this week. This takes up to a minute.</p>
+            <p class="text-sm text-slate-300">{m.revision_running()}</p>
         </div>
     {:else if pending}
         <p class="text-sm text-amber-300" role="status">
-            The revision is taking longer than expected. Reload the page in a few minutes.
+            {m.revision_stalled()}
         </p>
     {:else if failed}
         <div class="space-y-2" role="alert">
-            <p class="text-sm text-red-400">The revision failed. Your week is unchanged and nothing was counted.</p>
+            <p class="text-sm text-red-400">{m.revision_failed()}</p>
             {#if request && request.retriesLeft > 0}
                 <button type="button" class="gc-button" disabled={busy} on:click={retry}>
-                    {busy ? 'Retrying…' : `Try again (${request.retriesLeft} left)`}
+                    {busy ? m.revision_retrying() : m.revision_try_again({ left: request.retriesLeft })}
                 </button>
             {:else}
-                <p class="text-sm text-slate-400">No retries left for this revision.</p>
+                <p class="text-sm text-slate-400">{m.revision_no_retries()}</p>
             {/if}
         </div>
     {/if}
@@ -111,44 +112,50 @@
             class="text-sm {reason.outcome === 'revise' ? 'text-slate-300' : 'text-amber-200'} space-y-1"
             role="status">
             <p>
-                Done {reason.executedLoad} + planned {reason.remainingLoad}{reason.budget != null
-                    ? ` against a budget of ${reason.budget}`
-                    : ''}{reason.overspend > 0 ? `: over by ${reason.overspend}` : ''}.
-                {#if reason.missedKeySessions.length}Missed key sessions: {reason.missedKeySessions.join(', ')}.{/if}
+                {m.revision_loads({ done: reason.executedLoad, planned: reason.remainingLoad })}{reason.budget != null
+                    ? ` ${m.revision_against_budget({ budget: reason.budget })}`
+                    : ''}{reason.overspend > 0 ? `: ${m.revision_over_by({ amount: reason.overspend })}` : ''}.
+                {#if reason.missedKeySessions.length}{m.revision_missed({
+                        sessions: reason.missedKeySessions.join(', '),
+                    })}{/if}
             </p>
             {#if reason.outcome === 'revise'}
-                <p>GymCraft rewrote the rest of this week from {reason.from}.</p>
+                <p>{m.revision_rewrote({ from: reason.from })}</p>
                 {#each reason.moved as line}<p>{line}</p>{/each}
             {:else if reason.outcome === 'capped'}
-                <p>You have used every revision this month. The week stays as written; edit sessions by hand.</p>
+                <p>{m.revision_capped()}</p>
             {:else if reason.remainingLoad > 0}
                 <p>
-                    Only your own sessions are left, so GymCraft will not change them. Answer the question on this week,
-                    edit them, or rewrite the week.
+                    {m.revision_only_own()}
                 </p>
             {:else}
-                <p>No sessions are left this week to change.</p>
+                <p>{m.revision_none_left()}</p>
             {/if}
         </div>
     {/if}
 
     {#if !pending}
         <button type="button" class="gc-ghost" disabled={busy || atCap} on:click={ask}>
-            {busy ? 'Requesting…' : 'Rewrite the rest of my week'}
+            {busy ? m.revision_requesting() : m.revision_ask()}
         </button>
     {/if}
     {#if message}<p class="text-sm text-amber-300">{message}</p>{/if}
 
     {#if superseded.length}
         <details class="text-sm text-slate-300">
-            <summary class="cursor-pointer text-slate-400">What changed ({superseded.length})</summary>
+            <summary class="cursor-pointer text-slate-400"
+                >{m.revision_what_changed({ count: superseded.length })}</summary>
             <ul class="mt-2 space-y-1">
                 {#each superseded as s (s.id)}
                     <li class="line-through decoration-slate-500">
-                        {s.scheduledDate} · {s.title} · load {s.plannedLoad}{s.byAthlete ? ' · your edit' : ''}
+                        {s.scheduledDate} · {s.title} · {m.revision_load({ load: s.plannedLoad })}{s.byAthlete
+                            ? ` · ${m.revision_your_edit()}`
+                            : ''}
                     </li>
                     <li class="pl-4 text-slate-400">
-                        → {s.replacedBy ? `${s.replacedBy.title} · load ${s.replacedBy.plannedLoad}` : 'dropped'}
+                        → {s.replacedBy
+                            ? `${s.replacedBy.title} · ${m.revision_load({ load: s.replacedBy.plannedLoad })}`
+                            : m.revision_dropped()}
                     </li>
                 {/each}
             </ul>

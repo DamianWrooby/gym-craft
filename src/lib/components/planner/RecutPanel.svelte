@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     // A recut (stories 80–85): move the goal date or change the school. Only weeks not yet pulled are
     // re-laid; the cost is shown before confirm. A race a few days earlier is absorbed at once.
     import { invalidateAll } from '$app/navigation';
@@ -62,19 +63,19 @@
 {/if}
 
 {#if open}
-    <section class="gc-panel p-4 space-y-3" aria-label="Recut the plan">
+    <section class="gc-panel p-4 space-y-3" aria-label={m.recut_aria()}>
         <p class="text-sm text-slate-300">
-            A recut re-lays only the weeks not written yet. Weeks you trained stay as they are.
+            {m.recut_intro()}
         </p>
         <label class="block text-sm">
-            Goal date
+            {m.recut_goal_date()}
             <input type="date" class="input mt-1" bind:value={goalDate} disabled={busy} />
         </label>
         <label class="block text-sm">
-            Training school
+            {m.plan_training_school()}
             <select class="select mt-1" bind:value={school} disabled={busy}>
                 {#each SCHOOLS as s (s.id)}
-                    <option value={s.id}>{s.name}{s.id === schoolId ? ' (current)' : ''}</option>
+                    <option value={s.id}>{s.name}{s.id === schoolId ? ` (${m.recut_current()})` : ''}</option>
                 {/each}
             </select>
         </label>
@@ -85,16 +86,17 @@
                 {#each preview.losses as loss}<p class="text-slate-300">{loss}</p>{/each}
             </div>
             <button type="button" class="gc-button" disabled={busy} on:click={() => submit(true)}>
-                {busy ? 'Re-laying…' : 'Confirm recut'}
+                {busy ? m.recut_relaying() : m.recut_confirm()}
             </button>
         {:else}
             <button type="button" class="gc-button" disabled={busy || !changed} on:click={() => submit(false)}>
-                {busy ? 'Checking…' : 'Show what changes'}
+                {busy ? m.recut_checking() : m.recut_preview()}
             </button>
         {/if}
-        <button type="button" class="gc-ghost" disabled={busy} on:click={() => (open = false)}>Cancel</button>
+        <button type="button" class="gc-ghost" disabled={busy} on:click={() => (open = false)}
+            >{m.common_cancel()}</button>
         {#if error}<p class="text-sm text-rose-300" role="alert">{error}</p>{/if}
     </section>
 {:else}
-    <button type="button" class="gc-ghost" on:click={openPanel}> Change goal date or school </button>
+    <button type="button" class="gc-ghost" on:click={openPanel}>{m.recut_open()}</button>
 {/if}

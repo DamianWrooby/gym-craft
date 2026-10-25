@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     // Drift suggests a recut; it never regenerates (ADR 0015, story 79). Dismissed, it returns only if
     // drift continues into a new week.
     import { createEventDispatcher } from 'svelte';
@@ -19,20 +20,20 @@
     }
 </script>
 
-<section class="gc-panel p-4 space-y-2" role="status" aria-label="Recut suggestion">
+<section class="gc-panel p-4 space-y-2" role="status" aria-label={m.recut_suggestion_aria()}>
     <p class="text-sm text-amber-200">
-        Key sessions were dropped or overridden in {driftWeeks} of the last 3 weeks. Your plan may no longer fit.
+        {m.recut_suggestion_drift({ weeks: driftWeeks })}
     </p>
     <p class="text-sm text-slate-300">
-        Options: move the goal date, change the training school, or keep going as planned.
+        {m.recut_suggestion_options()}
     </p>
     <div class="flex flex-wrap gap-2">
         <button type="button" class="gc-ghost" disabled={busy} on:click={() => dispatch('recut')}>
-            Move the goal date
+            {m.recut_move_date()}
         </button>
         <button type="button" class="gc-ghost" disabled={busy} on:click={() => dispatch('recut')}>
-            Change school
+            {m.recut_change_school()}
         </button>
-        <button type="button" class="gc-ghost" disabled={busy} on:click={keepGoing}>Keep going</button>
+        <button type="button" class="gc-ghost" disabled={busy} on:click={keepGoing}>{m.recut_keep_going()}</button>
     </div>
 </section>

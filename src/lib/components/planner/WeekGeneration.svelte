@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { onDestroy } from 'svelte';
     import { invalidateAll } from '$app/navigation';
     import { finalizeWeek, generateWeek, retryWeek } from '$lib/planner/generation-client';
@@ -72,25 +73,25 @@
 
 {#if failed}
     <div class="space-y-2" role="alert">
-        <p class="text-sm text-red-400">Writing this week failed. Nothing was stored.</p>
+        <p class="text-sm text-red-400">{m.week_gen_failed()}</p>
         {#if request && request.retriesLeft > 0}
             <button type="button" class="gc-button" disabled={retrying} on:click={retry}>
-                {retrying ? 'Retrying…' : `Try again (${request.retriesLeft} left)`}
+                {retrying ? m.revision_retrying() : m.revision_try_again({ left: request.retriesLeft })}
             </button>
         {:else}
-            <p class="text-sm text-slate-400">No retries left for this week.</p>
+            <p class="text-sm text-slate-400">{m.week_gen_no_retries()}</p>
         {/if}
         {#if retryError}<p class="text-sm text-amber-300">{retryError}</p>{/if}
     </div>
 {:else if stalled}
     <p class="text-sm text-amber-300" role="status">
-        This week is taking longer than expected. Reload the page in a few minutes.
+        {m.week_gen_stalled()}
     </p>
 {:else if request}
     <div class="flex items-center gap-3" aria-live="polite">
         <span class="gc-pulse" aria-hidden="true">◆</span>
         <p class="text-sm text-slate-300">
-            Writing this week's sessions. This takes up to a minute. You can close this tab.
+            {m.week_gen_running()}
         </p>
     </div>
 {/if}
