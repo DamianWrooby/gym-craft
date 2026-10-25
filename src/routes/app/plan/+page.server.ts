@@ -3,7 +3,7 @@ import { addDays, dateInTimezone, toIsoDate, todayInTimezone } from '$lib/utils/
 import { getAthleteProfile, getRunningGoals } from '$lib/prisma/prisma';
 import { getActivePlan, type ActivePlan } from '$lib/server/planner/repository';
 import { finalizeWeek } from '$lib/server/planner/week-generation';
-import { retriesLeft, staleReason } from '$lib/server/planner/week-job';
+import { awaitsFinalize, retriesLeft } from '$lib/server/planner/week-job';
 import { hashSessionToken } from '$lib/server/session-token';
 import { toPlanView, type PlanView, type PlanViewActivity, type PlanViewSession } from '$lib/planner/plan-view';
 import { unconfirmedSessions } from '$lib/planner/core/pull';
@@ -15,17 +15,6 @@ import { buildAdaptView, finalizePendingRevision } from '$lib/server/planner/ada
 import type { AdaptView } from '$lib/planner/adapt-view';
 
 type StoredWeek = ActivePlan['phases'][number]['weeks'][number];
-
-/**
- * A week whose request finished while no tab was open: finalize it now (ADR 0014). A request no
- * proxy call will finish is failed here, so the athlete can retry it (#423).
- */
-const awaitsFinalize = (w: StoredWeek) =>
-    w.generation !== 'GENERATED' &&
-    w.aiRequest != null &&
-    (w.aiRequest.status === 'DONE' ||
-        (w.aiRequest.status === 'FAILED' && w.generation !== 'FAILED') ||
-        staleReason(w.aiRequest) != null);
 
 function toSession(s: StoredWeek['sessions'][number], today: string): PlanViewSession {
     const anchor = s.anchor as { stale?: boolean } | null;
@@ -110,7 +99,7 @@ export const load = async ({
     const timezone = profile?.timezone ?? 'UTC';
     const today = todayInTimezone(timezone);
     let plan = stored;
-    const unfinalized = plan.phases.flatMap((p) => p.weeks).filter(awaitsFinalize);
+    const unfinalized = plan.phases.flatMap((p) => p.weeks).filter((w) => awaitsFinalize(w.generation, w.aiRequest));
     for (const w of unfinalized) await finalizeWeek(userId, w.id);
     const revised = await finalizePendingRevision(userId, plan, today);
     if (unfinalized.length > 0 || revised) plan = (await getActivePlan(userId)) ?? plan;
