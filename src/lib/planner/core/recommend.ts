@@ -1,4 +1,5 @@
 // Recommend school (ADR 0019): a declared table, first match wins. Never an AI call.
+import { m } from '$lib/paraglide/messages.js';
 import { SCHOOLS } from '../schools/catalogue';
 import { RECOMMENDATION_RULES } from '../schools/recommendation';
 import type { SchoolId } from '../schools/types';
@@ -16,8 +17,6 @@ export interface Recommendation {
     filtered: { schoolId: SchoolId; reason: string }[];
 }
 
-const FIRST_OFFERED_REASON = 'The best fit that suits your horizon.';
-
 export function recommendSchool(input: RecommendInput): Recommendation {
     const offered: SchoolId[] = [];
     const filtered: Recommendation['filtered'] = [];
@@ -26,7 +25,7 @@ export function recommendSchool(input: RecommendInput): Recommendation {
         if (input.horizonWeeks < floor) {
             filtered.push({
                 schoolId: s.id,
-                reason: `Needs at least ${floor} weeks; your horizon has ${input.horizonWeeks}.`,
+                reason: m.recommend_needs_weeks({ floor, weeks: input.horizonWeeks }),
             });
         } else offered.push(s.id);
     }
@@ -45,9 +44,9 @@ export function recommendSchool(input: RecommendInput): Recommendation {
     });
 
     const recommended = match
-        ? { schoolId: match.schoolId as SchoolId, reason: match.reason }
+        ? { schoolId: match.schoolId as SchoolId, reason: match.reason() }
         : offered.length > 0
-          ? { schoolId: offered[0], reason: FIRST_OFFERED_REASON }
+          ? { schoolId: offered[0], reason: m.recommend_first_offered() }
           : null;
     return { recommended, offered, filtered };
 }

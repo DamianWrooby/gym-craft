@@ -12,6 +12,7 @@
     import ConflictNote from './ConflictNote.svelte';
     import SessionForm from './SessionForm.svelte';
     import { getSchool } from '$lib/planner/schools/catalogue';
+    import { displaySchool } from '$lib/i18n/school-text';
 
     export let plan: PlanView;
     export let index: number;
@@ -26,7 +27,7 @@
     $: phase = plan.phases.find((p) => p.ordinal === week.phaseOrdinal)!;
     $: fixtures = plan.fixtures.filter((f) => f.weekIndex === index);
     $: partial = week.inHorizonDays < 7;
-    $: school = plan.school.id ? getSchool(plan.school.id) : null;
+    $: school = plan.school.id ? displaySchool(getSchool(plan.school.id)) : null;
     let adding = false;
     $: status =
         week.generation === 'GENERATED'

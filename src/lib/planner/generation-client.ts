@@ -1,6 +1,7 @@
 // Browser side of week generation (ADR 0014): ask the proxy to run the AI request, then ask the app
 // to finalize it. The browser holds only ids; a closed tab loses nothing because the proxy writes
 // the output to the row and the next visit finalizes it.
+import { m } from '$lib/paraglide/messages.js';
 import { appConfig } from '@/constants/app.constants';
 import type { DecisionOption } from './core/conflict';
 import { isProduction } from '$lib/utils/environment';
@@ -43,7 +44,7 @@ export async function generateWeek(input: {
 export async function retryWeek(userId: string, weekId: string): Promise<{ aiRequestId: string } | { error: string }> {
     const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/retry`, { method: 'POST' });
     const body = await response.json().catch(() => null);
-    if (!response.ok) return { error: body?.message ?? 'Retry failed. Try again later.' };
+    if (!response.ok) return { error: body?.message ?? m.client_retry_failed() };
     return { aiRequestId: body.data.aiRequestId };
 }
 
@@ -58,7 +59,7 @@ export async function pullWeek(
         body: JSON.stringify(body),
     });
     const json = await response.json().catch(() => null);
-    if (!response.ok) return { error: json?.message ?? 'Could not write the week. Try again later.' };
+    if (!response.ok) return { error: json?.message ?? m.client_write_week_failed() };
     return { aiRequestId: json.data.aiRequestId };
 }
 
@@ -74,5 +75,5 @@ export async function answerDecision(
     });
     if (response.ok) return { ok: true };
     const json = await response.json().catch(() => null);
-    return { error: json?.message ?? 'Could not save your answer. Try again.' };
+    return { error: json?.message ?? m.client_answer_failed() };
 }

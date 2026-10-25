@@ -5,6 +5,7 @@
     import { invalidateAll } from '$app/navigation';
     import { recutPlan, type RecutAnswer } from '$lib/planner/adapt-client';
     import { SCHOOLS } from '$lib/planner/schools/catalogue';
+    import { displaySchool } from '$lib/i18n/school-text';
     import type { SchoolId } from '$lib/planner/schools/types';
 
     export let userId: string;
@@ -74,7 +75,7 @@
         <label class="block text-sm">
             {m.plan_training_school()}
             <select class="select mt-1" bind:value={school} disabled={busy}>
-                {#each SCHOOLS as s (s.id)}
+                {#each SCHOOLS.map(displaySchool) as s (s.id)}
                     <option value={s.id}>{s.name}{s.id === schoolId ? ` (${m.recut_current()})` : ''}</option>
                 {/each}
             </select>
