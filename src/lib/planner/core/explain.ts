@@ -1,5 +1,9 @@
 // Explain plan: how the athlete's data shaped the laid-out horizon. Pure; built once at creation
 // and stored with the plan, because the inputs (recent running, anchor) change afterwards.
+import { m } from '$lib/paraglide/messages.js';
+import { getLocale } from '$lib/paraglide/runtime.js';
+import { countRunDays, countWeeks } from '$lib/i18n/count';
+import { displayPhase, displaySchool } from '$lib/i18n/school-text';
 import { formatVolume } from '../plan-view';
 import { distanceName, formatDuration } from '$lib/utils/race';
 import { getSchool, isSchoolId } from '../schools/catalogue';
@@ -31,90 +35,113 @@ export interface PlanRationale {
     sections: RationaleSection[];
 }
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+// 2024-01-01 was a Monday: the locale's full weekday name for day 0–6 of a plan week.
+const dayName = (day: number) =>
+    new Date(Date.UTC(2024, 0, day + 1)).toLocaleDateString(getLocale(), { weekday: 'long', timeZone: 'UTC' });
 
 function listWeeks(numbers: number[]): string {
     if (numbers.length <= 1) return numbers.join('');
-    return `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
+    return m.explain_list({ items: numbers.slice(0, -1).join(', '), last: numbers[numbers.length - 1] });
 }
 
-function schoolSection({ school, recommended }: ExplainInput): RationaleSection {
+function schoolSection({ school: stored, recommended }: ExplainInput): RationaleSection {
+    const school = displaySchool(stored);
     const lines: string[] = [];
     if (recommended?.schoolId === school.id) {
-        lines.push(`You chose ${school.name}, the school GymCraft recommended: ${recommended.reason}`);
+        lines.push(m.explain_school_recommended({ school: school.name, reason: recommended.reason }));
     } else if (recommended) {
-        const name = isSchoolId(recommended.schoolId) ? getSchool(recommended.schoolId).name : recommended.schoolId;
-        lines.push(`GymCraft recommended ${name} (${recommended.reason}). You chose ${school.name}.`);
+        const name = isSchoolId(recommended.schoolId)
+            ? displaySchool(getSchool(recommended.schoolId)).name
+            : recommended.schoolId;
+        lines.push(m.explain_school_other({ recommended: name, reason: recommended.reason, school: school.name }));
     } else {
-        lines.push(`You chose ${school.name}.`);
+        lines.push(m.explain_school_chosen({ school: school.name }));
     }
     lines.push(school.tagline);
-    return { key: 'school', title: 'Training school', lines };
+    return { key: 'school', title: m.plan_training_school(), lines };
 }
 
 function horizonSection({ school, layout, goal }: ExplainInput): RationaleSection {
     const n = layout.weeks.length;
     const start = layout.phases[0].startDate;
     const end = layout.phases[layout.phases.length - 1].endDate;
-    const lines = [
+    const lines: string[] = [
         goal.date
-            ? `${plural(n, 'week')}, from ${start} to race day (${goal.name}) on ${goal.date}.`
-            : `${plural(n, 'week')}, from ${start} to ${end}, the end you chose for ${goal.name}.`,
+            ? m.explain_horizon_race({ weeks: countWeeks(n), start, goal: goal.name, date: goal.date })
+            : m.explain_horizon_open({ weeks: countWeeks(n), start, end, goal: goal.name }),
     ];
     const leadIn = layout.phases.find((p) => p.source === 'LEAD_IN');
     if (leadIn) {
         lines.push(
-            `Your horizon is ${plural(leadIn.weekCount, 'week')} longer than ${school.name} needs, so it starts with a ` +
-                `${leadIn.weekCount}-week GymCraft lead-in of easy running before the school's phases.`,
+            m.explain_lead_in({
+                weeks: countWeeks(leadIn.weekCount),
+                school: displaySchool(school).name,
+                n: leadIn.weekCount,
+            }),
         );
     }
-    for (const p of layout.phases) lines.push(`${p.name}: ${plural(p.weekCount, 'week')}.`);
+    for (const p of layout.phases) {
+        lines.push(`${displayPhase(school.id, p.name, p.intent).name}: ${countWeeks(p.weekCount)}.`);
+    }
     lines.push(...layout.losses);
-    return { key: 'horizon', title: 'Horizon and phases', lines };
+    return { key: 'horizon', title: m.explain_title_horizon(), lines };
 }
 
 function anchorSection({ anchor, layout }: ExplainInput): RationaleSection {
     const lines: string[] = [];
     if (anchor?.provenance === 'RACE_RESULT') {
         lines.push(
-            `Your paces come from your ${distanceName(anchor.distanceM)} on ${anchor.date} in ${formatDuration(anchor.timeSec)}.`,
+            m.explain_anchor_race({
+                distance: distanceName(anchor.distanceM),
+                date: anchor.date,
+                time: formatDuration(anchor.timeSec),
+            }),
         );
     } else if (anchor) {
         lines.push(
-            `Your paces come from your best recent Garmin run: ${distanceName(anchor.distanceM)} on ${anchor.date} ` +
-                `in ${formatDuration(anchor.timeSec)}. A race result gives more exact paces.`,
+            m.explain_anchor_inferred({
+                distance: distanceName(anchor.distanceM),
+                date: anchor.date,
+                time: formatDuration(anchor.timeSec),
+            }),
         );
     }
-    if (anchor?.stale) lines.push('This result is more than a year old. Enter a newer one.');
+    if (anchor?.stale) lines.push(m.explain_anchor_stale());
     if (layout.timeTrial) {
         lines.push(
-            `No race result or recent hard run, so week ${layout.timeTrial.weekIndex + 1} has a ` +
-                `${distanceName(layout.timeTrial.distanceM)} time trial. Its result sets your paces.`,
+            m.explain_time_trial({
+                week: layout.timeTrial.weekIndex + 1,
+                distance: distanceName(layout.timeTrial.distanceM),
+            }),
         );
     }
-    return { key: 'anchor', title: 'Paces', lines };
+    return { key: 'anchor', title: m.explain_title_paces(), lines };
 }
 
 function volumeSection({ layout, recentVolume }: ExplainInput): RationaleSection {
     const lines: string[] = [];
     if (recentVolume.minutesPerWeek > 0) {
         lines.push(
-            `In the last 4 weeks you ran ${formatVolume(recentVolume.minutesPerWeek, 'MINUTES')} a week on average ` +
-                `(${(recentVolume.metresPerWeek / 1000).toFixed(1)} km).`,
+            m.explain_recent_volume({
+                volume: formatVolume(recentVolume.minutesPerWeek, 'MINUTES'),
+                km: (recentVolume.metresPerWeek / 1000).toFixed(1),
+            }),
         );
     } else {
-        lines.push('No running in the last 4 weeks, so week 1 starts low.');
+        lines.push(m.explain_no_recent_running());
     }
     const first = layout.weeks[0];
     const peak = layout.weeks.reduce((a, b) =>
         b.volumeUnit === a.volumeUnit && b.volumeTarget > a.volumeTarget ? b : a,
     );
     lines.push(
-        `Week 1 asks for ${formatVolume(first.volumeTarget, first.volumeUnit)}; the most is ` +
-            `${formatVolume(peak.volumeTarget, peak.volumeUnit)} in week ${peak.index + 1}.`,
+        m.explain_volume_range({
+            first: formatVolume(first.volumeTarget, first.volumeUnit),
+            peak: formatVolume(peak.volumeTarget, peak.volumeUnit),
+            week: peak.index + 1,
+        }),
     );
-    return { key: 'volume', title: 'Volume', lines };
+    return { key: 'volume', title: m.explain_title_volume(), lines };
 }
 
 function recoverySection({ school, layout }: ExplainInput): RationaleSection {
@@ -123,23 +150,23 @@ function recoverySection({ school, layout }: ExplainInput): RationaleSection {
     const tapers = layout.weeks.filter((w) => w.isTaper).map((w) => w.index + 1);
     const limit = school.cutbackCadence.value ?? CUTBACK_CAP.value;
     if (cutbacks.length > 0) {
-        lines.push(
-            `Easy weeks with less volume: weeks ${cutbacks.join(', ')}. One comes after at most ${limit} harder weeks.`,
-        );
+        lines.push(m.explain_cutbacks({ weeks: cutbacks.join(', '), limit }));
     }
     if (tapers.length > 0) {
         lines.push(
-            `Taper: ${tapers.length === 1 ? 'week' : 'weeks'} ${listWeeks(tapers)}, so you start the race fresh.`,
+            tapers.length === 1
+                ? m.explain_taper_one({ week: tapers[0] })
+                : m.explain_taper_many({ weeks: listWeeks(tapers) }),
         );
     }
-    return { key: 'recovery', title: 'Easy weeks and taper', lines };
+    return { key: 'recovery', title: m.explain_title_recovery(), lines };
 }
 
 function weekSection({ runsPerWeek, longRunDay }: ExplainInput): RationaleSection {
     return {
         key: 'week',
-        title: 'Your week',
-        lines: [`${plural(runsPerWeek, 'run day')} a week, with the long run on ${DAY_NAMES[longRunDay]}.`],
+        title: m.explain_title_week(),
+        lines: [m.explain_week({ runDays: countRunDays(runsPerWeek), day: dayName(longRunDay) })],
     };
 }
 

@@ -1,5 +1,5 @@
-import { m } from '$lib/paraglide/messages.js';
 // Race distances and times, shared by the planner and the goal form. Client-importable.
+import { m } from '$lib/paraglide/messages.js';
 
 /** The race distances the planner accepts: 1500 m to the marathon. */
 export const RACE_MIN_M = 1500;

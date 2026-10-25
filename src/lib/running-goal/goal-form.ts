@@ -1,6 +1,6 @@
-import { m } from '$lib/paraglide/messages.js';
 // Race-first goal form rules (#421): the athlete types km and `h:mm:ss`, picks A/B/C; the API keeps
 // metres, seconds and a priority number. Pure, client-importable.
+import { m } from '$lib/paraglide/messages.js';
 
 import type { GoalType } from '@prisma/client';
 import { RACE_MAX_M, RACE_MIN_M, distanceName, formatDuration } from '$lib/utils/race';

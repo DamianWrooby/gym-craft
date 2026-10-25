@@ -1,4 +1,5 @@
 // Placement rules (ADR 0026): the model places sessions, these hard rules reject a violating week.
+import { m } from '$lib/paraglide/messages.js';
 import { daysBetween } from '$lib/utils/iso-week';
 import { WEEKDAYS, type AvailabilityMap } from '../wizard';
 import type { TypedSession } from './session';
@@ -29,20 +30,20 @@ export function placementViolations(sessions: TypedSession[], ctx: PlacementCont
 
     for (const s of sessions) {
         if (s.scheduledDate < ctx.from || s.scheduledDate > ctx.to) {
-            violations.push(`${s.scheduledDate} is outside the plan week`);
+            violations.push(m.placement_outside_week({ date: s.scheduledDate }));
         } else if (!ctx.availability[WEEKDAYS[weekday(s.scheduledDate, ctx)]]) {
-            violations.push(`${s.scheduledDate} is not a training day`);
+            violations.push(m.placement_not_training_day({ date: s.scheduledDate }));
         }
     }
 
     const longRuns = sessions.filter((s) => s.kind === 'RUNNING' && s.body.keySession === LONG_RUN_KEY);
     if (longRuns.some((s) => weekday(s.scheduledDate, ctx) !== ctx.longRunDay)) {
-        violations.push('The long run must fall on the long-run day');
+        violations.push(m.placement_long_run_day());
     }
 
     const keyDays = [...new Set(sessions.filter((s) => isKeyRun(s, ctx)).map((s) => weekday(s.scheduledDate, ctx)))];
     if (keyDays.some((d) => keyDays.includes(d + 1))) {
-        violations.push('Two key sessions fall on consecutive days');
+        violations.push(m.placement_consecutive_keys());
     }
 
     const heavyDays = sessions
@@ -58,7 +59,7 @@ export function placementViolations(sessions: TypedSession[], ctx: PlacementCont
 
     if (daysBetween(ctx.from, ctx.to) === 6) {
         const busy = new Set(sessions.map((s) => s.scheduledDate));
-        if (busy.size >= 7) violations.push('The week needs at least one rest day');
+        if (busy.size >= 7) violations.push(m.placement_rest_day());
     }
 
     return violations;

@@ -1,6 +1,7 @@
 // The shape the /app/plan page renders. Built on the server from the stored plan; pure.
 import { tuneUpFixtures, type FixtureGoal, type TuneUpFixture } from './core/fixtures';
 import { getSchool, isSchoolId } from './schools/catalogue';
+import { displayPhase, displaySchool } from '$lib/i18n/school-text';
 import type { SchoolId, VolumeUnit } from './schools/types';
 import type { PlanRationale } from './core/explain';
 import { pullTarget, unconfirmedSessions } from './core/pull';
@@ -133,8 +134,7 @@ export function toPlanView(plan: StoredPlan, goals: FixtureGoal[], today: string
         });
         return {
             ordinal: p.ordinal,
-            name: p.name,
-            intent: p.intent,
+            ...displayPhase(p.school, p.name, p.intent),
             source: p.source,
             startDate: p.startDate,
             endDate: p.endDate,
@@ -144,7 +144,7 @@ export function toPlanView(plan: StoredPlan, goals: FixtureGoal[], today: string
 
     // The school shown in the header is the one the plan's latest school phase runs under.
     const schoolId = [...plan.phases].reverse().find((p) => p.source === 'SCHOOL')?.school;
-    const school = isSchoolId(schoolId) ? getSchool(schoolId) : null;
+    const school = isSchoolId(schoolId) ? displaySchool(getSchool(schoolId)) : null;
 
     const current = weeks.find((w) => today >= w.startDate && today <= w.endDate);
     const pullWeek = pullTarget(
