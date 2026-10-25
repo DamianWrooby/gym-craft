@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import type { AcwrStatus } from '$lib/server/analytics/load/interpret';
 
 /**
@@ -6,11 +7,11 @@ import type { AcwrStatus } from '$lib/server/analytics/load/interpret';
  * `overreach` (a planned-hard caution) stays distinct from `high-risk` (a warning) — see
  * interpret.ts. Colour is always paired with a text label; never encode status by hue alone.
  */
-export const STATUS_LABEL: Record<AcwrStatus, string> = {
-    undertraining: 'Undertraining',
-    optimal: 'Optimal',
-    overreach: 'Overreach',
-    'high-risk': 'High risk',
+export const STATUS_LABEL: Record<AcwrStatus, () => string> = {
+    undertraining: m.load_status_undertraining,
+    optimal: m.load_status_optimal,
+    overreach: m.load_status_overreach,
+    'high-risk': m.load_status_high_risk,
 };
 
 export interface StatusStyle {
@@ -72,5 +73,5 @@ export function statusStyle(status: string | null | undefined): StatusStyle {
 }
 
 export function statusLabel(status: string | null | undefined): string {
-    return isAcwrStatus(status) ? STATUS_LABEL[status] : 'No load data';
+    return isAcwrStatus(status) ? STATUS_LABEL[status]() : m.load_status_none();
 }

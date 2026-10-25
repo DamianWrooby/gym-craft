@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { getLocale } from '$lib/paraglide/runtime.js';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation';
@@ -68,7 +69,7 @@
     });
 
     function notifyReportLimitReached() {
-        const message = `You've used all ${reportLimit} report generations this month.`;
+        const message = m.reports_limit_reached({ limit: reportLimit });
         if (user.subscriptionTier === 'FREE') {
             makeUpgradeToast(toastStore, message);
         } else {
@@ -78,7 +79,7 @@
 
     function openGenerateModal(initialPeriodStart: string | null = null) {
         if (!hasProfile) {
-            makeToast(toastStore, 'Please set up your athlete profile first', 'variant-filled-warning');
+            makeToast(toastStore, m.reports_profile_first(), 'variant-filled-warning');
             goto('/app/profile');
             return;
         }
@@ -103,10 +104,10 @@
         const component: ModalComponent = { ref: GarminLoginForm };
         const modal: ModalSettings = {
             type: 'component',
-            title: 'Sign in to Garmin Connect',
-            body: 'Provide your Garmin credentials to fetch activities.',
-            buttonTextCancel: 'Cancel',
-            buttonTextConfirm: 'Sign in and generate',
+            title: m.garmin_login_title(),
+            body: m.reports_garmin_login_body(),
+            buttonTextCancel: m.common_cancel(),
+            buttonTextConfirm: m.reports_garmin_login_confirm(),
             component,
             response: async (cred: { email: string; password: string } | false) => {
                 if (!cred || !pendingRequest) return;
@@ -119,10 +120,10 @@
     function openOverwriteConfirmModal(existingId: string) {
         const modal: ModalSettings = {
             type: 'confirm',
-            title: 'A report for this week already exists',
-            body: 'Overwriting will replace the existing report and still consume one of your generation slots. Continue?',
-            buttonTextCancel: 'View existing instead',
-            buttonTextConfirm: 'Overwrite',
+            title: m.reports_exists_title(),
+            body: m.reports_exists_body(),
+            buttonTextCancel: m.reports_exists_view(),
+            buttonTextConfirm: m.reports_exists_overwrite(),
             response: async (confirmed: boolean) => {
                 if (!confirmed) {
                     goto(`/app/running/analytics/reports/${existingId}`);
@@ -149,21 +150,21 @@
         );
 
         if (error || !response) {
-            makeToast(toastStore, error?.message ?? 'Network error', 'variant-filled-error');
+            makeToast(toastStore, error?.message ?? m.common_network_error(), 'variant-filled-error');
             generating = false;
             return;
         }
 
         const [parseError, data] = await to(response.json());
         if (parseError) {
-            makeToast(toastStore, 'Invalid server response', 'variant-filled-error');
+            makeToast(toastStore, m.common_invalid_response(), 'variant-filled-error');
             generating = false;
             return;
         }
 
         if (response.ok) {
             await invalidateAll();
-            makeToast(toastStore, 'Weekly report ready', 'variant-filled-success');
+            makeToast(toastStore, m.reports_ready(), 'variant-filled-success');
             generating = false;
             pendingRequest = null;
             goto(`/app/running/analytics/reports/${data.data.id}`);
@@ -172,7 +173,7 @@
 
         switch (data?.code) {
             case 'PROFILE_REQUIRED':
-                makeToast(toastStore, 'Please set up your athlete profile first', 'variant-filled-warning');
+                makeToast(toastStore, m.reports_profile_first(), 'variant-filled-warning');
                 generating = false;
                 goto('/app/profile');
                 return;
@@ -183,34 +184,26 @@
             case 'RATE_LIMITED':
                 // Not a credential failure — prompting would make the throttle worse.
                 generating = false;
-                makeToast(
-                    toastStore,
-                    'Garmin is rate limiting requests. Your login is fine — please try again in a few minutes.',
-                    'variant-filled-warning',
-                );
+                makeToast(toastStore, m.running_sync_rate_limited(), 'variant-filled-warning');
                 return;
             case 'INVALID_TOKEN':
                 generating = false;
-                makeToast(toastStore, 'Please re-authenticate with Garmin', 'variant-filled-warning');
+                makeToast(toastStore, m.reports_reauth_garmin(), 'variant-filled-warning');
                 openGarminLoginModal();
                 return;
             case 'REPORT_LIMIT_REACHED':
                 notifyReportLimitReached();
                 break;
             case 'LLM_FAILED':
-                makeToast(
-                    toastStore,
-                    'Coach service unavailable — your slot was not consumed.',
-                    'variant-filled-error',
-                );
+                makeToast(toastStore, m.reports_llm_failed(), 'variant-filled-error');
                 break;
             case 'INVALID_PERIOD':
             case 'INVALID_BODY':
             case 'INVALID_GOAL_IDS':
-                makeToast(toastStore, data.message ?? 'Invalid request', 'variant-filled-error');
+                makeToast(toastStore, data.message ?? m.common_invalid_request(), 'variant-filled-error');
                 break;
             default:
-                makeToast(toastStore, data?.message ?? 'Failed to generate report', 'variant-filled-error');
+                makeToast(toastStore, data?.message ?? m.reports_failed(), 'variant-filled-error');
         }
 
         generating = false;
@@ -219,13 +212,13 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-2">
-        <button type="button" on:click={() => goto('/app/running/analytics')} aria-label="Back to analytics">
+        <button type="button" on:click={() => goto('/app/running/analytics')} aria-label={m.activities_back()}>
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
     </div>
     <div class="md:w-3/4 m-auto pb-8">
         <div class="flex flex-row justify-between items-center py-6">
-            <h2 class="h2 text-xl font-bold">Weekly reports</h2>
+            <h2 class="h2 text-xl font-bold">{m.reports_heading()}</h2>
             <span class="text-sm opacity-70">
                 {monthlyReportCount}/{reportLimit} used this month
             </span>
@@ -234,11 +227,10 @@
         {#if !hasProfile}
             <div class="alert variant-filled-warning mb-4">
                 <p>
-                    Set up your athlete profile before generating reports. We need basic info (age, weight, height) so
-                    the coaching context is accurate.
+                    {m.reports_profile_needed()}
                 </p>
                 <button class="btn variant-filled-primary mt-2" on:click={() => goto('/app/profile')}>
-                    Go to profile
+                    {m.reports_go_to_profile()}
                 </button>
             </div>
         {/if}
@@ -258,7 +250,7 @@
                 class="btn variant-filled-primary"
                 disabled={!canGenerate || generating}
                 on:click={() => openGenerateModal()}>
-                {generating ? 'Generating…' : 'Generate new report'}
+                {generating ? m.reports_generating() : m.analytics_generate_report()}
             </button>
         </div>
 
@@ -267,7 +259,7 @@
         {/if}
 
         {#if reports.length === 0 && !generating}
-            <p class="text-center opacity-70 italic">No reports yet.</p>
+            <p class="text-center opacity-70 italic">{m.reports_empty()}</p>
         {:else}
             <ul class="space-y-3">
                 {#each reports as report (report.id)}

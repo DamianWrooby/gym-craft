@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { RoutePoint } from '$lib/server/garmin/fetch-activity-detail';
     import { trimRoute, routeToSvgPath } from '$lib/utils/route';
 
@@ -16,7 +17,7 @@
         viewBox="-6 -6 {width + 12} {height + 12}"
         class="h-16 w-auto max-w-[8rem] shrink-0 opacity-80"
         role="img"
-        aria-label="Activity route (start and end trimmed for privacy)">
+        aria-label={m.route_aria()}>
         <path
             {d}
             class="fill-none stroke-primary-500"
