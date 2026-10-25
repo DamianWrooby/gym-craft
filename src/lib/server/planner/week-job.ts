@@ -24,6 +24,17 @@ export function staleReason(request: { status: string; updatedAt: Date }): strin
     return null;
 }
 
+/**
+ * Whether a visit must settle the slot: its request finished while no tab was open, or no proxy
+ * call will finish it (ADR 0014, #423).
+ */
+export function awaitsFinalize(status: string | null, request: { status: string; updatedAt: Date } | null): boolean {
+    if (status === 'GENERATED' || !request) return false;
+    if (request.status === 'DONE') return true;
+    if (request.status === 'FAILED') return status !== 'FAILED';
+    return staleReason(request) != null;
+}
+
 export const retriesLeft = (retryCount: number) => Math.max(0, MAX_RETRIES - retryCount);
 
 export type FinalizeOutcome =

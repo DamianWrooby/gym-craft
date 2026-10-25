@@ -7,7 +7,7 @@ import { checkInProposal } from '$lib/planner/core/check-in';
 import { detectDrift, recutSuggestionShown } from '$lib/planner/core/revision';
 import type { AdaptRevision, AdaptView } from '$lib/planner/adapt-view';
 import type { ActivePlan } from './repository';
-import { retriesLeft } from './week-job';
+import { awaitsFinalize, retriesLeft } from './week-job';
 import { finalizeRevision, revisionsUsed } from './revision';
 import { readRevisionCause, readRevisionReason, titleOf } from './stored';
 import { weekOn } from './current-week';
@@ -22,9 +22,8 @@ function currentWeekOf(plan: ActivePlan, today: string): StoredWeek | null {
 /** A revision request that finished while no tab was open. */
 export function revisionAwaitsFinalize(plan: ActivePlan, today: string): string | null {
     const week = currentWeekOf(plan, today);
-    const status = week?.revisionRequest?.status;
-    if (!week || week.revisionGeneration !== 'PENDING') return null;
-    return status === 'DONE' || status === 'FAILED' ? week.id : null;
+    if (!week || !awaitsFinalize(week.revisionGeneration, week.revisionRequest)) return null;
+    return week.id;
 }
 
 export async function finalizePendingRevision(userId: string, plan: ActivePlan, today: string): Promise<boolean> {

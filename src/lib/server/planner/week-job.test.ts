@@ -38,7 +38,7 @@ const fake = vi.hoisted(() => {
 });
 vi.mock('$lib/database', () => ({ db: fake.db }));
 
-import { finalizeJob, finalizeResponse, retryJob, retryResponse, type WeekSlot } from './week-job';
+import { awaitsFinalize, finalizeJob, finalizeResponse, retryJob, retryResponse, type WeekSlot } from './week-job';
 
 const userId = 'user-1';
 const now = new Date('2026-10-14T09:00:00Z');
@@ -166,5 +166,22 @@ describe('responses', () => {
         const limit = retryResponse('revision', { kind: 'limit' });
         expect(limit.status).toBe(429);
         expect((await limit.json()).message).toBe('This revision was already retried 2 times');
+    });
+});
+
+describe('awaitsFinalize', () => {
+    const req = (status: string, minutes = 1) => ({ status, updatedAt: minutesAgo(minutes) });
+
+    it.each([
+        ['a DONE request', 'PENDING', req('DONE'), true],
+        ['a FAILED request the slot has not marked', 'PENDING', req('FAILED'), true],
+        ['a stale PENDING request', 'PENDING', req('PENDING', 10), true],
+        ['a stale RUNNING request', 'PENDING', req('RUNNING', 10), true],
+        ['a request still running', 'PENDING', req('RUNNING'), false],
+        ['a FAILED request the slot has marked', 'FAILED', req('FAILED'), false],
+        ['a generated slot', 'GENERATED', req('DONE'), false],
+        ['a slot with no request', 'PENDING', null, false],
+    ])('%s: %s', (_, status, request, expected) => {
+        expect(awaitsFinalize(status, request)).toBe(expected);
     });
 });
