@@ -1,6 +1,8 @@
+import { getLocale } from '$lib/paraglide/runtime.js';
+
 export function formatReportPeriod(start: string, end: string): string {
     const fmt = (s: string) =>
-        new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', {
+        new Date(`${s}T00:00:00Z`).toLocaleDateString(getLocale(), {
             month: 'short',
             day: 'numeric',
             timeZone: 'UTC',

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import ActivityTypeIcon from '$lib/components/activity-type-icon/ActivityTypeIcon.svelte';
     import { PACE_ACTIVITY_TYPES, formatPaceOrSpeed } from '$lib/utils/pace';
     import type { ActivityListItem } from '$lib/server/garmin/activity-row-mapper';
@@ -32,7 +33,7 @@
     function formatActivityDate(iso: string): { month: string; day: string; year: string } {
         const d = new Date(iso);
         return {
-            month: d.toLocaleString('en-US', { month: 'short' }),
+            month: d.toLocaleString(getLocale(), { month: 'short' }),
             day: d.getDate().toString(),
             year: d.getFullYear().toString(),
         };

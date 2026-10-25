@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import type { MetricsBundle } from '$lib/server/analytics/types';
 
     export let efficiency: MetricsBundle['efficiency'];
@@ -67,7 +68,7 @@
         if (!iso) return '';
         const date = new Date(iso.replace(' ', 'T'));
         if (Number.isNaN(date.getTime())) return '';
-        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        return date.toLocaleDateString(getLocale(), { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
     function formatDistance(m?: number): string {

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import { max } from 'd3-array';
     import type { MetricsBundle } from '$lib/server/analytics/types';
 
@@ -58,7 +59,7 @@
 
     function formatFullDate(yyyymmdd: string): string {
         const d = new Date(`${yyyymmdd}T00:00:00Z`);
-        return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+        return d.toLocaleDateString(getLocale(), { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
     }
 
     function formatDistance(km: number): string {

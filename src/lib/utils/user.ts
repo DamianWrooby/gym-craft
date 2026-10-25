@@ -4,6 +4,8 @@ import { hashSessionToken } from '$lib/server/session-token';
 import { getGeneralPlanLimit } from '$lib/prisma/prisma';
 import { TIER_LIMITS, resolveAiModel } from '@/constants/subscription.constants';
 import { currentMonthStartIso } from '$lib/utils/iso-week';
+import { PUBLIC_APP_ENV } from '$env/static/public';
+import { DEFAULT_LOCALE, enabledLocales, isEnabledLocale } from '@/constants/locale.constants';
 import type { RequestEvent } from '@sveltejs/kit';
 
 /** SUPPORTER: monthly allowance tracked via AiUsage kind='gym_plan'. */
@@ -35,6 +37,7 @@ export async function updateUser(event: RequestEvent) {
             subscriptionStatus: true,
             currentPeriodEnd: true,
             aiModelPreference: true,
+            locale: true,
         },
     });
 
@@ -70,6 +73,7 @@ export async function updateUser(event: RequestEvent) {
             email,
             subscriptionTier,
             aiModel: resolveAiModel(subscriptionTier, user.aiModelPreference),
+            locale: isEnabledLocale(user.locale, enabledLocales(PUBLIC_APP_ENV)) ? user.locale : DEFAULT_LOCALE,
         };
     }
 }
