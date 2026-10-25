@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { page } from '$app/stores';
     import { invalidateAll } from '$app/navigation';
     import { getToastStore } from '@skeletonlabs/skeleton';
@@ -8,7 +9,7 @@
     import GoalForm from '$lib/components/running-goal/GoalForm.svelte';
     import { todayInTimezone } from '$lib/utils/iso-week';
     import { makeToast } from '$lib/utils/toasts';
-    import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
+    import { goalTypeLabel } from '$lib/i18n/labels';
     import { to } from 'await-to-js';
     import type { User } from '@/models/user/user.model';
     import type { GoalType, Sex } from '@prisma/client';
@@ -61,10 +62,10 @@
         savingProfile = false;
         if (err || !response?.ok) {
             const message = response ? (await response.json())?.message : err?.message;
-            makeToast(toastStore, message ?? 'Failed to save profile', 'variant-filled-error');
+            makeToast(toastStore, message ?? m.profile_save_failed(), 'variant-filled-error');
             return;
         }
-        makeToast(toastStore, 'Profile saved', 'variant-filled-success');
+        makeToast(toastStore, m.profile_saved(), 'variant-filled-success');
         await invalidateAll();
     }
 
@@ -79,10 +80,10 @@
         savingGoal = false;
         if (err || !response?.ok) {
             const message = response ? (await response.json())?.message : err?.message;
-            makeToast(toastStore, message ?? 'Failed to save goal', 'variant-filled-error');
+            makeToast(toastStore, message ?? m.goal_save_failed(), 'variant-filled-error');
             return;
         }
-        makeToast(toastStore, 'Goal saved', 'variant-filled-success');
+        makeToast(toastStore, m.goal_saved(), 'variant-filled-success');
         editingGoalId = null;
         await invalidateAll();
     }
@@ -90,10 +91,10 @@
     async function archiveGoal(goalId: string) {
         const [err, response] = await to(fetch(`/api/user/${user.id}/running-goals/${goalId}`, { method: 'DELETE' }));
         if (err || !response?.ok) {
-            makeToast(toastStore, 'Failed to archive goal', 'variant-filled-error');
+            makeToast(toastStore, m.goal_archive_failed(), 'variant-filled-error');
             return;
         }
-        makeToast(toastStore, 'Goal archived', 'variant-filled-warning');
+        makeToast(toastStore, m.goal_archived(), 'variant-filled-warning');
         await invalidateAll();
     }
 </script>
@@ -102,15 +103,16 @@
 
 <Card width="3/4">
     <div class="md:w-3/4 m-auto pb-8">
-        <h1 class="h2 text-xl font-bold py-6">Athlete profile</h1>
+        <h1 class="h2 text-xl font-bold py-6">{m.profile_heading()}</h1>
         <AthleteProfileForm {profile} saving={savingProfile} on:save={saveProfile} />
     </div>
 
     <div class="md:w-3/4 m-auto pb-8">
         <div class="flex justify-between items-center py-4">
-            <h2 class="h2 text-xl font-bold">Running goals</h2>
+            <h2 class="h2 text-xl font-bold">{m.goals_heading()}</h2>
             {#if editingGoalId !== 'new'}
-                <button class="btn variant-filled-primary" on:click={() => (editingGoalId = 'new')}> Add goal </button>
+                <button class="btn variant-filled-primary" on:click={() => (editingGoalId = 'new')}
+                    >{m.goal_add()}</button>
             {/if}
         </div>
 
@@ -126,7 +128,7 @@
         {/if}
 
         {#if goals.length === 0 && editingGoalId !== 'new'}
-            <p class="text-center opacity-70 italic">No goals yet.</p>
+            <p class="text-center opacity-70 italic">{m.goals_empty()}</p>
         {:else}
             <ul class="space-y-3">
                 {#each goals as goal (goal.id)}
@@ -143,11 +145,11 @@
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="font-semibold">
-                                        {GOAL_TYPE_LABELS[goal.goalType]}
+                                        {goalTypeLabel(goal.goalType)}
                                         {#if goal.targetEventName}— {goal.targetEventName}{/if}
                                     </p>
                                     <p class="text-xs opacity-70">
-                                        Priority {goal.priority}
+                                        {m.goal_priority({ priority: goal.priority })}
                                         {#if goal.targetEventDate}
                                             · {goal.targetEventDate}{/if}
                                         {#if goal.targetDistanceM}
@@ -159,10 +161,10 @@
                                 </div>
                                 <div class="flex gap-2">
                                     <button class="btn btn-sm variant-soft" on:click={() => (editingGoalId = goal.id)}>
-                                        Edit
+                                        {m.common_edit()}
                                     </button>
                                     <button class="btn btn-sm variant-soft-error" on:click={() => archiveGoal(goal.id)}>
-                                        Archive
+                                        {m.goal_archive()}
                                     </button>
                                 </div>
                             </div>

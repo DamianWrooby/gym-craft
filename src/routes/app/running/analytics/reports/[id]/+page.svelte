@@ -17,7 +17,7 @@
     import TrainingLoadCard from '$lib/components/training-report/TrainingLoadCard.svelte';
     import RecommendationsPanel from '$lib/components/training-report/RecommendationsPanel.svelte';
     import { splitRecommendations } from '$lib/utils/split-recommendations';
-    import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
+    import { goalTypeLabel } from '$lib/i18n/labels';
     import type { MetricsBundle } from '$lib/server/analytics/types';
     import type { GoalType } from '@prisma/client';
 
@@ -122,7 +122,7 @@
             <div class="flex flex-wrap gap-2 mt-2">
                 {#each report.goalContext.goals as goal (goal.id)}
                     <span class="chip variant-soft-primary">
-                        {GOAL_TYPE_LABELS[goal.goalType]}{goal.targetEventName ? ` — ${goal.targetEventName}` : ''}
+                        {goalTypeLabel(goal.goalType)}{goal.targetEventName ? ` — ${goal.targetEventName}` : ''}
                     </span>
                 {/each}
             </div>

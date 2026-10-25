@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 // Race-first goal form rules (#421): the athlete types km and `h:mm:ss`, picks A/B/C; the API keeps
 // metres, seconds and a priority number. Pure, client-importable.
 
@@ -47,8 +48,15 @@ const PRESETS: Record<Exclude<DistanceKey, 'custom'>, number> = {
 };
 
 export const DISTANCES = Object.entries(PRESETS).map(([key, metres]) => {
-    const name = distanceName(metres);
-    return { key: key as Exclude<DistanceKey, 'custom'>, label: name[0].toUpperCase() + name.slice(1), metres };
+    return {
+        key: key as Exclude<DistanceKey, 'custom'>,
+        metres,
+        // A getter, so the label follows the locale of the request that renders it.
+        get label() {
+            const name = distanceName(metres);
+            return name[0].toUpperCase() + name.slice(1);
+        },
+    };
 });
 
 /** What the form holds: text as the athlete typed it, plus the stored priority to keep. */
@@ -135,18 +143,18 @@ export const NOTES_MAX = 500;
 
 /** The one reason save is blocked, or null. `today` is the athlete's local YYYY-MM-DD. */
 export function goalFormIssue(form: GoalFormState, today: string): string | null {
-    if (form.notes.length > NOTES_MAX) return `Notes must be at most ${NOTES_MAX} characters.`;
+    if (form.notes.length > NOTES_MAX) return m.goal_issue_notes_too_long({ max: NOTES_MAX });
     if (!form.isRace) return null;
-    if (!form.date) return 'Choose the race date.';
-    if (form.date <= today) return 'The race date must be after today.';
+    if (!form.date) return m.goal_issue_no_date();
+    if (form.date <= today) return m.goal_issue_date_past();
     if (form.distance === 'custom') {
         const metres = distanceMetres(form);
         if (metres == null || metres < CUSTOM_KM.min * 1000 || metres > CUSTOM_KM.max * 1000) {
-            return `The distance must be ${CUSTOM_KM.min}–${CUSTOM_KM.max} km.`;
+            return m.goal_issue_distance_range({ min: CUSTOM_KM.min, max: CUSTOM_KM.max });
         }
     }
     if (form.time.trim() && parseDuration(form.time) == null) {
-        return 'Type the target time as h:mm:ss or mm:ss, for example 1:45:00.';
+        return m.goal_issue_time_format();
     }
     return null;
 }
