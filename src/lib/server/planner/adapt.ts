@@ -7,7 +7,7 @@ import { checkInProposal } from '$lib/planner/core/check-in';
 import { detectDrift, recutSuggestionShown } from '$lib/planner/core/revision';
 import type { AdaptRevision, AdaptView } from '$lib/planner/adapt-view';
 import type { ActivePlan } from './repository';
-import { retriesLeft } from './week-generation';
+import { retriesLeft } from './week-job';
 import { finalizeRevision, revisionsUsed } from './revision';
 import { readRevisionCause, readRevisionReason, titleOf } from './stored';
 import { weekOn } from './current-week';

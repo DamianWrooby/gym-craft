@@ -30,8 +30,9 @@ import {
     type SessionRef,
 } from '$lib/planner/core/conflict';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
-import type { Prisma } from '@prisma/client';
-import { MAX_RETRIES, readWeekOutput, retriesLeft, staleReason, type WeekOutput } from './week-generation';
+import type { AiRequest, Prisma } from '@prisma/client';
+import { readWeekOutput, type WeekOutput } from './week-generation';
+import { finalizeJob, staleReason, type FinalizeOutcome, type JobWeek } from './week-job';
 import { buildWeekPrompt, type AiRequestInput, type PromptSession } from './week-prompt';
 import { athleteTimezone, weekOn } from './current-week';
 import {
@@ -74,18 +75,6 @@ export type ReevaluationOutcome =
     | { kind: 'ask' }
     | { kind: 'capped'; used: number; cap: number }
     | { kind: 'requested'; weekId: string; aiRequestId: string };
-
-export type RevisionFinalizeOutcome =
-    | { kind: 'not-found' }
-    | { kind: 'generated' }
-    | { kind: 'pending'; requestStatus: string }
-    | { kind: 'failed'; retriesLeft: number };
-
-export type RevisionRetryOutcome =
-    | { kind: 'not-found' }
-    | { kind: 'not-failed' }
-    | { kind: 'limit' }
-    | { kind: 'retrying'; aiRequestId: string; retriesLeft: number };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 /** Tier and model from the stored subscription, so the sync path needs no request locals. */
@@ -408,34 +397,13 @@ export async function reevaluateCurrentWeek(
     return { kind: 'requested', weekId: week.id, aiRequestId };
 }
 
-async function loadRevisedWeek(userId: string, weekId: string) {
-    const week = await db.planWeek.findUnique({
-        where: { id: weekId },
-        include: {
-            revisionRequest: true,
-            phase: { include: { plan: true } },
-            sessions: { where: { status: { not: 'SUPERSEDED' } } },
-        },
-    });
-    return week && week.userId === userId ? week : null;
-}
-
-type RevisedWeek = NonNullable<Awaited<ReturnType<typeof loadRevisedWeek>>>;
-
-async function failRevision(week: RevisedWeek, requestId: string, error: string | null): Promise<void> {
-    await db.$transaction(async (tx) => {
-        if (error != null) await tx.aiRequest.update({ where: { id: requestId }, data: { status: 'FAILED', error } });
-        await tx.planWeek.update({ where: { id: week.id }, data: { revisionGeneration: 'FAILED' } });
-    });
-}
-
 type WrittenWeek = Extract<WeekOutput, { ok: true }>;
 
 /**
  * The week's budget is read, never re-struck (ADR 0015). Easy volume is trimmed silently; when a
  * key session would have to go, the week is stored as written and 0013's ask decides.
  */
-function resolveBudget(week: RevisedWeek, target: RevisionScope, { school, written, costs }: WrittenWeek): Resolution {
+function resolveBudget(week: JobWeek, target: RevisionScope, { school, written, costs }: WrittenWeek): Resolution {
     const scope = new Set(target.scope);
     const fixedLoad = week.sessions
         .filter((s) => s.status === 'PLANNED' && !scope.has(s.id) && toIsoDate(s.scheduledDate) >= target.from)
@@ -456,7 +424,7 @@ function resolveBudget(week: RevisedWeek, target: RevisionScope, { school, writt
 }
 
 /** Where the kept rows go: which old row each supersedes, and its sequence on the day. */
-function placeRevision(week: RevisedWeek, target: RevisionScope, written: WrittenWeek['written'], kept: number[]) {
+function placeRevision(week: JobWeek, target: RevisionScope, written: WrittenWeek['written'], kept: number[]) {
     const scope = new Set(target.scope);
     // Sessions the revision keeps sit first on their day; the new ones follow.
     const replaced = week.sessions
@@ -550,34 +518,20 @@ async function storeRevision({
  * Stores a finished revision: the scope's still-planned sessions become SUPERSEDED and the new rows
  * point at them. Idempotent. Counts one `plan_revision` only here, at DONE; a failure is free.
  */
-export async function finalizeRevision(userId: string, weekId: string): Promise<RevisionFinalizeOutcome> {
-    const week = await loadRevisedWeek(userId, weekId);
-    if (!week) return { kind: 'not-found' };
-    if (week.revisionGeneration === 'GENERATED') return { kind: 'generated' };
-    const request = week.revisionRequest;
-    if (!request) return { kind: 'pending', requestStatus: 'NONE' };
-    const failed = async (error: string | null) => {
-        await failRevision(week, request.id, error);
-        return { kind: 'failed' as const, retriesLeft: retriesLeft(request.retryCount) };
-    };
-    const stalled = staleReason(request);
-    if (stalled) return failed(stalled);
-    if (request.status === 'FAILED') {
-        if (week.revisionGeneration === 'FAILED')
-            return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
-        return failed(null);
-    }
-    if (request.status !== 'DONE') return { kind: 'pending', requestStatus: request.status };
+export function finalizeRevision(userId: string, weekId: string): Promise<FinalizeOutcome> {
+    return finalizeJob(userId, weekId, 'revision', (week, request) => storeRevisionOutput(userId, week, request));
+}
 
+async function storeRevisionOutput(userId: string, week: JobWeek, request: AiRequest): Promise<string | null> {
     const target = readRevisionScope(request.input);
-    if (!target) return failed('The request has no revision scope');
+    if (!target) return 'The request has no revision scope';
     const read = await readWeekOutput(userId, week, request, target.from);
-    if (!read.ok) return failed(read.errors.join('; ').slice(0, 1000));
+    if (!read.ok) return read.errors.join('; ');
     // A revision has no ask of its own: a week that places only without a key session is rejected.
     const leftOut = read.placementTrim?.asked;
     if (leftOut) {
         const rules = read.placementTrim!.violations.join('; ');
-        return failed(`${leftOut.title} fits your training days only if it goes: ${rules}`.slice(0, 1000));
+        return `${leftOut.title} fits your training days only if it goes: ${rules}`;
     }
 
     const { anchor, written, costs } = read;
@@ -626,27 +580,5 @@ export async function finalizeRevision(userId: string, weekId: string): Promise<
             };
         }),
     });
-    return { kind: 'generated' };
-}
-
-export async function retryRevision(userId: string, weekId: string): Promise<RevisionRetryOutcome> {
-    const week = await loadRevisedWeek(userId, weekId);
-    if (!week) return { kind: 'not-found' };
-    const request = week.revisionRequest;
-    if (week.revisionGeneration !== 'FAILED' || !request || request.status !== 'FAILED') return { kind: 'not-failed' };
-    if (request.retryCount >= MAX_RETRIES) return { kind: 'limit' };
-
-    const retryCount = request.retryCount + 1;
-    const reopened = await db.$transaction(async (tx) => {
-        // Claiming the row at the retry count read keeps two parallel retries to one.
-        const claimed = await tx.aiRequest.updateMany({
-            where: { id: request.id, status: 'FAILED', retryCount: request.retryCount },
-            data: { status: 'PENDING', output: null, error: null, retryCount },
-        });
-        if (claimed.count === 0) return false;
-        await tx.planWeek.update({ where: { id: week.id }, data: { revisionGeneration: 'PENDING' } });
-        return true;
-    });
-    if (!reopened) return { kind: 'not-failed' };
-    return { kind: 'retrying', aiRequestId: request.id, retriesLeft: retriesLeft(retryCount) };
+    return null;
 }

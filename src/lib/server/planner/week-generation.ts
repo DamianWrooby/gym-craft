@@ -1,5 +1,5 @@
-// Finalize and retry a plan week's AI request (ADR 0014). The proxy wrote the raw output to the
-// row; here the server validates, costs and stores it. Safe to call any number of times.
+// Finalize a plan week's generation (ADR 0014). The proxy wrote the raw output to the row; here the
+// server validates, costs and stores it. The week job owns the lifecycle around it.
 import { db } from '$lib/database';
 import { getAthleteProfile } from '$lib/prisma/prisma';
 import { addDays, currentMonthStartIso, toIsoDate } from '$lib/utils/iso-week';
@@ -9,60 +9,13 @@ import { costSession, type Cost } from '$lib/planner/core/cost';
 import { canDowngrade, resolveConflict, type ConflictRecord, type SessionRef } from '$lib/planner/core/conflict';
 import { attachTargets, labelPaces } from '$lib/planner/core/targets';
 import { isValidZones } from '$lib/planner/core/zones';
-import type { Prisma, WeekDecision } from '@prisma/client';
+import type { AiRequest, Prisma, WeekDecision } from '@prisma/client';
+import { finalizeJob, retriesLeft, type FinalizeOutcome, type JobWeek } from './week-job';
 import type { TypedSession } from '$lib/planner/core/session';
 import type { AiRequestInput } from './week-prompt';
 import { readAvailability } from './stored';
 import type { SchoolDefinition } from '$lib/planner/schools/types';
 import type { Anchor } from '$lib/planner/core/anchor';
-
-/** A failed request may be retried at most this many times (ADR 0016). */
-export const MAX_RETRIES = 2;
-
-/**
- * Well past the proxy's 150 s OpenAI timeout. A RUNNING row this old lost its proxy call; a PENDING
- * row this old never got one, because the tab closed first (#423).
- */
-const STALE_MS = 5 * 60 * 1000;
-
-/** Why a request no proxy call will finish is failed, or null while one still may. */
-export function staleReason(request: { status: string; updatedAt: Date }): string | null {
-    if (Date.now() - request.updatedAt.getTime() <= STALE_MS) return null;
-    if (request.status === 'RUNNING') return 'Stalled: the proxy never wrote a result';
-    if (request.status === 'PENDING') return 'Stalled: the proxy call never started';
-    return null;
-}
-
-export type FinalizeOutcome =
-    | { kind: 'not-found' }
-    | { kind: 'generated' }
-    | { kind: 'pending'; requestStatus: string }
-    | { kind: 'failed'; retriesLeft: number };
-
-export type RetryOutcome =
-    | { kind: 'not-found' }
-    | { kind: 'not-failed' }
-    | { kind: 'limit' }
-    | { kind: 'retrying'; aiRequestId: string; retriesLeft: number };
-
-export const retriesLeft = (retryCount: number) => Math.max(0, MAX_RETRIES - retryCount);
-
-async function loadWeek(userId: string, weekId: string) {
-    const week = await db.planWeek.findUnique({
-        where: { id: weekId },
-        include: { aiRequest: true, phase: { include: { plan: true } } },
-    });
-    return week && week.userId === userId ? week : null;
-}
-
-type LoadedWeek = NonNullable<Awaited<ReturnType<typeof loadWeek>>>;
-
-async function failWeek(week: LoadedWeek, requestId: string, error: string | null): Promise<void> {
-    await db.$transaction(async (tx) => {
-        if (error != null) await tx.aiRequest.update({ where: { id: requestId }, data: { status: 'FAILED', error } });
-        await tx.planWeek.update({ where: { id: week.id }, data: { generation: 'FAILED' } });
-    });
-}
 
 /** What a week's AI request wrote, validated, targeted and costed; nothing is stored here. */
 export type WeekOutput =
@@ -122,29 +75,13 @@ export async function readWeekOutput(
     return { ok: true, school, anchor, written, costs, placementTrim: result.placementTrim };
 }
 
-export async function finalizeWeek(userId: string, weekId: string): Promise<FinalizeOutcome> {
-    const week = await loadWeek(userId, weekId);
-    if (!week) return { kind: 'not-found' };
-    if (week.generation === 'GENERATED') return { kind: 'generated' };
+export function finalizeWeek(userId: string, weekId: string): Promise<FinalizeOutcome> {
+    return finalizeJob(userId, weekId, 'generation', (week, request) => storeWeek(userId, week, request));
+}
 
-    const request = week.aiRequest;
-    if (!request) return { kind: 'pending', requestStatus: 'NONE' };
-    const stalled = staleReason(request);
-    if (stalled) {
-        await failWeek(week, request.id, stalled);
-        return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
-    }
-    if (request.status === 'FAILED') {
-        if (week.generation !== 'FAILED') await failWeek(week, request.id, null);
-        return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
-    }
-    if (request.status !== 'DONE') return { kind: 'pending', requestStatus: request.status };
-
+async function storeWeek(userId: string, week: JobWeek, request: AiRequest): Promise<string | null> {
     const read = await readWeekOutput(userId, week, request, toIsoDate(week.startDate));
-    if (!read.ok) {
-        await failWeek(week, request.id, read.errors.join('; ').slice(0, 1000));
-        return { kind: 'failed', retriesLeft: retriesLeft(request.retryCount) };
-    }
+    if (!read.ok) return read.errors.join('; ');
     const { school, anchor, written, costs, placementTrim } = read;
 
     // School versus budget (ADR 0013): trim easy volume silently, or store as written and ask.
@@ -230,27 +167,5 @@ export async function finalizeWeek(userId: string, weekId: string): Promise<Fina
             update: { count: { increment: 1 } },
         });
     });
-    return { kind: 'generated' };
-}
-
-export async function retryWeek(userId: string, weekId: string): Promise<RetryOutcome> {
-    const week = await loadWeek(userId, weekId);
-    if (!week) return { kind: 'not-found' };
-    const request = week.aiRequest;
-    if (week.generation !== 'FAILED' || !request || request.status !== 'FAILED') return { kind: 'not-failed' };
-    if (request.retryCount >= MAX_RETRIES) return { kind: 'limit' };
-
-    const retryCount = request.retryCount + 1;
-    const reopened = await db.$transaction(async (tx) => {
-        // Claiming the row at the retry count read keeps two parallel retries to one.
-        const claimed = await tx.aiRequest.updateMany({
-            where: { id: request.id, status: 'FAILED', retryCount: request.retryCount },
-            data: { status: 'PENDING', output: null, error: null, retryCount },
-        });
-        if (claimed.count === 0) return false;
-        await tx.planWeek.update({ where: { id: week.id }, data: { generation: 'PENDING' } });
-        return true;
-    });
-    if (!reopened) return { kind: 'not-failed' };
-    return { kind: 'retrying', aiRequestId: request.id, retriesLeft: retriesLeft(retryCount) };
+    return null;
 }

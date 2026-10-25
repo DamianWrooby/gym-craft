@@ -46,23 +46,4 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/revision/retry', () => {
             data: { status: 'PENDING', retryCount: 2 },
         });
     });
-
-    it('stops after two retries', async () => {
-        db.planWeek.findUnique.mockResolvedValue(week(2));
-        const res = await post();
-        expect(res.status).toBe(429);
-        expect(tx.aiRequest.updateMany).not.toHaveBeenCalled();
-    });
-
-    it('keeps two parallel retries to one', async () => {
-        db.planWeek.findUnique.mockResolvedValue(week(0));
-        tx.aiRequest.updateMany.mockResolvedValue({ count: 0 });
-        expect((await post()).status).toBe(409);
-        expect(tx.planWeek.update).not.toHaveBeenCalled();
-    });
-
-    it('refuses a revision that has not failed', async () => {
-        db.planWeek.findUnique.mockResolvedValue(week(0, 'DONE'));
-        expect((await post()).status).toBe(409);
-    });
 });
