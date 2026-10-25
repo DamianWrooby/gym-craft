@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile } from '$lib/prisma/prisma';
@@ -27,10 +28,10 @@ export async function POST({
     params: { id: string; weekId: string };
     locals: App.Locals;
 }): Promise<Response> {
-    if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
+    if (params.id !== locals.user?.id) return createResponse(403, { message: m.api_unauthorized() });
 
     const input = validate(await request.json().catch(() => null));
-    if (!input) return createResponse(400, { code: 'INVALID_BODY', message: 'Choose an outlook for next week' });
+    if (!input) return createResponse(400, { code: 'INVALID_BODY', message: m.api_choose_outlook() });
 
     const profile = await getAthleteProfile(params.id);
     const today = todayInTimezone(profile?.timezone ?? 'UTC');
@@ -39,11 +40,11 @@ export async function POST({
     const outcome = await pullWeek(params.id, params.weekId, input, model, today);
     switch (outcome.kind) {
         case 'no-plan':
-            return createResponse(404, { code: 'NOT_FOUND', message: 'No active plan' });
+            return createResponse(404, { code: 'NOT_FOUND', message: m.api_no_active_plan() });
         case 'not-pullable':
-            return createResponse(409, { code: 'NOT_PULLABLE', message: 'This week cannot be written yet' });
+            return createResponse(409, { code: 'NOT_PULLABLE', message: m.api_week_not_writable() });
         case 'already-pulled':
-            return createResponse(409, { code: 'ALREADY_PULLED', message: 'This week is already being written' });
+            return createResponse(409, { code: 'ALREADY_PULLED', message: m.api_week_being_written() });
         case 'pulled':
             return createResponse(201, { data: { weekId: outcome.weekId, aiRequestId: outcome.aiRequestId } });
     }

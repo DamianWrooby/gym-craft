@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { db } from '$lib/database';
 import { ensureActivityDetail } from '$lib/server/garmin/ensure-activity-detail';
@@ -25,18 +26,18 @@ export async function POST({
     const activityId = params.activityId;
 
     if (userId !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json().catch(() => null);
     const question = typeof body?.question === 'string' ? body.question.trim() : '';
     if (!question) {
-        return createResponse(400, { code: 'QUESTION_REQUIRED', message: 'Question is required' });
+        return createResponse(400, { code: 'QUESTION_REQUIRED', message: m.api_question_required() });
     }
     if (question.length > EXPLAIN_QUESTION_MAX_LENGTH) {
         return createResponse(400, {
             code: 'QUESTION_TOO_LONG',
-            message: `Question must be ${EXPLAIN_QUESTION_MAX_LENGTH} characters or fewer`,
+            message: m.ask_question_too_long({ max: EXPLAIN_QUESTION_MAX_LENGTH }),
         });
     }
 
@@ -55,16 +56,16 @@ export async function POST({
     if ((usage?.count ?? 0) >= explainLimit) {
         return createResponse(429, {
             code: 'EXPLAIN_LIMIT_REACHED',
-            message: `Daily limit of ${explainLimit} explanations reached. Try again tomorrow.`,
+            message: m.api_explain_limit({ limit: explainLimit }),
         });
     }
     if (!activity) {
-        return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: 'Activity not found' });
+        return createResponse(404, { code: 'ACTIVITY_NOT_FOUND', message: m.api_activity_not_found() });
     }
     if (!activityTypeSupportsAiCoach(activity.activityType)) {
         return createResponse(400, {
             code: 'ACTIVITY_TYPE_NOT_SUPPORTED',
-            message: 'The AI coach is available for running activities only.',
+            message: m.api_coach_running_only(),
         });
     }
 
@@ -118,7 +119,7 @@ export async function POST({
     if (!proxy.ok || !proxy.analysis) {
         // proxy.error carries OpenAI's own wording — diagnostics, not copy. Log it, show our own.
         console.error(`[explain-run] proxy failed for user ${userId}: ${proxy.error}`);
-        return createResponse(502, { code: 'LLM_FAILED', message: 'AI service is temporarily unavailable' });
+        return createResponse(502, { code: 'LLM_FAILED', message: m.api_ai_unavailable() });
     }
 
     await db.aiUsage.upsert({

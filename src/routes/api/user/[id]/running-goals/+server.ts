@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { createRunningGoal, getRunningGoals, type RunningGoalCreateInput } from '$lib/prisma/prisma';
 import { validateRunningGoalInput } from '$lib/server/running-goals/validation';
@@ -12,7 +13,7 @@ export async function GET({
     url: URL;
 }): Promise<Response> {
     if (params.id !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
     const includeArchived = url.searchParams.get('includeArchived') === 'true';
     const goals = await getRunningGoals(params.id, { includeArchived });
@@ -29,7 +30,7 @@ export async function POST({
     locals: App.Locals;
 }): Promise<Response> {
     if (params.id !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json();

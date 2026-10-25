@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/database';
 import { createResponse } from '$lib/utils/response';
@@ -15,14 +16,14 @@ const PLANS: Record<PlanKey, { price: string; mode: 'subscription' }> = {
 
 export async function POST({ request, locals }: { request: Request; locals: App.Locals }): Promise<Response> {
     if (!billingEnabled) {
-        return createResponse(503, { code: 'BILLING_DISABLED', message: 'Supporter plans are not available yet' });
+        return createResponse(503, { code: 'BILLING_DISABLED', message: m.api_supporter_unavailable() });
     }
-    if (!locals.user) return createResponse(401, { message: 'Unauthorized' });
+    if (!locals.user) return createResponse(401, { message: m.api_unauthorized() });
 
     const body = await request.json().catch(() => null);
     const plan = body?.plan as PlanKey | undefined;
     if (!plan || !PLANS[plan]) {
-        return createResponse(400, { code: 'INVALID_PLAN', message: 'Unknown plan' });
+        return createResponse(400, { code: 'INVALID_PLAN', message: m.api_unknown_plan() });
     }
     const selected = PLANS[plan];
 

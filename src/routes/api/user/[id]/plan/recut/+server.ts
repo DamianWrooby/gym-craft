@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { createResponse } from '$lib/utils/response';
 import { isValidDateString, todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile } from '$lib/prisma/prisma';
@@ -31,7 +32,7 @@ export async function POST({
     params: { id: string };
     locals: App.Locals;
 }): Promise<Response> {
-    if (params.id !== locals.user?.id) return createResponse(403, { message: 'Unauthorized' });
+    if (params.id !== locals.user?.id) return createResponse(403, { message: m.api_unauthorized() });
 
     const body: unknown = await request.json().catch(() => null);
     const read = readBody(body);
@@ -39,7 +40,7 @@ export async function POST({
     const { change, confirm } = read;
 
     const plan = await getActivePlan(params.id);
-    if (!plan) return createResponse(404, { code: 'NO_PLAN', message: 'There is no active plan' });
+    if (!plan) return createResponse(404, { code: 'NO_PLAN', message: m.api_no_active_plan_long() });
     const profile = await getAthleteProfile(params.id);
     const today = todayInTimezone(profile?.timezone ?? 'UTC');
 

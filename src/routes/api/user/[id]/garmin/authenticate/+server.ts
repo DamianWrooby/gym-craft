@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { to } from 'await-to-js';
 import { createResponse } from '$lib/utils/response';
 import { getGarminEmail, saveGarminSessionToken } from '$lib/prisma/prisma';
@@ -21,18 +22,18 @@ export async function POST({
     const userId = params.id;
 
     if (userId !== locals.user?.id) {
-        return createResponse(403, { message: 'Unauthorized' });
+        return createResponse(403, { message: m.api_unauthorized() });
     }
 
     const body = await request.json().catch(() => null);
     const password = typeof body?.password === 'string' ? body.password : undefined;
     if (!password) {
-        return createResponse(400, { message: 'password is required' });
+        return createResponse(400, { message: m.api_password_required() });
     }
 
     const [emailError, email] = await to(getGarminEmail(userId));
     if (emailError || !email) {
-        return createResponse(400, { code: 'GARMIN_EMAIL_NOT_CONFIGURED', message: 'Garmin email not configured' });
+        return createResponse(400, { code: 'GARMIN_EMAIL_NOT_CONFIGURED', message: m.api_garmin_email_missing() });
     }
 
     const url = `${garminApiUrl}/authenticate`;
@@ -50,7 +51,7 @@ export async function POST({
 
     const [parseError, data] = await to(pyResponse.json());
     if (parseError) {
-        return createResponse(502, { message: 'Invalid response from Garmin service' });
+        return createResponse(502, { message: m.api_garmin_invalid_response() });
     }
 
     if (!pyResponse.ok || !data?.session_token) {
@@ -62,7 +63,7 @@ export async function POST({
     const sessionToken: string = data.session_token;
     const [saveError] = await to(saveGarminSessionToken(userId, sessionToken));
     if (saveError) {
-        return createResponse(500, { message: 'Failed to persist Garmin session' });
+        return createResponse(500, { message: m.api_garmin_session_failed() });
     }
 
     return createResponse(200, { status: 'success', sessionToken });

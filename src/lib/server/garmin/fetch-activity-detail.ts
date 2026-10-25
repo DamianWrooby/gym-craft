@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { to } from 'await-to-js';
 import { garminApiUrl, garminBearerHeaders } from './config';
 import { classifyGarminStatus } from './fetch-activities';
@@ -109,7 +110,7 @@ async function requestActivityDetail(
             ok: false,
             status: 502,
             code: 'GARMIN_SERVICE_PARSE_ERROR',
-            message: 'Invalid response from Garmin service',
+            message: m.api_garmin_invalid_response(),
         };
     }
 
