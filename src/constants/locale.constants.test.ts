@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { enabledLocales, isEnabledLocale, pickLocale } from './locale.constants';
 
 describe('enabledLocales', () => {
-    it('hides Polish in production', () => {
-        expect(enabledLocales('production')).toEqual(['en']);
+    it('shows Polish in production', () => {
+        expect(enabledLocales('production')).toEqual(['en', 'pl']);
     });
 
     it('shows Polish outside production', () => {

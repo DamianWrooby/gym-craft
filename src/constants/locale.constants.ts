@@ -6,8 +6,8 @@ export const DEFAULT_LOCALE: Locale = 'en';
 
 export const LOCALE_NAMES: Record<Locale, string> = { en: 'English', pl: 'Polski' };
 
-// Polish stays hidden in production until the app UI is translated (#430).
-const UNRELEASED_LOCALES: readonly Locale[] = ['pl'];
+// A supported locale listed here stays hidden in production until its UI is translated.
+const UNRELEASED_LOCALES: readonly Locale[] = [];
 
 export function enabledLocales(appEnv: string | undefined): Locale[] {
     if (appEnv !== 'production') return [...SUPPORTED_LOCALES];
