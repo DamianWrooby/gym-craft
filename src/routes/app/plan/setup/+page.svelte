@@ -14,6 +14,7 @@
     import { generateWeek } from '$lib/planner/generation-client';
     import { addDays } from '$lib/utils/iso-week';
     import { SCHOOLS, getSchool } from '$lib/planner/schools/catalogue';
+    import { displaySchool } from '$lib/i18n/school-text';
     import { deriveAnchor } from '$lib/planner/core/anchor';
     import { recommendSchool } from '$lib/planner/core/recommend';
     import {
@@ -112,7 +113,7 @@
         anchorPresent: anchor != null,
         recentMetresPerWeek: ready?.recentVolume.metresPerWeek ?? 0,
     });
-    $: school = state.schoolId ? getSchool(state.schoolId) : null;
+    $: school = state.schoolId ? displaySchool(getSchool(state.schoolId)) : null;
     $: runsPerWeek = WEEKDAYS.filter((d) => state.availability[d]).length;
     $: layout =
         ready && school && endDate
@@ -331,7 +332,7 @@
             {/if}
         {:else if step === 'school'}
             <div class="grid gap-3 sm:grid-cols-2">
-                {#each SCHOOLS as s}
+                {#each SCHOOLS.map(displaySchool) as s}
                     {@const filtered = recommendation.filtered.find((f) => f.schoolId === s.id)}
                     {@const recommended = recommendation.recommended?.schoolId === s.id}
                     <div class="flex flex-col gap-1">
@@ -424,7 +425,7 @@
                         {#each layout.layout.phases as p}
                             <li class="flex justify-between border-b border-slate-700 py-1">
                                 <span>
-                                    {p.name}
+                                    {p.source === 'LEAD_IN' ? m.lead_in_name() : p.name}
                                     {#if p.source === 'LEAD_IN'}
                                         <span class="text-xs text-slate-400">· {p.intent}</span>
                                     {/if}

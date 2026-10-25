@@ -2,8 +2,10 @@
 // re-lays only the weeks not yet pulled, from the week after the last written one. A race moved up
 // to 7 days earlier is absorbed silently when no floor breaks; anything else is a full re-lay the
 // athlete confirms. Pure.
+import { m } from '$lib/paraglide/messages.js';
 import { addDays, daysBetween, mondayOf } from '$lib/utils/iso-week';
 import { getSchool } from '../schools/catalogue';
+import { displayPhase, displaySchool } from '$lib/i18n/school-text';
 import type { SchoolId } from '../schools/types';
 import {
     horizonWeekCount,
@@ -64,9 +66,8 @@ export function recut(input: RecutInput): RecutResult {
     const currentSchool = phases[phases.length - 1].school;
     const schoolId = input.change.schoolId ?? currentSchool;
     const endDate = input.change.endDate ?? input.endDate;
-    if (schoolId === currentSchool && endDate === input.endDate)
-        return { kind: 'refused', reason: 'Nothing to change.' };
-    if (endDate <= today) return { kind: 'refused', reason: 'The goal date must be after today.' };
+    if (schoolId === currentSchool && endDate === input.endDate) return { kind: 'refused', reason: m.recut_nothing() };
+    if (endDate <= today) return { kind: 'refused', reason: m.recut_date_past() };
 
     // Kept: the current week, and everything up to the last week that was pulled or written.
     const thisMonday = mondayOf(today);
@@ -75,13 +76,13 @@ export function recut(input: RecutInput): RecutResult {
             (last, w, i) => (w.startDate <= thisMonday || w.pulled || w.generation !== 'PENDING' ? i : last),
             -1,
         ) + 1;
-    if (keptCount === 0) return { kind: 'refused', reason: 'The plan has not started yet; set it up again.' };
+    if (keptCount === 0) return { kind: 'refused', reason: m.recut_not_started() };
     const lastKept = weeks[keptCount - 1];
     const relayFrom = addDays(lastKept.endDate, 1);
     if (endDate <= lastKept.endDate) {
         return {
             kind: 'refused',
-            reason: `Weeks up to ${lastKept.endDate} are already written; the goal date must be after them.`,
+            reason: m.recut_before_written({ date: lastKept.endDate }),
         };
     }
 
@@ -113,7 +114,11 @@ export function recut(input: RecutInput): RecutResult {
         weeks: laidWeeks,
         timeTrial,
         losses,
-        summary: `Weeks ${keptCount + 1}–${keptCount + laidWeeks.length} will be re-laid under ${school.name}.`,
+        summary: m.recut_summary({
+            from: keptCount + 1,
+            to: keptCount + laidWeeks.length,
+            school: displaySchool(school).name,
+        }),
     };
 }
 
@@ -210,8 +215,11 @@ function absorb(
         timeTrial: trial < 0 ? null : { weekIndex: trial, distanceM: kept[trial].timeTrialDistanceM! },
         losses: [],
         summary: removedFrom
-            ? `Goal date moved to ${endDate}: ${removedFrom.name} is one week shorter.`
-            : `Goal date moved to ${endDate}: the last week is shorter.`,
+            ? m.recut_absorbed_phase({
+                  date: endDate,
+                  phase: displayPhase(removedFrom.school, removedFrom.name, removedFrom.intent).name,
+              })
+            : m.recut_absorbed_last({ date: endDate }),
     };
 }
 

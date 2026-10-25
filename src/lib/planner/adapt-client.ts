@@ -1,5 +1,6 @@
 // Browser side of revisions and check-ins (ADR 0015). Like week generation, the browser holds only
 // ids: it asks the proxy to run a revision's AI request, then asks the app to finalize it.
+import { m } from '$lib/paraglide/messages.js';
 import { runOnProxy } from './generation-client';
 import type { RecutResult } from './core/recut';
 import type { SchoolId } from './schools/types';
@@ -37,7 +38,7 @@ export async function runRevision(input: {
 
 export async function retryRevision(userId: string, weekId: string): Promise<{ ok: true } | { error: string }> {
     const { ok, json } = await post(`/api/user/${userId}/plan/weeks/${weekId}/revision/retry`);
-    return ok ? { ok: true } : { error: messageOf(json, 'Retry failed. Try again later.') };
+    return ok ? { ok: true } : { error: messageOf(json, m.client_retry_failed()) };
 }
 
 /** The outcome kinds the revision route answers with. */
@@ -48,7 +49,7 @@ export async function requestRevision(
     trigger: 'ATHLETE' | 'CHECK_IN',
 ): Promise<{ kind: RevisionRequestKind } | { error: string }> {
     const { ok, json } = await post(`/api/user/${userId}/plan/revision`, { trigger });
-    if (!ok) return { error: messageOf(json, 'Could not request a revision. Try again.') };
+    if (!ok) return { error: messageOf(json, m.client_revision_failed()) };
     return { kind: (json?.data as { kind: RevisionRequestKind }).kind };
 }
 
@@ -58,7 +59,7 @@ export async function saveCheckIn(
     reason: string | null,
 ): Promise<{ ok: true } | { error: string }> {
     const { ok, json } = await post(`/api/user/${userId}/plan/check-ins`, { feeling, reason });
-    return ok ? { ok: true } : { error: messageOf(json, 'Could not save your check-in. Try again.') };
+    return ok ? { ok: true } : { error: messageOf(json, m.client_checkin_failed()) };
 }
 
 export async function dismissCheckInProposal(userId: string): Promise<void> {
@@ -83,6 +84,6 @@ export async function recutPlan(
     confirm = false,
 ): Promise<RecutAnswer | { error: string }> {
     const { ok, json } = await post(`/api/user/${userId}/plan/recut`, { ...change, confirm });
-    if (!ok) return { error: messageOf(json, 'Could not recut the plan. Try again.') };
+    if (!ok) return { error: messageOf(json, m.client_recut_failed()) };
     return json?.data as RecutAnswer;
 }

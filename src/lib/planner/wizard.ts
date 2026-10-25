@@ -1,4 +1,5 @@
 // Setup-wizard step gating (ADR 0018). Pure, so the component stays a thin view over it.
+import { m } from '$lib/paraglide/messages.js';
 import type { HrZoneBound } from './core/zones';
 import { isValidZones } from './core/zones';
 import type { Compression } from './core/layout';
@@ -56,21 +57,21 @@ export function initialWizardState(zones: HrZoneBound[] | null): WizardState {
 export function stepIssue(step: WizardStep, s: WizardState): string | null {
     switch (step) {
         case 'goal':
-            return s.goalId ? null : 'Choose the goal this plan works toward.';
+            return s.goalId ? null : m.wizard_choose_goal();
         case 'school':
-            return s.schoolId ? null : 'Choose a training school.';
+            return s.schoolId ? null : m.wizard_choose_school();
         case 'horizon':
-            if (!s.goalDate && !s.endDate) return 'Choose when the horizon ends.';
-            return s.layoutRefused ? 'This horizon cannot be laid out. Change the phases or the end date.' : null;
+            if (!s.goalDate && !s.endDate) return m.wizard_choose_end();
+            return s.layoutRefused ? m.wizard_layout_refused() : null;
         case 'zones':
-            if (!isValidZones(s.zones)) return 'Enter five heart-rate zones, lowest first.';
-            return s.zonesConfirmed ? null : 'Confirm your heart-rate zones.';
+            if (!isValidZones(s.zones)) return m.wizard_zones_invalid();
+            return s.zonesConfirmed ? null : m.wizard_zones_confirm();
         case 'results':
             return null; // Optional: no result schedules a time trial.
         case 'availability': {
-            if (!WEEKDAYS.some((d) => s.availability[d])) return 'Choose at least one training day.';
-            if (s.longRunDay == null) return 'Choose your long-run day.';
-            if (!s.availability[WEEKDAYS[s.longRunDay]]) return 'Your long-run day must be a training day.';
+            if (!WEEKDAYS.some((d) => s.availability[d])) return m.wizard_training_day();
+            if (s.longRunDay == null) return m.wizard_long_run_day();
+            if (!s.availability[WEEKDAYS[s.longRunDay]]) return m.wizard_long_run_not_training();
             return null;
         }
     }

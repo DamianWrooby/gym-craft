@@ -1,5 +1,7 @@
 // Re-evaluate (ADR 0015): an event decides when, the current plan week decides what. The outcome
 // is no change, a revision of the remaining sessions, or an ask. Pure.
+import { m } from '$lib/paraglide/messages.js';
+import { getLocale } from '$lib/paraglide/runtime.js';
 import type { TypedSession } from './session';
 
 /** What started a re-evaluation. `ATHLETE` and `CHECK_IN` are athlete-confirmed requests. */
@@ -146,8 +148,8 @@ export const daySessionOf = (s: TypedSession): DaySession => ({
     date: s.scheduledDate,
 });
 
-const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const weekdayName = (date: string) => WEEKDAY_NAMES[new Date(`${date}T00:00:00Z`).getUTCDay()];
+const weekdayName = (date: string) =>
+    new Date(`${date}T00:00:00Z`).toLocaleDateString(getLocale(), { weekday: 'long', timeZone: 'UTC' });
 
 /**
  * One line per session a rewrite moved to another day (ADR 0026). A key session matches by its key.
@@ -173,6 +175,6 @@ export function movedSessions(before: DaySession[], after: DaySession[]): string
                 ? take((s) => s.keySession == null && s.cutKey === old.cutKey)
                 : null);
         if (!now || now.date === old.date) return [];
-        return [`${old.title} moved from ${weekdayName(old.date)} to ${weekdayName(now.date)}.`];
+        return [m.revision_moved({ title: old.title, from: weekdayName(old.date), to: weekdayName(now.date) })];
     });
 }

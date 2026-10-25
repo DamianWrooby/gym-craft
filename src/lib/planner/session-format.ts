@@ -1,6 +1,7 @@
 // Plain-text rendering of a session body, shared by the week calendar and the PDF export so the
 // two never disagree. Speaks GymCraft vocabulary only: labels, targets, exercises.
 import { getSchool, isSchoolId } from './schools/catalogue';
+import { displaySchool } from '$lib/i18n/school-text';
 import { isRepeat, type RunBlock, type RunStep, type StepTarget } from './core/session';
 
 export function formatPace(secPerKm: number): string {
@@ -23,7 +24,7 @@ function formatAmount(step: RunStep): string {
 
 export function labelName(schoolId: string | null, label: string): string {
     if (!isSchoolId(schoolId)) return label;
-    return getSchool(schoolId).intensityLabels.find((l) => l.key === label)?.name ?? label;
+    return displaySchool(getSchool(schoolId)).intensityLabels.find((l) => l.key === label)?.name ?? label;
 }
 
 /** "20 min · Threshold · 4:10–4:18 /km" */

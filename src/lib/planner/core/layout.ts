@@ -1,5 +1,7 @@
 // Layout (ADRs 0008, 0012, 0020, 0021, 0025): lays the whole horizon out as phases and plan weeks.
 // Pure arithmetic over the school's declared data. No AI call, no I/O.
+import { m } from '$lib/paraglide/messages.js';
+import { displaySchool } from '$lib/i18n/school-text';
 import { addDays, daysBetween, mondayOf } from '$lib/utils/iso-week';
 import type { PhaseDefinition, SchoolDefinition, SchoolId, VolumeUnit } from '../schools/types';
 import {
@@ -90,7 +92,8 @@ export interface Layout {
 
 export type LayoutResult = { ok: true; layout: Layout } | { ok: false; reason: string };
 
-export const LEAD_IN_NAME = 'Lead-in (GymCraft)';
+import { LEAD_IN_NAME } from './lead-in-name';
+export { LEAD_IN_NAME };
 
 /** Number of Monday–Sunday weeks the horizon touches; partial weeks count as one. */
 export function horizonWeekCount(startDate: string, endDate: string): number {
@@ -132,30 +135,31 @@ export function defaultCompression(school: SchoolDefinition, weeks: number): Com
 
 function validateCompression(school: SchoolDefinition, compression: Compression, weeks: number): string | null {
     let total = 0;
-    for (const p of choosablePhases(school)) {
+    const shown = displaySchool(school);
+    for (const p of choosablePhases(shown)) {
         const n = compression[p.key];
         if (n === 0) {
-            if (!p.droppable.value) return `${p.name} cannot be dropped.`;
+            if (!p.droppable.value) return m.layout_cannot_drop({ phase: p.name });
             continue;
         }
-        if (n < p.floorWeeks.value) return `${p.name} needs at least ${p.floorWeeks.value} weeks.`;
-        if (n > p.idealWeeks.value) return `${p.name} runs at most ${p.idealWeeks.value} weeks.`;
+        if (n < p.floorWeeks.value) return m.layout_phase_min({ phase: p.name, weeks: p.floorWeeks.value });
+        if (n > p.idealWeeks.value) return m.layout_phase_max({ phase: p.name, weeks: p.idealWeeks.value });
         total += n;
     }
     if (total < school.schoolFloorWeeks.value) {
-        return `${school.name} needs at least ${school.schoolFloorWeeks.value} weeks of its own phases.`;
+        return m.layout_school_min({ school: shown.name, weeks: school.schoolFloorWeeks.value });
     }
-    if (total > weeks) return `These phases are longer than the horizon (${total} of ${weeks} weeks).`;
+    if (total > weeks) return m.layout_too_long({ total, weeks });
     return null;
 }
 
 export function compressionLosses(school: SchoolDefinition, compression: Compression): string[] {
     const losses: string[] = [];
-    for (const p of choosablePhases(school)) {
+    for (const p of choosablePhases(displaySchool(school))) {
         const n = compression[p.key];
-        if (n === 0) losses.push(`${p.name} dropped: ${p.lossLine}`);
+        if (n === 0) losses.push(m.layout_loss_dropped({ phase: p.name, loss: p.lossLine }));
         else if (n < p.idealWeeks.value) {
-            losses.push(`${p.name} shortened from ${p.idealWeeks.value} to ${n} weeks: ${p.lossLine}`);
+            losses.push(m.layout_loss_shortened({ phase: p.name, from: p.idealWeeks.value, to: n, loss: p.lossLine }));
         }
     }
     return losses;
@@ -229,7 +233,7 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
     const { resume } = input;
     const school = resume ? remainingSchool(input.school, resume) : input.school;
     const { startDate, endDate, goal, recentVolume, runsPerWeek, anchorPresent } = input;
-    if (endDate <= startDate) return { ok: false, reason: 'The horizon must end after it starts.' };
+    if (endDate <= startDate) return { ok: false, reason: m.layout_end_before_start() };
 
     const n = horizonWeekCount(startDate, endDate);
     if (n < school.schoolFloorWeeks.value) {
@@ -406,6 +410,7 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
 }
 
 function leadInIntent(school: SchoolDefinition, kind: LeadInKind): string {
-    const what = kind === 'bridge' ? 'A short bridge into the school' : 'Easy aerobic base with strides';
-    return `${what}, shaped to fit ${school.name}.`;
+    return kind === 'bridge'
+        ? m.layout_lead_in_bridge({ school: displaySchool(school).name })
+        : m.layout_lead_in_base({ school: displaySchool(school).name });
 }
