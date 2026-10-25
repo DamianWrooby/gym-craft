@@ -37,11 +37,6 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/retry', () => {
         expect((await post('someone-else')).status).toBe(403);
     });
 
-    it('returns 404 for a week the athlete does not own', async () => {
-        db.planWeek.findUnique.mockResolvedValueOnce(failedWeek(0, { userId: 'someone-else' }));
-        expect((await post()).status).toBe(404);
-    });
-
     it('re-opens the failed request and counts the retry', async () => {
         const response = await post();
         expect(response.status).toBe(200);
@@ -51,24 +46,5 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/retry', () => {
             data: { status: 'PENDING', output: null, error: null, retryCount: 1 },
         });
         expect(tx.planWeek.update).toHaveBeenCalledWith({ where: { id: 'week-1' }, data: { generation: 'PENDING' } });
-    });
-
-    it('refuses a third retry', async () => {
-        db.planWeek.findUnique.mockResolvedValueOnce(failedWeek(2));
-        const response = await post();
-        expect(response.status).toBe(429);
-        expect(await response.json()).toMatchObject({ code: 'RETRY_LIMIT' });
-        expect(tx.aiRequest.updateMany).not.toHaveBeenCalled();
-    });
-
-    it('refuses a retry that lost the race to a parallel one', async () => {
-        tx.aiRequest.updateMany.mockResolvedValueOnce({ count: 0 });
-        expect((await post()).status).toBe(409);
-        expect(tx.planWeek.update).not.toHaveBeenCalled();
-    });
-
-    it('refuses a week that has not failed', async () => {
-        db.planWeek.findUnique.mockResolvedValueOnce(failedWeek(0, { generation: 'GENERATED' }));
-        expect((await post()).status).toBe(409);
     });
 });

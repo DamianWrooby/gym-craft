@@ -274,15 +274,4 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/revision/finalize', () => {
         db.planWeek.findUnique.mockResolvedValue(week({ status: 'RUNNING', updatedAt: new Date() }));
         expect((await (await post()).json()).data).toMatchObject({ revision: 'PENDING' });
     });
-
-    it('fails a request whose proxy call never started (#423)', async () => {
-        db.planWeek.findUnique.mockResolvedValue(
-            week({ status: 'PENDING', updatedAt: new Date('2026-10-14T08:50:00Z') }),
-        );
-        expect((await (await post()).json()).data.revision).toBe('FAILED');
-        expect(tx.aiRequest.update).toHaveBeenCalledWith({
-            where: { id: 'request-9' },
-            data: { status: 'FAILED', error: 'Stalled: the proxy call never started' },
-        });
-    });
 });

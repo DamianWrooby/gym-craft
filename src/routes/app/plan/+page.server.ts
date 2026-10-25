@@ -2,7 +2,8 @@ import { redirect } from '@sveltejs/kit';
 import { addDays, dateInTimezone, toIsoDate, todayInTimezone } from '$lib/utils/iso-week';
 import { getAthleteProfile, getRunningGoals } from '$lib/prisma/prisma';
 import { getActivePlan, type ActivePlan } from '$lib/server/planner/repository';
-import { MAX_RETRIES, finalizeWeek, staleReason } from '$lib/server/planner/week-generation';
+import { finalizeWeek } from '$lib/server/planner/week-generation';
+import { retriesLeft, staleReason } from '$lib/server/planner/week-job';
 import { hashSessionToken } from '$lib/server/session-token';
 import { toPlanView, type PlanView, type PlanViewActivity, type PlanViewSession } from '$lib/planner/plan-view';
 import { unconfirmedSessions } from '$lib/planner/core/pull';
@@ -157,7 +158,7 @@ export const load = async ({
                         ? {
                               id: w.aiRequest.id,
                               status: w.aiRequest.status,
-                              retriesLeft: Math.max(0, MAX_RETRIES - w.aiRequest.retryCount),
+                              retriesLeft: retriesLeft(w.aiRequest.retryCount),
                           }
                         : null,
                 })),
