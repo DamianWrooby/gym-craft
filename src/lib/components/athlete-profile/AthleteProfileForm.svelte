@@ -1,6 +1,8 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { createEventDispatcher } from 'svelte';
     import { SEX_LABELS } from '@/constants/training-report.constants';
+    import { sexLabel } from '$lib/i18n/labels';
     import type { Sex } from '@prisma/client';
 
     export let profile: {
@@ -14,6 +16,8 @@
         vo2max: number | null;
     } | null = null;
     export let saving = false;
+
+    const SEXES = Object.keys(SEX_LABELS) as Sex[];
 
     const dispatch = createEventDispatcher<{
         save: {
@@ -39,9 +43,9 @@
 
     function onSubmit(e: Event) {
         e.preventDefault();
-        if (!birthDate) return (formError = 'Birth date is required');
-        if (weightKg == null || weightKg <= 0) return (formError = 'Weight is required');
-        if (heightCm == null || heightCm <= 0) return (formError = 'Height is required');
+        if (!birthDate) return (formError = m.profile_birth_date_required());
+        if (weightKg == null || weightKg <= 0) return (formError = m.profile_weight_required());
+        if (heightCm == null || heightCm <= 0) return (formError = m.profile_height_required());
         formError = '';
         const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
         dispatch('save', {
@@ -60,36 +64,36 @@
 <form class="space-y-4" on:submit={onSubmit}>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label class="label">
-            <span>Birth date</span>
+            <span>{m.profile_birth_date()}</span>
             <input type="date" class="input" bind:value={birthDate} required />
         </label>
         <label class="label">
-            <span>Sex</span>
+            <span>{m.profile_sex()}</span>
             <select class="select" bind:value={sex} required>
-                {#each Object.entries(SEX_LABELS) as [key, label]}
-                    <option value={key}>{label}</option>
+                {#each SEXES as key}
+                    <option value={key}>{sexLabel(key)}</option>
                 {/each}
             </select>
         </label>
         <label class="label">
-            <span>Weight (kg)</span>
+            <span>{m.profile_weight()}</span>
             <input type="number" class="input" step="0.1" min="20" max="300" bind:value={weightKg} required />
         </label>
         <label class="label">
-            <span>Height (cm)</span>
+            <span>{m.profile_height()}</span>
             <input type="number" class="input" step="1" min="100" max="250" bind:value={heightCm} required />
         </label>
     </div>
 
     <details class="rounded border border-surface-300 dark:border-surface-700 p-3">
-        <summary class="cursor-pointer font-semibold">Advanced (optional)</summary>
+        <summary class="cursor-pointer font-semibold">{m.profile_advanced()}</summary>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
             <label class="label">
-                <span>Resting HR (bpm)</span>
+                <span>{m.profile_resting_hr()}</span>
                 <input type="number" class="input" min="30" max="120" bind:value={restingHR} />
             </label>
             <label class="label">
-                <span>Max HR (bpm)</span>
+                <span>{m.profile_max_hr()}</span>
                 <input type="number" class="input" min="100" max="250" bind:value={maxHR} />
             </label>
             <label class="label">
@@ -104,7 +108,7 @@
     {/if}
     <div class="flex justify-end">
         <button type="submit" class="btn variant-filled-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save profile'}
+            {saving ? m.common_saving() : m.profile_save()}
         </button>
     </div>
 </form>
