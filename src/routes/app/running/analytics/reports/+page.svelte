@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import { page } from '$app/stores';
     import { goto, invalidateAll } from '$app/navigation';
     import { onMount } from 'svelte';
@@ -281,7 +282,7 @@
                                     Week of {formatReportPeriod(report.periodStart, report.periodEnd)}
                                 </h3>
                                 <span class="text-xs opacity-60 whitespace-nowrap">
-                                    {new Date(report.createdAt).toLocaleDateString()}
+                                    {new Date(report.createdAt).toLocaleDateString(getLocale())}
                                 </span>
                             </div>
                             <div class="flex flex-wrap items-center gap-2 mt-2">

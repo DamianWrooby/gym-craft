@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import { createEventDispatcher } from 'svelte';
     import { PlusIcon } from 'svelte-feather-icons';
     import type { WeekCell } from '$lib/server/reports/week-timeline';
@@ -28,7 +29,7 @@
     }
 
     function shortLabel(periodStart: string): string {
-        return new Date(`${periodStart}T00:00:00Z`).toLocaleDateString(undefined, {
+        return new Date(`${periodStart}T00:00:00Z`).toLocaleDateString(getLocale(), {
             month: 'short',
             day: 'numeric',
             timeZone: 'UTC',

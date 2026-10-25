@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import { afterNavigate, goto } from '$app/navigation';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
@@ -118,7 +119,7 @@
     });
 
     function formatDate(iso: string): string {
-        return new Date(iso).toLocaleString('en-US', {
+        return new Date(iso).toLocaleString(getLocale(), {
             weekday: 'short',
             month: 'short',
             day: 'numeric',

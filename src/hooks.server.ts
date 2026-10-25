@@ -1,6 +1,8 @@
 import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
 import { updateUser } from '$lib/utils/user';
+import { i18nHandle } from '$lib/server/i18n/handle';
 
 const publicPaths = new Set([
     '/',
@@ -29,7 +31,7 @@ function routePath(rawPath: string) {
     return stripped === '' ? '/' : stripped;
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
+const authHandle: Handle = async ({ event, resolve }) => {
     const session = event.cookies.get('session');
     const pathname = routePath(new URL(event.request.url).pathname);
 
@@ -57,6 +59,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     return addSecurityHeaders(await resolve(event));
 };
+
+// Auth first: the locale hook reads the signed-in athlete's stored locale.
+export const handle = sequence(authHandle, i18nHandle);
 
 function addSecurityHeaders(response: Response): Response {
     response.headers.set('X-Frame-Options', 'DENY');
