@@ -150,7 +150,7 @@
 </script>
 
 <Seo
-    title="{activity.activityName ?? 'Activity'} | GymCraft™"
+    title="{activity.activityName ?? m.chart_activity()} | GymCraft™"
     metaDescription="Activity detail with splits and AI analysis." />
 
 <Card width="3/4">

@@ -72,7 +72,7 @@
     }
 </script>
 
-<Seo title="Activities | GymCraft&#x2122;" metaDescription="Browse your Garmin activities." />
+<Seo title={`${m.activities_heading()} | GymCraft™`} metaDescription="Browse your Garmin activities." />
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-2">

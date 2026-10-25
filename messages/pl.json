@@ -836,5 +836,10 @@
     "api_user_not_found": "Nie znaleziono użytkownika",
     "api_verify_not_sent": "Wiadomość weryfikacyjna nie została wysłana",
     "api_explain_limit": "Osiągnięto dzienny limit wyjaśnień ({limit}). Spróbuj jutro.",
-    "api_garmin_too_many_steps": "Ta sesja ma {count} kroków; Garmin przyjmuje najwyżej {max}"
+    "api_garmin_too_many_steps": "Ta sesja ma {count} kroków; Garmin przyjmuje najwyżej {max}",
+    "report_modal_heading_short": "Raport tygodniowy",
+    "common_play_video": "Odtwórz wideo",
+    "page_profile_load_failed": "Nie można załadować profilu",
+    "page_reports_load_failed": "Nie można załadować raportów",
+    "page_report_load_failed": "Nie można załadować raportu"
 }
