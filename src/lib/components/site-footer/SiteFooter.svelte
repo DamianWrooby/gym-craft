@@ -1,10 +1,11 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     const currentYear = new Date().getFullYear();
 
     const links = [
-        { href: '/', label: 'Home' },
-        { href: '/privacy-policy', label: 'Privacy Policy' },
-        { href: '/terms-of-use', label: 'Terms of Use' },
+        { href: '/', label: m.footer_home() },
+        { href: '/privacy-policy', label: m.register_privacy_link() },
+        { href: '/terms-of-use', label: m.register_terms_link() },
     ];
 </script>
 
@@ -19,7 +20,7 @@
         </ul>
     </nav>
     <div class="hidden sm:block">
-        © {currentYear} <span class="font-bold">GymCraft</span> - Your AI powered personal trainer by
+        © {currentYear} <span class="font-bold">GymCraft</span> - {m.footer_tagline()}
         <a href="https://github.com/DamianWrooby" target="_blank" rel="noopener noreferrer"
             ><span class="text-surface-200 hover:text-surface-300 font-semibold">Wrooby</span></a>
     </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import Spinner from '@components/loading/spinner/Spinner.svelte';
 
     export let onSubmit = () => {};
@@ -7,7 +8,7 @@
 </script>
 
 <div class="flex flex-col gap-3 w-full max-w-sm">
-    <label class="label" for="delete-account-password">Enter your password to delete your account</label>
+    <label class="label" for="delete-account-password">{m.account_delete_password()}</label>
     <input
         class="input"
         id="delete-account-password"
@@ -20,6 +21,6 @@
         {#if loading}
             <Spinner size={4} />
         {/if}
-        <span>Confirm deletion</span>
+        <span>{m.account_delete_confirm()}</span>
     </button>
 </div>

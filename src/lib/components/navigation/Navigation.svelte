@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { Avatar, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
     import { page } from '$app/stores';
     import type { User } from '@/models/user/user.model';
@@ -16,9 +17,9 @@
     function confirmLogout() {
         const modal: ModalSettings = {
             type: 'confirm',
-            title: 'Log out',
-            body: 'Are you sure you want to log out?',
-            buttonTextConfirm: 'Log out',
+            title: m.nav_logout(),
+            body: m.nav_logout_confirm(),
+            buttonTextConfirm: m.nav_logout(),
             response: (confirmed: boolean) => {
                 // form.submit() skips the submit event, so this does not re-open the modal.
                 if (confirmed) logoutForm.submit();
@@ -31,9 +32,9 @@
 <nav class="flex items-center text-surface-500 font-semibold whitespace-nowrap">
     {#if !user}
         <a class="px-4 hover:text-tertiary-500" class:text-tertiary-500={isActive('/app/login')} href="/app/login"
-            >Login</a>
+            >{m.nav_login()}</a>
         <a class="px-4 hover:text-tertiary-500" class:text-tertiary-500={isActive('/app/register')} href="/app/register"
-            >Register</a>
+            >{m.nav_register()}</a>
     {:else}
         <a
             class="px-2 sm:px-4 hover:text-tertiary-500"
@@ -51,25 +52,25 @@
             class:text-tertiary-500={isActive('/app/plan')}
             href="/app/plan">
             <CalendarIcon size="18" />
-            <span class="hidden sm:inline">Plan</span>
+            <span class="hidden sm:inline">{m.nav_plan()}</span>
         </a>
         <a
             class="px-3 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
             class:text-tertiary-500={isActive('/app/gym')}
             href="/app/gym">
             <SportIcon sport="gym" size={18} />
-            <span class="hidden sm:inline">Gym</span>
+            <span class="hidden sm:inline">{m.nav_gym()}</span>
         </a>
         <a
             class="px-3 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
             class:text-tertiary-500={isActive('/app/running')}
             href="/app/running">
             <SportIcon sport="running" size={18} />
-            <span class="hidden sm:inline">Running</span>
+            <span class="hidden sm:inline">{m.nav_running()}</span>
         </a>
         <span class="hidden sm:block text-surface-300 select-none">|</span>
         <form action="/app/logout" method="POST" bind:this={logoutForm} on:submit|preventDefault={confirmLogout}>
-            <button class="px-2 sm:px-4 hover:text-tertiary-500" type="submit">Log out</button>
+            <button class="px-2 sm:px-4 hover:text-tertiary-500" type="submit">{m.nav_logout()}</button>
         </form>
     {/if}
 </nav>
