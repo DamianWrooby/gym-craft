@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import PlannerShell from '$lib/components/planner/PlannerShell.svelte';
     import PlanHeader from '$lib/components/planner/PlanHeader.svelte';
     import PhaseTimeline from '$lib/components/planner/PhaseTimeline.svelte';
@@ -66,11 +67,11 @@
             on:recut={() => (recutOpen = true)} />
     {:else}
         <section class="gc-panel p-8 text-center space-y-4">
-            <h1 class="text-3xl font-black tracking-wide">Build your plan</h1>
+            <h1 class="text-3xl font-black tracking-wide">{m.plan_build_heading()}</h1>
             <p class="text-slate-300 max-w-prose mx-auto">
-                Pick a goal and a training school. GymCraft lays out every week from today to race day.
+                {m.plan_build_intro()}
             </p>
-            <a class="gc-button inline-block" href="/app/plan/setup">Start setup</a>
+            <a class="gc-button inline-block" href="/app/plan/setup">{m.plan_start_setup()}</a>
         </section>
     {/if}
 </PlannerShell>

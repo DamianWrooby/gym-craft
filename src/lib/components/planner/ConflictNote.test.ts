@@ -71,7 +71,7 @@ describe('ConflictNote', () => {
         const { component } = renderNote(ask(true), 'PENDING', 3);
         const recut = vi.fn();
         component.$on('recut', recut);
-        expect(screen.getByRole('note')).toHaveTextContent('You kept 3 weeks over budget so far.');
+        expect(screen.getByRole('note')).toHaveTextContent('Weeks you kept over budget so far: 3.');
         await fireEvent.click(screen.getByRole('button', { name: 'Change school' }));
         expect(recut).toHaveBeenCalled();
     });

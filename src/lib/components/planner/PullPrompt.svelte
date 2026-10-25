@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { invalidateAll } from '$app/navigation';
     import { generateWeek, pullWeek } from '$lib/planner/generation-client';
     import { WEEK_OUTLOOKS, type WeekOutlook } from '$lib/planner/core/pull';
@@ -8,11 +9,11 @@
     export let userId: string;
     export let proxySession: string | null;
 
-    const OUTLOOK_NAMES: Record<WeekOutlook, string> = {
-        NORMAL: 'Normal',
-        BUSY: 'Busy',
-        TRAVEL: 'Travel',
-        ILL: 'Ill',
+    const OUTLOOK_NAMES: Record<WeekOutlook, () => string> = {
+        NORMAL: m.outlook_normal,
+        BUSY: m.outlook_busy,
+        TRAVEL: m.outlook_travel,
+        ILL: m.outlook_ill,
     };
 
     const MARKS = ['DONE', 'SKIPPED'] as const;
@@ -43,12 +44,12 @@
     }
 </script>
 
-<section class="gc-panel p-4 space-y-4" aria-label="Write week {pull.weekIndex + 1}">
-    <h2 class="text-lg font-bold text-slate-100">Week {pull.weekIndex + 1} is next</h2>
+<section class="gc-panel p-4 space-y-4" aria-label={m.pull_write_week({ n: pull.weekIndex + 1 })}>
+    <h2 class="text-lg font-bold text-slate-100">{m.pull_next({ n: pull.weekIndex + 1 })}</h2>
 
     {#if pull.unconfirmed.length > 0}
         <div class="space-y-2">
-            <p class="text-sm text-slate-300">Mark these sessions first. They are not confirmed.</p>
+            <p class="text-sm text-slate-300">{m.pull_mark_first()}</p>
             <ul class="space-y-2">
                 {#each pull.unconfirmed as session (session.id)}
                     <li class="flex flex-wrap items-center justify-between gap-2">
@@ -60,7 +61,7 @@
                                     class={marks[session.id] === status ? 'gc-button' : 'gc-ghost'}
                                     aria-pressed={marks[session.id] === status}
                                     on:click={() => (marks = { ...marks, [session.id]: status })}>
-                                    {status === 'DONE' ? 'Done' : 'Skipped'}
+                                    {status === 'DONE' ? m.session_done() : m.session_skipped()}
                                 </button>
                             {/each}
                         </span>
@@ -71,7 +72,7 @@
     {/if}
 
     <fieldset class="space-y-2">
-        <legend class="text-sm text-slate-300">How does week {pull.weekIndex + 1} look?</legend>
+        <legend class="text-sm text-slate-300">{m.pull_outlook_question({ n: pull.weekIndex + 1 })}</legend>
         <div class="flex flex-wrap gap-2">
             {#each WEEK_OUTLOOKS as option}
                 <button
@@ -79,15 +80,15 @@
                     class={outlook === option ? 'gc-button' : 'gc-ghost'}
                     aria-pressed={outlook === option}
                     on:click={() => (outlook = option)}>
-                    {OUTLOOK_NAMES[option]}
+                    {OUTLOOK_NAMES[option]()}
                 </button>
             {/each}
         </div>
     </fieldset>
 
     <button type="button" class="gc-button" disabled={busy || !allMarked} on:click={submit}>
-        {busy ? 'Writing the week…' : `Write week ${pull.weekIndex + 1}`}
+        {busy ? m.pull_writing() : m.pull_write_week({ n: pull.weekIndex + 1 })}
     </button>
-    {#if busy}<p class="text-sm text-slate-400">This takes up to a minute. You can close this tab.</p>{/if}
+    {#if busy}<p class="text-sm text-slate-400">{m.pull_wait()}</p>{/if}
     {#if error}<p class="text-sm text-amber-300" role="alert">{error}</p>{/if}
 </section>

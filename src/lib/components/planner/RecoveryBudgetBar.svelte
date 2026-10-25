@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     // One recovery budget for running and strength together (ADR 0011); never split by kind.
     import { budgetBarState, type PlanViewWeek } from '$lib/planner/plan-view';
 
@@ -10,23 +11,24 @@
 </script>
 
 <div class="gc-stat space-y-1">
-    <div class="text-xs uppercase tracking-widest text-slate-500">Recovery budget</div>
+    <div class="text-xs uppercase tracking-widest text-slate-500">{m.budget_heading()}</div>
     {#if state.kind === 'unstruck'}
-        <p class="text-sm text-slate-400">Struck when this week is written.</p>
+        <p class="text-sm text-slate-400">{m.budget_unstruck()}</p>
     {:else if state.kind === 'needs-tracked-activity'}
         <p class="text-sm text-slate-400">
-            <span aria-hidden="true">🔒</span> Needs tracked activity. Link Garmin to strike a budget; the plan works without
-            it.
+            <span aria-hidden="true">🔒</span>
+            {m.budget_needs_activity()}
         </p>
     {:else if state.kind === 'needs-tracked-training'}
         <p class="text-sm text-slate-400">
-            <span aria-hidden="true">🔒</span> Needs 28 days of tracked training before a budget can be struck.
+            <span aria-hidden="true">🔒</span>
+            {m.budget_needs_training()}
         </p>
     {:else}
         {@const over = state.kind === 'over'}
         <div
             role="meter"
-            aria-label="Recovery budget"
+            aria-label={m.budget_heading()}
             aria-valuemin={0}
             aria-valuemax={state.budget}
             aria-valuenow={state.evaluation.plannedTotal}
@@ -37,22 +39,29 @@
         </div>
         <div class="flex flex-wrap justify-between gap-2 text-sm">
             <span class={over ? 'text-red-400 font-semibold' : 'text-slate-200'}
-                >{trimp(state.evaluation.plannedTotal)} of {trimp(state.budget)} TRIMP</span>
+                >{m.budget_of({ planned: trimp(state.evaluation.plannedTotal), budget: trimp(state.budget) })}</span>
             {#if over}
-                <span class="text-red-400">Over budget by {trimp(-(state.evaluation.remainder ?? 0))} TRIMP</span>
+                <span class="text-red-400"
+                    >{m.budget_over_by({ amount: trimp(-(state.evaluation.remainder ?? 0)) })}</span>
             {/if}
         </div>
         {#if over && state.kept}
-            <p class="text-xs text-amber-300">You kept this week over budget. It applies to this week only.</p>
+            <p class="text-xs text-amber-300">{m.budget_kept()}</p>
         {/if}
         {#if state.chronicLoad != null}
             <p class="text-xs text-slate-400">
-                1.3 × your chronic load of {state.chronicLoad} TRIMP/day, struck when the week was written.
+                {m.budget_basis({ chronic: state.chronicLoad })}
             </p>
         {/if}
         <p class="text-xs text-slate-400">
-            {pct(state.evaluation.fallbackShare)} of this week's planned load is a flat-rate estimate{#if state.chronicFallbackShare != null};
-                {pct(state.chronicFallbackShare)} of your chronic load is{/if}.
+            {#if state.chronicFallbackShare != null}
+                {m.budget_fallback_both({
+                    planned: pct(state.evaluation.fallbackShare),
+                    chronic: pct(state.chronicFallbackShare),
+                })}
+            {:else}
+                {m.budget_fallback({ planned: pct(state.evaluation.fallbackShare) })}
+            {/if}
         </p>
     {/if}
 </div>

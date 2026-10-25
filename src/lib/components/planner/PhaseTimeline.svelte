@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { createEventDispatcher } from 'svelte';
     import type { PlanView } from '$lib/planner/plan-view';
 
@@ -12,12 +13,30 @@
         source === 'LEAD_IN' ? 'bg-slate-500' : ordinal % 2 === 0 ? 'bg-rose-600' : 'bg-sky-600';
 
     $: fixtureWeeks = new Map(plan.fixtures.map((f) => [f.weekIndex, f]));
+
+    function weekAria(index: number): string {
+        const week = plan.weeks[index];
+        const fixture = fixtureWeeks.get(index);
+        const parts = [m.timeline_week({ n: index + 1 })];
+        if (week.isCutback) parts.push(m.timeline_cutback());
+        if (week.isTaper) parts.push(m.timeline_taper());
+        if (week.timeTrialDistanceM) parts.push(m.timeline_time_trial());
+        parts.push(
+            week.generation === 'PENDING'
+                ? m.timeline_not_written()
+                : week.generation === 'FAILED'
+                  ? m.timeline_failed()
+                  : m.timeline_written(),
+        );
+        if (fixture) parts.push(m.timeline_tune_up({ name: fixture.name ?? m.timeline_race() }));
+        return parts.join(', ');
+    }
 </script>
 
-<section class="gc-panel p-4 space-y-3" aria-label="Phase timeline">
+<section class="gc-panel p-4 space-y-3" aria-label={m.timeline_aria()}>
     <div class="flex justify-between text-[11px] uppercase tracking-[0.2em] text-slate-400">
         <span>{plan.startDate}</span>
-        <span>Horizon · {plan.weeks.length} weeks</span>
+        <span>{m.timeline_horizon({ weeks: plan.weeks.length })}</span>
         <span>{plan.endDate}</span>
     </div>
 
@@ -43,13 +62,7 @@
                                 : phaseColor(phase.source, phase.ordinal)}
                                 {week.generation === 'PENDING' ? 'opacity-35 border border-dashed border-white/40' : ''}
                                 {selected === index ? 'ring-2 ring-sky-300' : ''}"
-                            aria-label="Week {index + 1}{week.isCutback ? ', cutback' : ''}{week.isTaper
-                                ? ', taper'
-                                : ''}{week.timeTrialDistanceM ? ', time trial' : ''}{week.generation === 'PENDING'
-                                ? ', not yet written'
-                                : week.generation === 'FAILED'
-                                  ? ', failed'
-                                  : ', written'}{fixture ? `, tune-up: ${fixture.name ?? 'race'}` : ''}">
+                            aria-label={weekAria(index)}>
                             {#if week.timeTrialDistanceM}
                                 <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px]" aria-hidden="true"
                                     >⏱</span>
@@ -61,7 +74,7 @@
                             {#if index === plan.currentWeekIndex}
                                 <span
                                     class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-sky-300 whitespace-nowrap"
-                                    >▲ now</span>
+                                    >▲ {m.timeline_now()}</span>
                             {/if}
                         </button>
                     {/each}
@@ -71,12 +84,12 @@
     </div>
 
     <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">
-        <span><span class="inline-block w-2 h-2 bg-rose-600 mr-1" />written</span>
-        <span><span class="inline-block w-2 h-2 bg-rose-600 opacity-35 mr-1" />not yet written</span>
-        <span><span class="inline-block w-2 h-2 bg-red-500 mr-1" />failed</span>
-        <span>▁ cutback</span>
-        <span>▂ taper</span>
-        <span>⏱ time trial</span>
-        <span>⚑ tune-up</span>
+        <span><span class="inline-block w-2 h-2 bg-rose-600 mr-1" />{m.timeline_written()}</span>
+        <span><span class="inline-block w-2 h-2 bg-rose-600 opacity-35 mr-1" />{m.timeline_not_written()}</span>
+        <span><span class="inline-block w-2 h-2 bg-red-500 mr-1" />{m.timeline_failed()}</span>
+        <span>▁ {m.timeline_cutback()}</span>
+        <span>▂ {m.timeline_taper()}</span>
+        <span>⏱ {m.timeline_time_trial()}</span>
+        <span>⚑ {m.timeline_tune_up_legend()}</span>
     </div>
 </section>

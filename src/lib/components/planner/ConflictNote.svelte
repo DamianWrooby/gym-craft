@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     // Every trim and every ask states the numbers, the action, why that session and what was
     // protected (ADR 0013). A silent trim is one line that expands.
     import { createEventDispatcher } from 'svelte';
@@ -16,15 +17,15 @@
     const dispatch = createEventDispatcher<{ recut: void }>();
 
     const OPTION_LABELS: Record<DecisionOption, (title: string) => string> = {
-        DROP: (t) => `Drop ${t}`,
-        DOWNGRADE: (t) => `Downgrade ${t} one intensity step`,
-        KEEP: () => 'Keep the week as written and go over budget',
-        REWRITE: () => 'Rewrite the week',
+        DROP: (title) => m.conflict_option_drop({ title }),
+        DOWNGRADE: (title) => m.conflict_option_downgrade({ title }),
+        KEEP: () => m.conflict_option_keep(),
+        REWRITE: () => m.conflict_option_rewrite(),
     };
-    const ANSWERED: Record<string, string> = {
-        DROPPED: 'You dropped',
-        DOWNGRADED: 'You downgraded',
-        KEPT: 'You kept',
+    const ANSWERED: Record<string, (p: { title: string; over: string; budget: string }) => string> = {
+        DROPPED: m.conflict_answered_dropped,
+        DOWNGRADED: m.conflict_answered_downgraded,
+        KEPT: m.conflict_answered_kept,
     };
 
     $: placement = week.conflict?.placement ?? null;
@@ -50,17 +51,19 @@
 {#if placement && asked && week.decision === 'PENDING'}
     <div class="gc-stat space-y-2" role="alert">
         <p class="text-sm text-slate-100">
-            {asked.title} does not fit your training days with the rest of this week, so it is not in the week.
+            {m.conflict_not_fit({ title: asked.title })}
         </p>
         <ul class="ml-4 list-disc text-xs text-slate-400">
-            <li>Rules the week broke: {placement.violations.join('; ')}.</li>
+            <li>{m.conflict_rules_broke({ rules: placement.violations.join('; ') })}</li>
             {#if placement.removed.length}
                 <li>
-                    Also removed: {placement.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', ')}.
+                    {m.conflict_also_removed({
+                        sessions: placement.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', '),
+                    })}
                 </li>
             {/if}
-            <li>{asked.title} ({trimp(asked.plannedLoad)}) is a key session, so you decide.</li>
-            <li>Protected: {placement.protected.join(', ') || 'no other key sessions'}.</li>
+            <li>{m.conflict_key_you_decide({ title: asked.title, load: trimp(asked.plannedLoad) })}</li>
+            <li>{m.conflict_protected({ sessions: placement.protected.join(', ') || m.conflict_no_other_key() })}</li>
         </ul>
         <div class="flex flex-wrap gap-2">
             {#each asked.options as option}
@@ -76,15 +79,19 @@
         {#if error}<p class="text-sm text-amber-300">{error}</p>{/if}
     </div>
 {:else if asked && week.decision === 'DROPPED'}
-    <p class="text-sm text-slate-300">You dropped {asked.title} so the week fits your training days.</p>
+    <p class="text-sm text-slate-300">{m.conflict_dropped_to_fit({ title: asked.title })}</p>
 {:else if placement && placement.removed.length > 0}
     <details class="text-sm text-slate-300">
-        <summary>Removed {titles(placement.removed)} so the week fits your training days.</summary>
+        <summary>{m.conflict_removed_to_fit({ sessions: titles(placement.removed) })}</summary>
         <ul class="mt-1 ml-4 list-disc text-xs text-slate-400">
-            <li>Rules the week broke: {placement.violations.join('; ')}.</li>
-            <li>Removed: {placement.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', ')}.</li>
-            <li>Why those: {schoolName}'s cut order, cheapest to lose first: {placement.cutOrder.join(' → ')}.</li>
-            <li>Protected: {placement.protected.join(', ') || 'no key sessions'}.</li>
+            <li>{m.conflict_rules_broke({ rules: placement.violations.join('; ') })}</li>
+            <li>
+                {m.conflict_removed({
+                    sessions: placement.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', '),
+                })}
+            </li>
+            <li>{m.conflict_why_those({ school: schoolName, order: placement.cutOrder.join(' → ') })}</li>
+            <li>{m.conflict_protected({ sessions: placement.protected.join(', ') || m.conflict_no_key() })}</li>
         </ul>
     </details>
 {/if}
@@ -93,22 +100,35 @@
     {@const f = budget.facts}
     {#if budget.kind === 'TRIM'}
         <details class="text-sm text-slate-300">
-            <summary
-                >{#if f.removed.length > 0}Trimmed {titles(f.removed)}{:else}Nothing could be trimmed{/if}{#if f.stillOver > 0};
-                    the week is still {trimp(f.stillOver)} over budget.{:else}
-                    to fit the recovery budget.{/if}</summary>
+            <summary>
+                {#if f.removed.length === 0}
+                    {m.conflict_nothing_trimmed({ over: trimp(f.stillOver) })}
+                {:else if f.stillOver > 0}
+                    {m.conflict_trimmed_still_over({ sessions: titles(f.removed), over: trimp(f.stillOver) })}
+                {:else}
+                    {m.conflict_trimmed_to_fit({ sessions: titles(f.removed) })}
+                {/if}
+            </summary>
             <ul class="mt-1 ml-4 list-disc text-xs text-slate-400">
                 <li>
-                    Planned {trimp(f.plannedTotal)} against a budget of {trimp(f.budget)}: {trimp(f.overspend)} over.
+                    {m.conflict_planned_vs_budget({
+                        planned: trimp(f.plannedTotal),
+                        budget: trimp(f.budget),
+                        over: trimp(f.overspend),
+                    })}
                 </li>
-                <li>Removed: {f.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', ')}.</li>
-                <li>Why those: {schoolName}'s cut order, cheapest to lose first: {f.cutOrder.join(' → ')}.</li>
-                <li>Protected: {f.protected.join(', ') || 'no key sessions'}.</li>
+                <li>
+                    {m.conflict_removed({
+                        sessions: f.removed.map((r) => `${r.title} (${trimp(r.plannedLoad)})`).join(', '),
+                    })}
+                </li>
+                <li>{m.conflict_why_those({ school: schoolName, order: f.cutOrder.join(' → ') })}</li>
+                <li>{m.conflict_protected({ sessions: f.protected.join(', ') || m.conflict_no_key() })}</li>
                 {#if f.stillOver > 0}
-                    <li>Still {trimp(f.stillOver)} over: nothing else is in the cut order.</li>
+                    <li>{m.conflict_still_over({ over: trimp(f.stillOver) })}</li>
                 {/if}
                 {#if f.fallbackShare > 0}
-                    <li>{pct(f.fallbackShare)} of the planned load is a flat-rate estimate.</li>
+                    <li>{m.conflict_fallback({ share: pct(f.fallbackShare) })}</li>
                 {/if}
             </ul>
         </details>
@@ -117,23 +137,32 @@
         {#if week.decision === 'PENDING'}
             <div class="gc-stat space-y-2" role="alert">
                 <p class="text-sm text-slate-100">
-                    This week is {trimp(f.overspend)} over budget: {trimp(f.plannedTotal)} planned against {trimp(
-                        f.budget,
-                    )}.
+                    {m.conflict_week_over({
+                        over: trimp(f.overspend),
+                        planned: trimp(f.plannedTotal),
+                        budget: trimp(f.budget),
+                    })}
                 </p>
                 <ul class="ml-4 list-disc text-xs text-slate-400">
                     {#if f.removed.length > 0}
                         <li>
-                            Removing {titles(f.removed)} ({schoolName}'s cut order: {f.cutOrder.join(' → ')}) is not
-                            enough.
+                            {m.conflict_removing_not_enough({
+                                sessions: titles(f.removed),
+                                school: schoolName,
+                                order: f.cutOrder.join(' → '),
+                            })}
                         </li>
                     {:else}
-                        <li>No easy volume is left to trim ({schoolName}'s cut order: {f.cutOrder.join(' → ')}).</li>
+                        <li>{m.conflict_no_easy_volume({ school: schoolName, order: f.cutOrder.join(' → ') })}</li>
                     {/if}
-                    <li>{offered.title} ({trimp(offered.plannedLoad)}) is a key session, so you decide.</li>
-                    <li>Protected either way: {f.protected.join(', ') || 'no other key sessions'}.</li>
+                    <li>{m.conflict_key_you_decide({ title: offered.title, load: trimp(offered.plannedLoad) })}</li>
+                    <li>
+                        {m.conflict_protected_either_way({
+                            sessions: f.protected.join(', ') || m.conflict_no_other_key(),
+                        })}
+                    </li>
                     {#if f.fallbackShare > 0}
-                        <li>{pct(f.fallbackShare)} of the planned load is a flat-rate estimate.</li>
+                        <li>{m.conflict_fallback({ share: pct(f.fallbackShare) })}</li>
                     {/if}
                 </ul>
                 <div class="flex flex-wrap gap-2">
@@ -151,19 +180,17 @@
             </div>
         {:else if week.decision}
             <p class="text-sm text-slate-300">
-                {ANSWERED[week.decision]}
-                {offered.title} this week ({trimp(f.overspend)} over a budget of {trimp(f.budget)}).
+                {ANSWERED[week.decision]?.({ title: offered.title, over: trimp(f.overspend), budget: trimp(f.budget) })}
             </p>
         {/if}
         {#if budget.schoolFit}
             <p class="text-sm text-amber-300" role="note">
-                The key sessions alone cost more than this week's budget, so {schoolName}'s minimum week does not fit
-                you now. Consider a gentler school, a longer horizon, or a lead-in phase.
+                {m.conflict_school_fit({ school: schoolName })}
                 {#if keptWeeks > 0}
-                    You kept {keptWeeks}
-                    {keptWeeks === 1 ? 'week' : 'weeks'} over budget so far.
+                    {m.conflict_kept_weeks({ weeks: keptWeeks })}
                 {/if}
-                <button type="button" class="underline" on:click={() => dispatch('recut')}>Change school</button>
+                <button type="button" class="underline" on:click={() => dispatch('recut')}
+                    >{m.recut_change_school()}</button>
             </p>
         {/if}
     {/if}

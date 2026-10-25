@@ -1,4 +1,8 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
+    import { getLocale } from '$lib/paraglide/runtime.js';
+    import { goalTypeLabel } from '$lib/i18n/labels';
+    import type { GoalType } from '@prisma/client';
     import { goto, invalidateAll } from '$app/navigation';
     import { page } from '$app/stores';
     import PlannerShell from '$lib/components/planner/PlannerShell.svelte';
@@ -46,26 +50,31 @@
           };
 
     const STEP_TITLES: Record<WizardStep, string> = {
-        goal: 'Choose your goal',
-        school: 'Choose your training school',
-        horizon: 'Set your horizon',
-        zones: 'Confirm your heart-rate zones',
-        results: 'Enter race results',
-        availability: 'When can you train?',
+        goal: m.setup_step_goal(),
+        school: m.setup_step_school(),
+        horizon: m.setup_step_horizon(),
+        zones: m.setup_step_zones(),
+        results: m.setup_step_results(),
+        availability: m.setup_step_availability(),
     };
     const ZONE_SOURCE_LABEL: Record<ZoneSource, string> = {
-        profile: 'From your profile (synced from Garmin or entered by you).',
-        'max-hr': 'Proposed from your max heart rate.',
-        age: 'Proposed from your age. This is a rough estimate: check it.',
+        profile: m.setup_zones_from_profile(),
+        'max-hr': m.setup_zones_from_max_hr(),
+        age: m.setup_zones_from_age(),
     };
-    const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // 2024-01-01 was a Monday: seven days from it give the locale's short weekday names.
+    const DAY_LABELS = [1, 2, 3, 4, 5, 6, 7].map((d) =>
+        new Date(Date.UTC(2024, 0, d)).toLocaleDateString(getLocale(), { weekday: 'short', timeZone: 'UTC' }),
+    );
+    const asGoalType = (goalType: string) => goalType as GoalType;
+    const capitalize = (s: string) => s[0].toUpperCase() + s.slice(1);
     // `example` is a typical finish time, shown as the placeholder in the right format.
     const DISTANCES = [
         { label: '1500 m', m: 1500, format: 'm:ss', example: '6:30' },
         { label: '5 km', m: 5000, format: 'mm:ss', example: '24:30' },
         { label: '10 km', m: 10000, format: 'mm:ss', example: '52:00' },
-        { label: 'Half marathon', m: 21097, format: 'h:mm:ss', example: '1:45:00' },
-        { label: 'Marathon', m: 42195, format: 'h:mm:ss', example: '3:45:00' },
+        { label: capitalize(m.race_half_marathon()), m: 21097, format: 'h:mm:ss', example: '1:45:00' },
+        { label: capitalize(m.race_marathon()), m: 42195, format: 'h:mm:ss', example: '3:45:00' },
     ];
     const distanceLabel = (m: number) => DISTANCES.find((d) => d.m === m)?.label ?? `${(m / 1000).toFixed(1)} km`;
     $: newDistance = DISTANCES.find((d) => d.m === newResult.distanceM) ?? DISTANCES[1];
@@ -141,7 +150,7 @@
             body: JSON.stringify(e.detail),
         });
         if (!response.ok) {
-            goalError = (await readApiError(response, 'The goal was not saved. Try again.')).message;
+            goalError = (await readApiError(response, m.setup_goal_not_saved())).message;
             savingGoal = false;
             return;
         }
@@ -151,7 +160,7 @@
         addingGoal = false;
         const fresh = ready?.goals.find((g) => g.id === created.id);
         if (fresh) chooseGoal(fresh);
-        else goalError = 'The goal was saved, but its date has passed, so it cannot set a plan horizon.';
+        else goalError = m.setup_goal_date_passed();
     }
 
     function chooseSchool(id: (typeof SCHOOLS)[number]['id']) {
@@ -183,11 +192,11 @@
     function addResult() {
         const timeSec = parseTime(newResult.time);
         if (!newResult.date || !ready || newResult.date > ready.today) {
-            resultError = 'Enter a date that is not in the future.';
+            resultError = m.setup_result_future_date();
             return;
         }
         if (!timeSec) {
-            resultError = `Enter the time as ${newDistance.format}, for example ${newDistance.example}.`;
+            resultError = m.setup_result_time_format({ format: newDistance.format, example: newDistance.example });
             return;
         }
         state = {
@@ -244,7 +253,7 @@
             await goto('/app/plan');
             return;
         }
-        submitError = (await readApiError(response, 'Setup failed. Try again.')).message;
+        submitError = (await readApiError(response, m.setup_failed())).message;
         submitting = false;
     }
 </script>
@@ -255,20 +264,20 @@
     {#if generating}
         <section class="gc-panel p-8 text-center space-y-4" aria-live="polite">
             <div class="gc-pulse mx-auto" aria-hidden="true">◆</div>
-            <h1 class="text-2xl font-black tracking-wide">Writing week 1</h1>
+            <h1 class="text-2xl font-black tracking-wide">{m.setup_writing_week_1()}</h1>
             <p class="text-slate-300 max-w-prose mx-auto">
-                Your horizon is laid out. GymCraft is now writing this week's sessions. This takes up to a minute.
+                {m.setup_writing_body()}
             </p>
-            <p class="text-sm text-sky-300">You can close this tab. Week 1 will be on your plan when you come back.</p>
+            <p class="text-sm text-sky-300">{m.setup_writing_close()}</p>
         </section>
     {:else if data.profileMissing}
         <section class="gc-panel p-8 space-y-4 text-center">
-            <h1 class="text-2xl font-black">Your athlete profile comes first</h1>
-            <p class="text-slate-300">The planner needs your age and heart-rate details.</p>
-            <a class="gc-button inline-block" href="/app/profile">Open profile</a>
+            <h1 class="text-2xl font-black">{m.setup_profile_first()}</h1>
+            <p class="text-slate-300">{m.setup_profile_needs()}</p>
+            <a class="gc-button inline-block" href="/app/profile">{m.setup_open_profile()}</a>
         </section>
     {:else}
-        <ol class="flex gap-1" aria-label="Setup progress">
+        <ol class="flex gap-1" aria-label={m.setup_progress()}>
             {#each WIZARD_STEPS as s, i}
                 <li
                     class="h-1.5 flex-1 {i < stepIndex
@@ -282,13 +291,13 @@
             {/each}
         </ol>
         <div class="text-[11px] uppercase tracking-[0.3em] text-rose-400">
-            Step {stepIndex + 1} of {WIZARD_STEPS.length}
+            {m.setup_step_of({ step: stepIndex + 1, total: WIZARD_STEPS.length })}
         </div>
         <h1 class="text-3xl font-black tracking-wide">{STEP_TITLES[step]}</h1>
 
         {#if step === 'goal'}
             {#if data.goals.length === 0 && !addingGoal}
-                <p class="text-slate-400">You have no upcoming goals. Add one to start your plan.</p>
+                <p class="text-slate-400">{m.setup_no_goals()}</p>
             {/if}
             <div class="grid gap-3 sm:grid-cols-2">
                 {#each data.goals as g}
@@ -297,9 +306,9 @@
                         class="gc-panel gc-choice p-4 text-left"
                         aria-pressed={state.goalId === g.id}
                         on:click={() => chooseGoal(g)}>
-                        <div class="font-bold text-lg">{g.name ?? g.goalType.replace('_', ' ').toLowerCase()}</div>
+                        <div class="font-bold text-lg">{g.name ?? goalTypeLabel(asGoalType(g.goalType))}</div>
                         <div class="text-sm text-slate-400">
-                            {g.date ? `Race day ${g.date}` : 'No date: you choose the horizon'}
+                            {g.date ? m.setup_race_day({ date: g.date }) : m.setup_no_date()}
                             {g.distanceM ? ` · ${(g.distanceM / 1000).toFixed(1)} km` : ''}
                         </div>
                     </button>
@@ -307,7 +316,7 @@
             </div>
             {#if addingGoal}
                 <section class="gc-panel p-5 space-y-3">
-                    <h2 class="font-bold">New goal</h2>
+                    <h2 class="font-bold">{m.setup_new_goal()}</h2>
                     <GoalForm
                         others={ready?.goalRanks ?? []}
                         today={ready?.today ?? ''}
@@ -317,7 +326,8 @@
                     {#if goalError}<p class="text-rose-400 text-sm">{goalError}</p>{/if}
                 </section>
             {:else}
-                <button type="button" class="gc-ghost" on:click={() => (addingGoal = true)}>+ Add a goal</button>
+                <button type="button" class="gc-ghost" on:click={() => (addingGoal = true)}
+                    >+ {m.setup_add_goal()}</button>
             {/if}
         {:else if step === 'school'}
             <div class="grid gap-3 sm:grid-cols-2">
@@ -333,19 +343,21 @@
                             on:click={() => chooseSchool(s.id)}>
                             {#if recommended}
                                 <div class="text-[11px] uppercase tracking-[0.25em] text-sky-300">
-                                    ★ Recommended · {recommendation.recommended?.reason}
+                                    ★ {m.setup_recommended()} · {recommendation.recommended?.reason}
                                 </div>
                             {/if}
                             <div class="text-xl font-black">{s.name}</div>
                             <div class="text-sm text-rose-300">{s.tagline}</div>
                             <p class="text-sm text-slate-300">{s.lore}</p>
-                            {#if filtered}<p class="text-sm text-amber-300">Not available: {filtered.reason}</p>{/if}
+                            {#if filtered}<p class="text-sm text-amber-300">
+                                    {m.setup_not_available({ reason: filtered.reason })}
+                                </p>{/if}
                         </button>
                         <button
                             type="button"
                             class="self-start text-sm text-sky-300 underline underline-offset-4 hover:text-sky-200"
                             on:click={() => (detailsSchool = s)}>
-                            What to expect →
+                            {m.setup_what_to_expect()} →
                         </button>
                     </div>
                 {/each}
@@ -354,24 +366,24 @@
         {:else if step === 'horizon'}
             <section class="gc-panel p-5 space-y-4">
                 {#if state.goalDate}
-                    <p>Your horizon ends on race day: <b>{state.goalDate}</b>.</p>
+                    <p>{m.setup_horizon_race_day()} <b>{state.goalDate}</b>.</p>
                 {:else}
                     <label class="block space-y-1">
                         <span class="text-sm text-slate-300">
-                            Horizon end ({school?.name} default: {school?.phases.reduce(
-                                (n, p) => n + p.idealWeeks.value,
-                                0,
-                            )} weeks)
+                            {m.setup_horizon_end({
+                                school: school?.name ?? '',
+                                weeks: school?.phases.reduce((n, p) => n + p.idealWeeks.value, 0) ?? 0,
+                            })}
                         </span>
                         <input type="date" min={data.today} bind:value={state.endDate} />
                     </label>
                 {/if}
-                {#if weeks}<p class="text-sm text-slate-400">{weeks} plan weeks from today.</p>{/if}
+                {#if weeks}<p class="text-sm text-slate-400">{m.setup_weeks_from_today({ weeks })}</p>{/if}
 
                 {#if school && weeks != null && needsCompression}
                     <div class="space-y-2">
-                        <h2 class="font-bold">Your horizon is shorter than {school.name}'s full structure</h2>
-                        <p class="text-sm text-slate-400">Choose which phases are shortened or dropped.</p>
+                        <h2 class="font-bold">{m.setup_horizon_short({ school: school.name })}</h2>
+                        <p class="text-sm text-slate-400">{m.setup_choose_phases()}</p>
                         {#each choosablePhases(school) as p}
                             {@const value = (state.compression ?? defaultCompression(school, weeks))[p.key]}
                             <div class="flex flex-wrap items-center gap-3">
@@ -385,7 +397,7 @@
                                     {value}
                                     on:change={(e) => setPhaseWeeks(p.key, Number(e.currentTarget.value))} />
                                 <span class="text-xs text-slate-500"
-                                    >{p.floorWeeks.value}–{p.idealWeeks.value} weeks</span>
+                                    >{m.school_weeks({ weeks: `${p.floorWeeks.value}–${p.idealWeeks.value}` })}</span>
                                 {#if p.droppable.value}
                                     <label class="text-sm flex items-center gap-1">
                                         <input
@@ -396,7 +408,7 @@
                                                     p.key,
                                                     e.currentTarget.checked ? 0 : p.floorWeeks.value,
                                                 )} />
-                                        Drop
+                                        {m.setup_drop()}
                                     </label>
                                 {/if}
                             </div>
@@ -417,14 +429,16 @@
                                         <span class="text-xs text-slate-400">· {p.intent}</span>
                                     {/if}
                                 </span>
-                                <span class="text-slate-400">{p.weekCount} {p.weekCount === 1 ? 'week' : 'weeks'}</span>
+                                <span class="text-slate-400">{m.school_weeks({ weeks: p.weekCount })}</span>
                             </li>
                         {/each}
                     </ol>
                     {#if layout.layout.timeTrial}
                         <p class="text-sm text-sky-300">
-                            No race result yet: a {layout.layout.timeTrial.distanceM / 1000} km time trial is scheduled in
-                            week {layout.layout.timeTrial.weekIndex + 1}.
+                            {m.setup_time_trial_scheduled({
+                                km: layout.layout.timeTrial.distanceM / 1000,
+                                week: layout.layout.timeTrial.weekIndex + 1,
+                            })}
                         </p>
                     {/if}
                 {/if}
@@ -435,43 +449,42 @@
                     <p class="text-sm text-slate-300">{ZONE_SOURCE_LABEL[data.zoneProposal.source]}</p>
                 {:else}
                     <p class="text-sm text-amber-300">
-                        Enter your zones. Add your max heart rate on your profile for a proposal.
+                        {m.setup_enter_zones()}
                     </p>
                 {/if}
                 {#each state.zones ?? [] as z, i}
                     <div class="flex items-center gap-3">
-                        <span class="w-16 font-bold">Zone {z.zone}</span>
+                        <span class="w-16 font-bold">{m.setup_zone({ zone: z.zone })}</span>
                         <input
                             type="number"
                             class="w-20"
                             value={z.lowerBpm}
-                            aria-label="Zone {z.zone} lower bpm"
+                            aria-label={m.setup_zone_lower({ zone: z.zone })}
                             on:change={(e) => updateZone(i, 'lowerBpm', Number(e.currentTarget.value))} />
                         <span>–</span>
                         <input
                             type="number"
                             class="w-20"
                             value={z.upperBpm}
-                            aria-label="Zone {z.zone} upper bpm"
+                            aria-label={m.setup_zone_upper({ zone: z.zone })}
                             on:change={(e) => updateZone(i, 'upperBpm', Number(e.currentTarget.value))} />
                         <span class="text-slate-400 text-sm">bpm</span>
                     </div>
                 {/each}
                 <label class="flex items-center gap-2 pt-2">
                     <input type="checkbox" bind:checked={state.zonesConfirmed} />
-                    These are my heart-rate zones.
+                    {m.setup_zones_confirm()}
                 </label>
             </section>
         {:else if step === 'results'}
             <section class="gc-panel p-5 space-y-3">
                 <p class="text-sm text-slate-300">
-                    A race, a parkrun or a solo time trial from 1500 m to the marathon. Your paces come from these. Skip
-                    this step and GymCraft schedules a time trial.
+                    {m.setup_results_intro()}
                 </p>
                 <ul class="space-y-1">
                     {#each data.raceResults as r}
                         <li class="text-sm text-slate-400">
-                            {r.date} · {distanceLabel(r.distanceM)} · {formatTime(r.timeSec)} (saved)
+                            {r.date} · {distanceLabel(r.distanceM)} · {formatTime(r.timeSec)} ({m.setup_saved()})
                         </li>
                     {/each}
                     {#each state.raceResults as r, i}
@@ -482,44 +495,49 @@
                                 class="text-rose-400"
                                 on:click={() =>
                                     (state = { ...state, raceResults: state.raceResults.filter((_, j) => j !== i) })}
-                                >Remove</button>
+                                >{m.setup_remove()}</button>
                         </li>
                     {/each}
                 </ul>
                 <div class="flex flex-wrap gap-2 items-end">
                     <label class="flex flex-col gap-1 text-xs text-slate-400">
-                        Date
+                        {m.setup_date()}
                         <input type="date" max={data.today} bind:value={newResult.date} />
                     </label>
                     <label class="flex flex-col gap-1 text-xs text-slate-400">
-                        Distance
+                        {m.goal_distance()}
                         <select bind:value={newResult.distanceM}>
                             {#each DISTANCES as d}<option value={d.m}>{d.label}</option>{/each}
                         </select>
                     </label>
                     <label class="flex flex-col gap-1 text-xs text-slate-400">
-                        Time ({newDistance.format})
+                        {m.setup_time({ format: newDistance.format })}
                         <input
                             placeholder={newDistance.example}
                             inputmode="numeric"
                             class="w-28"
                             bind:value={newResult.time} />
                     </label>
-                    <button type="button" class="gc-ghost" on:click={addResult}>Add</button>
+                    <button type="button" class="gc-ghost" on:click={addResult}>{m.setup_add()}</button>
                 </div>
                 {#if resultError}<p class="text-sm text-amber-300">{resultError}</p>{/if}
                 <p class="text-sm text-sky-300">
                     {#if !anchor}
-                        No result yet, so a time trial is scheduled. Your training paces come from it.
+                        {m.setup_anchor_none()}
                     {:else if anchor.provenance === 'RACE_RESULT'}
-                        Your training paces come from your {distanceLabel(anchor.distanceM)} on {anchor.date} in {formatTime(
-                            anchor.timeSec,
-                        )}.
+                        {m.setup_anchor_race({
+                            distance: distanceLabel(anchor.distanceM),
+                            date: anchor.date,
+                            time: formatTime(anchor.timeSec),
+                        })}
                     {:else}
-                        Your training paces come from your best recent Garmin run: {distanceLabel(anchor.distanceM)} on
-                        {anchor.date} in {formatTime(anchor.timeSec)}. Add a race result to use a real race effort.
+                        {m.setup_anchor_inferred({
+                            distance: distanceLabel(anchor.distanceM),
+                            date: anchor.date,
+                            time: formatTime(anchor.timeSec),
+                        })}
                     {/if}
-                    {#if anchor?.stale}This result is old: enter a newer one.{/if}
+                    {#if anchor?.stale}{m.setup_anchor_stale()}{/if}
                 </p>
             </section>
         {:else if step === 'availability'}
@@ -536,7 +554,7 @@
                     {/each}
                 </div>
                 <label class="flex items-center gap-3">
-                    Long-run day
+                    {m.setup_long_run_day()}
                     <select bind:value={state.longRunDay}>
                         {#each DAY_LABELS as label, i}<option value={i}>{label}</option>{/each}
                     </select>
@@ -548,12 +566,14 @@
         {#if submitError}<p class="text-sm text-red-400" role="alert">{submitError}</p>{/if}
 
         <div class="flex justify-between pt-2">
-            <button type="button" class="gc-ghost" disabled={stepIndex === 0} on:click={() => stepIndex--}>Back</button>
+            <button type="button" class="gc-ghost" disabled={stepIndex === 0} on:click={() => stepIndex--}
+                >{m.setup_back()}</button>
             {#if stepIndex < WIZARD_STEPS.length - 1}
-                <button type="button" class="gc-button" disabled={!!issue} on:click={() => stepIndex++}>Next</button>
+                <button type="button" class="gc-button" disabled={!!issue} on:click={() => stepIndex++}
+                    >{m.setup_next()}</button>
             {:else}
                 <button type="button" class="gc-button" disabled={!canFinish(gated) || submitting} on:click={finish}>
-                    {submitting ? 'Laying out…' : 'Lay out my plan'}
+                    {submitting ? m.setup_laying_out() : m.setup_lay_out()}
                 </button>
             {/if}
         </div>
