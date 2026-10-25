@@ -1,5 +1,4 @@
 {
-    "$schema": "https://inlang.com/schema/inlang-message-format",
     "account_language_heading": "Język",
     "account_language_description": "Język, w którym wyświetla się serwis.",
     "account_language_not_saved": "Ustawienia języka nie zostały zapisane.",
