@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import TiltFrame from '$lib/components/tilt-frame/TiltFrame.svelte';
     import Play from '$lib/images/play.svg';
 
@@ -38,7 +39,7 @@
     <button
         class="absolute top-0 w-full h-full flex justify-center items-center group"
         on:click={onPlayClick}
-        aria-label="Play video">
+        aria-label={m.common_play_video()}>
         <img
             alt="play button"
             src={Play}

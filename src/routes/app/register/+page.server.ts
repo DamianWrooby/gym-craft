@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Action, Actions } from '../$types';
 import { Role } from '@prisma/client';
@@ -60,7 +61,7 @@ const register: Action = async ({ request }) => {
     });
 
     const [err, verificationToken] = await to(sendVerificationToken(createdUser.id, createdUser.email));
-    if (err) error(500, 'Verification email not sent');
+    if (err) error(500, m.api_verify_not_sent());
     if (verificationToken) redirect(303, '/verification-mail-sent');
 };
 

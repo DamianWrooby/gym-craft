@@ -1,15 +1,16 @@
+import { m } from '$lib/paraglide/messages.js';
 import { error } from '@sveltejs/kit';
 import { to } from 'await-to-js';
 import { getAthleteProfile, getRunningGoals } from '$lib/prisma/prisma';
 
 export async function load({ locals }) {
     const userId = locals.user?.id;
-    if (!userId) error(401, 'Unauthorized');
+    if (!userId) error(401, m.api_unauthorized());
 
     const [err, results] = await to(
         Promise.all([getAthleteProfile(userId), getRunningGoals(userId, { includeArchived: false })]),
     );
-    if (err || !results) error(500, 'Cannot load profile');
+    if (err || !results) error(500, m.page_profile_load_failed());
     const [profile, goals] = results;
 
     return {

@@ -99,7 +99,7 @@
     }
 </script>
 
-<Seo title="Profile | GymCraft™" metaDescription="Athlete profile and running goals." />
+<Seo title={`${m.profile_heading()} | GymCraft™`} metaDescription="Athlete profile and running goals." />
 
 <Card width="3/4">
     <div class="md:w-3/4 m-auto pb-8">

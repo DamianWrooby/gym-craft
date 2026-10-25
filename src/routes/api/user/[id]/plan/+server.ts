@@ -14,7 +14,8 @@ import {
     persistNewPlan,
 } from '$lib/server/planner/repository';
 
-const PROFILE_REQUIRED = { code: 'PROFILE_REQUIRED', message: m.api_profile_required_short() };
+// A function, so the message reads in each request's locale.
+const profileRequired = () => ({ code: 'PROFILE_REQUIRED', message: m.api_profile_required_short() });
 
 /** Create a plan: lay out the whole horizon, write it, and record week 1's AI request (ADR 0014). */
 export async function POST({
@@ -32,7 +33,7 @@ export async function POST({
     const userId = params.id;
 
     const profile = await getAthleteProfile(userId);
-    if (!profile) return createResponse(409, PROFILE_REQUIRED);
+    if (!profile) return createResponse(409, profileRequired());
     const today = todayInTimezone(profile.timezone);
 
     const validation = validateCreatePlanInput(await request.json(), today);
@@ -58,7 +59,7 @@ export async function POST({
         if (e instanceof ActivePlanExistsError) {
             return createResponse(409, { code: 'ACTIVE_PLAN_EXISTS', message: e.message });
         }
-        if (e instanceof MissingProfileError) return createResponse(409, PROFILE_REQUIRED);
+        if (e instanceof MissingProfileError) return createResponse(409, profileRequired());
         throw e;
     }
 }
