@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { CalendarIcon, ArrowRightIcon } from 'svelte-feather-icons';
     import Card from '@components/card/Card.svelte';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
@@ -12,9 +13,9 @@
         <span class="text-tertiary-500">
             <SportIcon sport="gym" size={48} />
         </span>
-        <h2 class="h2 text-2xl md:text-3xl">Gym</h2>
+        <h2 class="h2 text-2xl md:text-3xl">{m.nav_gym()}</h2>
         <p class="text-surface-500 dark:text-surface-300 max-w-xl">
-            Strength sessions now live in your training plan, on the same calendar as your runs.
+            {m.gym_moved()}
         </p>
     </div>
 
@@ -29,9 +30,9 @@
                 </span>
                 <ArrowRightIcon size="20" class="opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <h3 class="h3 text-lg font-semibold">Open my plan</h3>
+            <h3 class="h3 text-lg font-semibold">{m.gym_open_plan()}</h3>
             <p class="text-sm text-surface-500 dark:text-surface-300">
-                See this week's strength and running sessions, day by day.
+                {m.gym_open_plan_description()}
             </p>
         </a>
     </div>
