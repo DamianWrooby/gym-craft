@@ -27,15 +27,11 @@
         if (!checkout) return;
 
         if (checkout === 'success') {
-            makeToast(
-                toastStore,
-                'Thank you for supporting GymCraft! 🎉 <br> Your Supporter perks are activating — this can take a few seconds.',
-                'variant-filled-success',
-            );
+            makeToast(toastStore, m.account_checkout_success(), 'variant-filled-success');
             // Stripe redirects back before the webhook lands; refresh page data shortly so the tier flips.
             setTimeout(() => invalidateAll(), 2500);
         } else if (checkout === 'cancel') {
-            makeToast(toastStore, 'Checkout canceled — you have not been charged.', 'variant-filled-surface');
+            makeToast(toastStore, m.account_checkout_cancel(), 'variant-filled-surface');
         }
 
         // Strip the query param so a page refresh does not repeat the toast.
@@ -54,7 +50,7 @@
                 body: JSON.stringify({ model }),
             });
             if (response.ok) {
-                makeToast(toastStore, 'AI model saved.', 'variant-filled-success');
+                makeToast(toastStore, m.account_ai_model_saved(), 'variant-filled-success');
                 await invalidateAll();
             } else {
                 const { message } = await response.json();
@@ -62,7 +58,7 @@
             }
         } catch (err) {
             console.error({ err });
-            makeToast(toastStore, 'The AI model has not been saved.', 'variant-filled-error');
+            makeToast(toastStore, m.account_ai_model_not_saved(), 'variant-filled-error');
         } finally {
             isModelSaving = false;
         }
@@ -119,8 +115,7 @@
             }
         } catch (err) {
             console.error({ err });
-            makeToast(toastStore, 'Verification email has not been sent', 'variant-filled-error');
-            makeToast(toastStore, err as string, 'variant-filled-error');
+            makeToast(toastStore, m.account_delete_failed(), 'variant-filled-error');
         }
 
         isDeletionProcessed = false;
@@ -128,42 +123,42 @@
 </script>
 
 <Card>
-    <h2 class="h2 text-center text-xl pb-8">Manage your account</h2>
+    <h2 class="h2 text-center text-xl pb-8">{m.account_heading()}</h2>
 
     <div class="flex flex-col gap-6 max-w-2xl mx-auto">
         <section class="rounded-container-token border border-surface-500/40 p-5" aria-labelledby="account-heading">
             <div class="flex items-center gap-3 mb-4">
-                <h3 id="account-heading" class="h3">Account</h3>
+                <h3 id="account-heading" class="h3">{m.account_section_account()}</h3>
                 {#if user.subscriptionTier === 'SUPPORTER'}
                     <SupporterBadge />
                 {/if}
             </div>
             <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
-                <dt class="opacity-75">Name</dt>
+                <dt class="opacity-75">{m.account_name()}</dt>
                 <dd class="font-bold text-secondary-400 break-all">{user.name}</dd>
                 {#if user.email}
-                    <dt class="opacity-75">Email</dt>
+                    <dt class="opacity-75">{m.auth_email()}</dt>
                     <dd class="break-all">{user.email}</dd>
                 {/if}
-                <dt class="opacity-75">Generated plans</dt>
+                <dt class="opacity-75">{m.account_generated_plans()}</dt>
                 <dd>{user.generatedPlansNumber}</dd>
-                <dt class="opacity-75">Plans left</dt>
+                <dt class="opacity-75">{m.account_plans_left()}</dt>
                 <dd>{user.plansLeft}</dd>
             </dl>
             <a href="/app/profile" class="btn variant-soft-primary mt-5">
-                <span>Edit athlete profile &amp; running goals</span>
+                <span>{m.account_edit_profile()}</span>
                 <span aria-hidden="true">→</span>
             </a>
         </section>
 
         <section class="rounded-container-token border border-surface-500/40 p-5" aria-labelledby="ai-model-heading">
-            <h3 id="ai-model-heading" class="h3 mb-2">AI model</h3>
+            <h3 id="ai-model-heading" class="h3 mb-2">{m.account_ai_model()}</h3>
             <p class="mb-4 text-sm opacity-75">
-                Used by every AI feature: plan weeks, weekly reports and Explain my run.
+                {m.account_ai_model_description()}
             </p>
             {#if allowedModels.length > 1}
                 <label class="label">
-                    <span class="sr-only">AI model</span>
+                    <span class="sr-only">{m.account_ai_model()}</span>
                     <select
                         class="select max-w-xs"
                         value={user.aiModel}
@@ -175,7 +170,7 @@
                     </select>
                 </label>
             {:else}
-                <p><span class="font-bold">{user.aiModel}</span> — Supporters can switch to a smarter model.</p>
+                <p><span class="font-bold">{user.aiModel}</span> — {m.account_ai_model_upsell()}</p>
             {/if}
         </section>
 
@@ -203,13 +198,13 @@
         <BillingPanel tier={user.subscriptionTier} />
 
         <section class="rounded-container-token border border-error-500/60 p-5" aria-labelledby="danger-heading">
-            <h3 id="danger-heading" class="h3 text-error-500 mb-2">Danger zone</h3>
+            <h3 id="danger-heading" class="h3 text-error-500 mb-2">{m.account_danger_zone()}</h3>
             <p class="mb-4 text-sm opacity-75">
-                Deleting your account removes all your GymCraft data. You cannot undo this.
+                {m.account_delete_warning()}
             </p>
             {#if !deleteAccountFormOpened}
                 <button type="button" class="btn variant-filled-error" on:click={() => openDeleteAccountPanel()}>
-                    <span>Delete my account</span>
+                    <span>{m.account_delete()}</span>
                 </button>
             {:else}
                 <div transition:slide={{ duration: 200 }}>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { setupViewTransitions } from '$lib/utils/view-transitions';
     import SiteFooter from '$lib/components/site-footer/SiteFooter.svelte';
     import '../../app.pcss';
@@ -83,8 +84,5 @@
 </AppShell>
 
 {#if $cookieBannerOpened}
-    <Banner
-        title={'Cookie Consent'}
-        message={"This web application uses cookies to keep user's session. By continuing to browse or by clicking 'Accept', you agree to the storing of cookies on your device."}
-        on:accept={closeCookieBanner} />
+    <Banner title={m.cookie_banner_title()} message={m.cookie_banner_message()} on:accept={closeCookieBanner} />
 {/if}
