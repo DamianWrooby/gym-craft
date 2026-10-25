@@ -10,7 +10,7 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="gc-planner {fullscreen ? 'min-h-screen' : 'min-h-full'} px-4 py-6 md:px-8" on:click={openDatePicker}>
+<div class="gc-planner relative {fullscreen ? 'min-h-screen' : 'min-h-full'} px-4 py-6 md:px-8" on:click={openDatePicker}>
     <div class="mx-auto max-w-5xl space-y-4">
         <slot />
     </div>
