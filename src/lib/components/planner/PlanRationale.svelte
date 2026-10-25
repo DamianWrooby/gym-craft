@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     // "Why this plan": how the athlete's data shaped the layout, frozen at creation.
     import type { PlanRationale } from '$lib/planner/core/explain';
 
@@ -7,9 +8,9 @@
 
 <details class="gc-panel p-5 group">
     <summary class="cursor-pointer list-none flex items-center justify-between">
-        <span class="text-[11px] uppercase tracking-[0.3em] text-rose-400">Why this plan</span>
-        <span class="text-sm text-sky-300 group-open:hidden">Show how your data shaped it ▾</span>
-        <span class="text-sm text-sky-300 hidden group-open:inline">Hide ▴</span>
+        <span class="text-[11px] uppercase tracking-[0.3em] text-rose-400">{m.plan_why()}</span>
+        <span class="text-sm text-sky-300 group-open:hidden">{m.plan_why_show()} ▾</span>
+        <span class="text-sm text-sky-300 hidden group-open:inline">{m.plan_why_hide()} ▴</span>
     </summary>
     <div class="mt-4 grid gap-4 md:grid-cols-2">
         {#each rationale.sections as s}
