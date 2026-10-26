@@ -10,7 +10,7 @@
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
     import { TIER_LIMITS, type SubscriptionTier } from '@/constants/subscription.constants';
     import { withGarminLogin } from '$lib/garmin/garmin-login';
-    import { askGarminCredentials } from '$lib/garmin/garmin-login-modal';
+    import { askGarminCredentials, askGarminMfaCode } from '$lib/garmin/garmin-login-modal';
     import { formatRelativeTime } from '$lib/utils/relative-time';
 
     export let data: {
@@ -61,6 +61,7 @@
                     askGarminCredentials(modalStore, {
                         body: m.running_garmin_login_body(),
                     }),
+                (retry) => askGarminMfaCode(modalStore, retry),
             );
 
             if (result.ok) {

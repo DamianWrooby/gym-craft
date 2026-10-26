@@ -8,7 +8,8 @@ import { garminApiUrl, garminApiHeaders } from '$lib/server/garmin/config';
  * Exchanges the user's Garmin password for an opaque session token from the curl_cffi
  * microservice, and persists it. The token (not the password) becomes the identity for all
  * subsequent Garmin calls. Returns the token to the browser so the client-side proxy-sync path
- * can send it as a Bearer header.
+ * can send it as a Bearer header. When Garmin asks for an emailed MFA code, returns
+ * `{ code: 'MFA_REQUIRED', mfaTicket }` instead, and the login finishes at `./mfa`.
  */
 export async function POST({
     request,
@@ -52,6 +53,11 @@ export async function POST({
     const [parseError, data] = await to(pyResponse.json());
     if (parseError) {
         return createResponse(502, { message: m.api_garmin_invalid_response() });
+    }
+
+    if (pyResponse.ok && data?.code === 'MFA_REQUIRED' && data?.mfa_ticket) {
+        // Garmin emailed the user a code; the browser finishes the login at ./mfa.
+        return createResponse(200, { code: 'MFA_REQUIRED', mfaTicket: data.mfa_ticket });
     }
 
     if (!pyResponse.ok || !data?.session_token) {
