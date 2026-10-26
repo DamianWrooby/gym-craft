@@ -19,7 +19,7 @@
     import { linkSession, markSession, recordTimeTrial, unlinkSession } from '$lib/planner/session-client';
     import { uploadWorkoutToGarmin } from '$lib/garmin/upload-workout';
     import { withGarminLogin } from '$lib/garmin/garmin-login';
-    import { askGarminCredentials } from '$lib/garmin/garmin-login-modal';
+    import { askGarminCredentials, askGarminMfaCode } from '$lib/garmin/garmin-login-modal';
     import type { SchoolDefinition } from '$lib/planner/schools/types';
     import type { PlanViewActivity, PlanViewSession, PlanViewWeek } from '$lib/planner/plan-view';
 
@@ -83,6 +83,7 @@
                 askGarminCredentials(modalStore!, {
                     body: m.session_garmin_login_body(),
                 }),
+            (retry) => askGarminMfaCode(modalStore!, retry),
         );
         busy = false;
         if (result.ok) message = m.session_sent_to_garmin();

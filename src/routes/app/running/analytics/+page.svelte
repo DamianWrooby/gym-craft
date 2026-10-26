@@ -18,7 +18,7 @@
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
     import { TIER_LIMITS } from '@/constants/subscription.constants';
     import { withGarminLogin } from '$lib/garmin/garmin-login';
-    import { askGarminCredentials } from '$lib/garmin/garmin-login-modal';
+    import { askGarminCredentials, askGarminMfaCode } from '$lib/garmin/garmin-login-modal';
     import type { User } from '@/models/user/user.model';
     import type { DashboardPageData } from './+page.server';
 
@@ -74,6 +74,7 @@
                     askGarminCredentials(modalStore, {
                         body: m.analytics_garmin_login_body(),
                     }),
+                (retry) => askGarminMfaCode(modalStore, retry),
             );
 
             if (result.ok) {

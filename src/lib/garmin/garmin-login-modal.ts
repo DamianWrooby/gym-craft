@@ -1,5 +1,6 @@
 import { m } from '$lib/paraglide/messages.js';
 import GarminLoginForm from '$lib/components/garmin-login-form/GarminLoginForm.svelte';
+import GarminMfaForm from '$lib/components/garmin-login-form/GarminMfaForm.svelte';
 import type { ModalSettings, ModalStore } from '@skeletonlabs/skeleton';
 
 export type GarminLoginResponse = { email: string; password: string } | false;
@@ -34,5 +35,22 @@ export function askGarminCredentials(
 ): Promise<{ email: string; password: string } | null> {
     return new Promise((resolve) => {
         triggerGarminLoginModal(modalStore, { ...options, response: (value) => resolve(value || null) });
+    });
+}
+
+/**
+ * Promise form of the "enter the Garmin code" modal (email MFA), for `withGarminLogin`: resolves
+ * the code, or null when the user cancels. `retry` switches the body to the wrong-code text.
+ */
+export function askGarminMfaCode(modalStore: ModalStore, retry: boolean): Promise<string | null> {
+    return new Promise((resolve) => {
+        modalStore.trigger({
+            type: 'component',
+            title: m.garmin_mfa_title(),
+            body: retry ? m.garmin_mfa_retry_body() : m.garmin_mfa_body(),
+            buttonTextCancel: m.common_cancel(),
+            component: { ref: GarminMfaForm },
+            response: (value: unknown) => resolve(typeof value === 'string' && value ? value : null),
+        });
     });
 }
