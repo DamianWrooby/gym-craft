@@ -1,5 +1,6 @@
 <script lang="ts">
     import { m } from '$lib/paraglide/messages.js';
+    import InfoTooltip from '$lib/components/info-tooltip/InfoTooltip.svelte';
     // One recovery budget for running and strength together (ADR 0011); never split by kind.
     import { budgetBarState, type PlanViewWeek } from '$lib/planner/plan-view';
 
@@ -11,7 +12,10 @@
 </script>
 
 <div class="gc-stat space-y-1">
-    <div class="text-xs uppercase tracking-widest text-slate-500">{m.budget_heading()}</div>
+    <div class="flex items-center gap-1 text-xs uppercase tracking-widest text-slate-500">
+        {m.budget_heading()}
+        <InfoTooltip id="tip-budget" ariaLabel={m.help_aria()} placement="top">{m.help_budget()}</InfoTooltip>
+    </div>
     {#if state.kind === 'unstruck'}
         <p class="text-sm text-slate-400">{m.budget_unstruck()}</p>
     {:else if state.kind === 'needs-tracked-activity'}

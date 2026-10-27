@@ -1,5 +1,6 @@
 <script lang="ts">
     import { m } from '$lib/paraglide/messages.js';
+    import InfoTooltip from '$lib/components/info-tooltip/InfoTooltip.svelte';
     // A recut (stories 80–85): move the goal date or change the school. Only weeks not yet pulled are
     // re-laid; the cost is shown before confirm. A race a few days earlier is absorbed at once.
     import { invalidateAll } from '$app/navigation';
@@ -99,5 +100,8 @@
         {#if error}<p class="text-sm text-rose-300" role="alert">{error}</p>{/if}
     </section>
 {:else}
-    <button type="button" class="gc-ghost" on:click={openPanel}>{m.recut_open()}</button>
+    <div class="flex items-center gap-2">
+        <button type="button" class="gc-ghost" on:click={openPanel}>{m.recut_open()}</button>
+        <InfoTooltip id="tip-recut" ariaLabel={m.help_aria()} placement="top">{m.help_recut()}</InfoTooltip>
+    </div>
 {/if}

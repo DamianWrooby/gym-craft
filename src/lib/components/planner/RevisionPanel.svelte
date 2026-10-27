@@ -5,6 +5,7 @@
 
 <script lang="ts">
     import { m } from '$lib/paraglide/messages.js';
+    import InfoTooltip from '$lib/components/info-tooltip/InfoTooltip.svelte';
     // The current week's revision (stories 69–75): runs one in flight, shows the verdict in numbers,
     // lets the athlete ask for one, and keeps the "what changed" view.
     import { onDestroy } from 'svelte';
@@ -135,9 +136,12 @@
     {/if}
 
     {#if !pending}
-        <button type="button" class="gc-ghost" disabled={busy || atCap} on:click={ask}>
-            {busy ? m.revision_requesting() : m.revision_ask()}
-        </button>
+        <div class="flex items-center gap-2">
+            <button type="button" class="gc-ghost" disabled={busy || atCap} on:click={ask}>
+                {busy ? m.revision_requesting() : m.revision_ask()}
+            </button>
+            <InfoTooltip id="tip-revision" ariaLabel={m.help_aria()} placement="top">{m.help_revision()}</InfoTooltip>
+        </div>
     {/if}
     {#if message}<p class="text-sm text-amber-300">{message}</p>{/if}
 

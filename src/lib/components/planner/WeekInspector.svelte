@@ -1,5 +1,7 @@
 <script lang="ts">
     import { m } from '$lib/paraglide/messages.js';
+    import { createEventDispatcher } from 'svelte';
+    import { ChevronLeftIcon, ChevronRightIcon } from 'svelte-feather-icons';
     import { formatVolume, type PlanView, type PlanViewActivity } from '$lib/planner/plan-view';
     import { downloadWeekPdf } from '$lib/utils/plan-description';
     import WeekCalendar from './WeekCalendar.svelte';
@@ -29,6 +31,7 @@
     $: partial = week.inHorizonDays < 7;
     $: school = plan.school.id ? displaySchool(getSchool(plan.school.id)) : null;
     let adding = false;
+    const dispatch = createEventDispatcher<{ select: number }>();
     $: status =
         week.generation === 'GENERATED'
             ? m.inspector_written()
@@ -38,11 +41,33 @@
 </script>
 
 <section class="gc-panel p-4 space-y-3" aria-label={m.timeline_week({ n: index + 1 })}>
-    <header class="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="text-lg font-bold text-slate-100">
-            {m.timeline_week({ n: index + 1 })}
-            <span class="text-slate-400 font-normal">{m.inspector_of({ total: plan.weeks.length })}</span>
-        </h2>
+    <header class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <button
+                type="button"
+                class="gc-ghost gc-week-nav"
+                title={m.inspector_prev_week()}
+                aria-label={m.inspector_prev_week()}
+                disabled={index === 0}
+                on:click={() => dispatch('select', index - 1)}><ChevronLeftIcon size="16" /></button>
+            <h2 class="text-lg font-bold text-slate-100">
+                {m.timeline_week({ n: index + 1 })}
+                <span class="text-slate-400 font-normal">{m.inspector_of({ total: plan.weeks.length })}</span>
+            </h2>
+            <button
+                type="button"
+                class="gc-ghost gc-week-nav"
+                title={m.inspector_next_week()}
+                aria-label={m.inspector_next_week()}
+                disabled={index === plan.weeks.length - 1}
+                on:click={() => dispatch('select', index + 1)}><ChevronRightIcon size="16" /></button>
+            {#if plan.currentWeekIndex != null && index !== plan.currentWeekIndex}
+                <button
+                    type="button"
+                    class="gc-ghost gc-week-nav"
+                    on:click={() => dispatch('select', plan.currentWeekIndex ?? 0)}>{m.inspector_this_week()}</button>
+            {/if}
+        </div>
         <span
             class="text-xs uppercase tracking-widest {week.generation === 'FAILED' ? 'text-red-400' : 'text-sky-300'}">
             {status}
@@ -116,3 +141,21 @@
         {#key week.id}<WeekGeneration {week} {userId} {proxySession} />{/key}
     {/if}
 </section>
+
+<style>
+    .gc-week-nav {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.7rem;
+    }
+    .gc-week-nav:hover:not(:disabled) {
+        color: #f8fafc;
+        border-color: #38bdf8;
+        background-color: rgba(56, 189, 248, 0.15);
+    }
+    .gc-week-nav:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+</style>

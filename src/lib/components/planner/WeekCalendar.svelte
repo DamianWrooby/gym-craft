@@ -16,6 +16,12 @@
         activities: PlanViewActivity[] | null;
     } | null = null;
 
+    // The athlete's local date, so "today" matches their own calendar.
+    const now = new Date();
+    const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+        .map((n, i) => String(n).padStart(i === 0 ? 4 : 2, '0'))
+        .join('-');
+
     // Both session kinds share one day, interleaved: the week reads as one plan.
     $: days = [0, 1, 2, 3, 4, 5, 6].map((i) => {
         const date = addDays(week.startDate, i);
@@ -28,11 +34,13 @@
     });
 </script>
 
-<ol class="grid gap-2 md:grid-cols-7" aria-label={m.calendar_aria()}>
+<ol class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7" aria-label={m.calendar_aria()}>
     {#each days as day}
-        <li class="space-y-1.5">
-            <div class="text-xs uppercase tracking-widest text-slate-500">
-                {day.name} <span class="text-slate-600">{day.date.slice(5)}</span>
+        {@const isToday = day.date === today}
+        <li class="min-w-0 space-y-1.5" class:gc-today={isToday} aria-current={isToday ? 'date' : undefined}>
+            <div class="text-xs uppercase tracking-widest {isToday ? 'text-sky-300' : 'text-slate-500'}">
+                {day.name} <span class={isToday ? 'text-sky-400' : 'text-slate-600'}>{day.date.slice(5)}</span>
+                {#if isToday}<span class="normal-case tracking-normal">· {m.calendar_today()}</span>{/if}
             </div>
             <!-- A tune-up race is a fixed session: the athlete's, never moved or rewritten (story 36). -->
             {#each day.fixtures as fixture (fixture.goalId)}
@@ -53,6 +61,11 @@
 </ol>
 
 <style>
+    .gc-today {
+        outline: 1px solid rgba(56, 189, 248, 0.35);
+        outline-offset: 4px;
+        border-radius: 0.2rem;
+    }
     .gc-fixture {
         background: rgba(2, 6, 23, 0.6);
         border: 1px solid rgba(251, 191, 36, 0.4);

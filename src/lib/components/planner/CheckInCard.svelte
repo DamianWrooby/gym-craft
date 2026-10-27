@@ -1,5 +1,6 @@
 <script lang="ts">
     import { m } from '$lib/paraglide/messages.js';
+    import InfoTooltip from '$lib/components/info-tooltip/InfoTooltip.svelte';
     // Daily one-tap check-in (story 77) and the revision it may propose (story 78).
     import { invalidateAll } from '$app/navigation';
     import { CHECK_IN_REASONS, FEELINGS, type CheckInReason, type Feeling } from '$lib/planner/core/check-in';
@@ -56,7 +57,10 @@
 
 <section class="gc-panel p-4 space-y-3" aria-label={m.checkin_aria()}>
     <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs uppercase tracking-widest text-slate-500">{m.checkin_question()}</span>
+        <span class="flex items-center gap-1 text-xs uppercase tracking-widest text-slate-500">
+            {m.checkin_question()}
+            <InfoTooltip id="tip-checkin" ariaLabel={m.help_aria()} placement="top">{m.help_checkin()}</InfoTooltip>
+        </span>
         {#each FEELINGS as feeling}
             <button
                 type="button"
