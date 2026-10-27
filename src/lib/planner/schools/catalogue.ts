@@ -3,6 +3,8 @@ import { judged, sourced, type SchoolDefinition, type SchoolId } from './types';
 // Sources: docs/research/phase-floors-and-droppable-flags.md (#374, #377) and
 // docs/research/volume-ramp-and-strength-cadence.md (#380). "Transcribed" values reach the
 // book through a reviewer; they are marked sourced with the note saying so.
+// Intensity labels (#378): docs/research/intensity-labels.md. Judged Edwards weights follow one
+// rule: the Edwards zone that holds the midpoint of the school's own %HRmax range.
 
 const POLARIZED: SchoolDefinition = {
     id: 'POLARIZED',
@@ -58,19 +60,19 @@ const POLARIZED: SchoolDefinition = {
         {
             key: 'z1',
             name: 'Zone 1 (easy)',
-            edwardsWeight: judged(2),
+            edwardsWeight: judged(2, 'Below the first ventilatory threshold; Seiler gives no %HRmax.'),
             targetType: sourced('HR', 'Seiler three-zone model is heart-rate based.'),
         },
         {
             key: 'z2',
             name: 'Zone 2 (moderate)',
-            edwardsWeight: judged(3),
+            edwardsWeight: judged(3, 'Between the two ventilatory thresholds; Seiler gives no %HRmax.'),
             targetType: sourced('HR', 'Seiler three-zone model.'),
         },
         {
             key: 'z3',
             name: 'Zone 3 (hard)',
-            edwardsWeight: judged(4.5),
+            edwardsWeight: judged(5, 'Above the second ventilatory threshold; Edwards weights are whole zones.'),
             targetType: sourced('HR', 'Seiler three-zone model.'),
         },
     ],
@@ -290,30 +292,28 @@ const PFITZINGER: SchoolDefinition = {
         {
             key: 'REC',
             name: 'Recovery',
-            edwardsWeight: judged(1),
-            targetType: sourced('PACE'),
-            paceDerivation: 'LT pace from the anchor; recovery is well slower.',
+            edwardsWeight: judged(1, 'Easiest running; low Edwards zone kept until the book table is checked.'),
+            targetType: sourced('HR', 'ADR 0010: Pfitzinger prescribes recovery runs by %maxHR.'),
         },
         {
             key: 'GA',
             name: 'General aerobic',
-            edwardsWeight: judged(2),
-            targetType: sourced('PACE'),
-            paceDerivation: 'LT pace from the anchor; general aerobic is well slower.',
+            edwardsWeight: judged(2, 'Recalled 70-81 % HRmax range is unverified; weight kept until checked.'),
+            targetType: sourced('HR', 'ADR 0010: Pfitzinger prescribes general aerobic runs by %maxHR.'),
         },
         {
             key: 'MP',
             name: 'Marathon pace',
-            edwardsWeight: judged(3),
+            edwardsWeight: judged(3, 'Recalled %HRmax range is unverified; weight kept until checked.'),
             targetType: sourced('PACE'),
-            paceDerivation: 'LT pace from the anchor; marathon pace is "a couple of percent slower".',
+            paceDerivation: 'LT pace from the anchor; marathon pace is slower than LT pace.',
         },
         {
             key: 'LT',
             name: 'Lactate threshold',
-            edwardsWeight: judged(4),
+            edwardsWeight: sourced(4, 'pfitzingercoaching.com: about 82 to 90 percent of maximal heart rate.'),
             targetType: sourced('PACE', 'pfitzingercoaching.com: LT pace is the best predictor of race pace.'),
-            paceDerivation: 'LT pace from the anchor: about the pace you could race for an hour.',
+            paceDerivation: 'LT pace from the anchor: the pace you could race for about 45-60 minutes.',
         },
         {
             key: 'VO2',

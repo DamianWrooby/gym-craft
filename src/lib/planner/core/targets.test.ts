@@ -30,11 +30,12 @@ describe('labelPaces', () => {
         expect(paces.LT).toBeLessThan(265);
         expect(paces.VO2).toBeGreaterThan(230);
         expect(paces.VO2).toBeLessThan(250);
-        // Marathon pace is "a couple of percent slower than lactate threshold".
+        // Marathon pace is slower than lactate threshold pace.
         expect(paces.MP / paces.LT).toBeGreaterThan(1.01);
         expect(paces.MP / paces.LT).toBeLessThan(1.06);
-        expect(paces.REC).toBeGreaterThan(paces.GA);
-        expect(paces.GA).toBeGreaterThan(paces.MP);
+        // Recovery and general aerobic runs are prescribed by heart rate (ADR 0010).
+        expect(paces.REC).toBeUndefined();
+        expect(paces.GA).toBeUndefined();
     });
 
     it('gives no paces without an anchor, and none for a heart-rate school', () => {
