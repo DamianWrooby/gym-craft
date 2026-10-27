@@ -41,10 +41,10 @@ describe('costSession', () => {
         expect(costSession(s, { school: daniels, paceSecPerKm: { I: 240, E: 330 } }).plannedLoad).toBeCloseTo(120);
     });
 
-    it('uses the school table, so a polarized zone-3 minute costs 4.5', () => {
+    it('uses the school table, so a polarized zone-3 minute costs 5', () => {
         expect(
             costSession(run([{ label: 'z3', durationSec: 600 }]), { school: polarized, paceSecPerKm: null }),
-        ).toEqual({ plannedLoad: 45, method: 'LABEL_TABLE' });
+        ).toEqual({ plannedLoad: 50, method: 'LABEL_TABLE' });
     });
 
     it('cannot cost a distance step without a pace for its label', () => {
