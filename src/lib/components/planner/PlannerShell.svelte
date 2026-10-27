@@ -1,6 +1,8 @@
 <script lang="ts">
     // Visual frame for the planner only (ADR 0018): cyberpunk direction in the GymCraft palette.
     export let fullscreen = false;
+    /** Uses the full screen width on wide screens; the plan view needs it for the 7-day week. */
+    export let wide = false;
 
     // A click anywhere on a date field opens the calendar, not only on its small icon.
     function openDatePicker(e: MouseEvent) {
@@ -10,8 +12,10 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="gc-planner relative {fullscreen ? 'min-h-screen' : 'min-h-full'} px-4 py-6 md:px-8" on:click={openDatePicker}>
-    <div class="mx-auto max-w-5xl space-y-4">
+<div
+    class="gc-planner relative {fullscreen ? 'min-h-screen' : 'min-h-full'} px-4 py-6 md:px-8"
+    on:click={openDatePicker}>
+    <div class="mx-auto {wide ? 'max-w-screen-2xl' : 'max-w-5xl'} space-y-4">
         <slot />
     </div>
 </div>
@@ -93,6 +97,7 @@
     /* Checkboxes keep the forms plugin's check-mark image, so they only set background-color. */
     .gc-planner :global(input:not([type='checkbox']):not([type='radio'])),
     .gc-planner :global(select) {
+        cursor: pointer;
         background: #020617;
         border: 1px solid rgba(148, 163, 184, 0.35);
         color: #e2e8f0;

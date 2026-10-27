@@ -1,5 +1,6 @@
 <script lang="ts">
     import { m } from '$lib/paraglide/messages.js';
+    import InfoTooltip from '$lib/components/info-tooltip/InfoTooltip.svelte';
     import { otherEffortLabel, otherModalityLabel } from '$lib/i18n/labels';
     import { invalidateAll } from '$app/navigation';
     import { getModalStore } from '@skeletonlabs/skeleton';
@@ -43,12 +44,17 @@
         ? []
         : (actions?.activities ?? []).filter((a) => a.kind === session.kind && !a.linkedSessionId);
     let chosen = '';
+    $: chosenActivity = candidates.find((a) => a.id === chosen);
+    const activityLabel = (a: PlanViewActivity) =>
+        `${a.date.slice(5)} · ${a.name} · ${Math.round(a.durationSec / 60)} min`;
     $: timeTrialM = session.kind === 'RUNNING' ? (actions?.week.timeTrialDistanceM ?? null) : null;
 
     const modalStore = actions ? getModalStore() : null;
 
     let editing = false;
     let busy = false;
+    /** True while the workout uploads; the button spins and the card says so. */
+    let sending = false;
     let message: string | null = null;
     let ttMinutes: number | null = null;
     let ttSeconds: number | null = null;
@@ -62,11 +68,36 @@
         else await invalidateAll();
     }
 
-    const mark = (status: 'DONE' | 'SKIPPED' | 'PLANNED') =>
-        run(() => markSession(actions!.userId, session.id, status));
+    /**
+     * Shows the expected session state at once, then sends the request. The page reload after a
+     * success replaces the prop with the server's state; a failure puts the old state back.
+     */
+    async function runOptimistic(
+        expected: Partial<PlanViewSession>,
+        action: () => Promise<{ ok: true } | { error: string }>,
+    ) {
+        const previous = session;
+        session = { ...session, notConfirmed: false, ...expected };
+        message = null;
+        const result = await action();
+        if ('error' in result) {
+            session = previous;
+            message = result.error;
+        } else await invalidateAll();
+    }
 
-    const link = () => run(() => linkSession(actions!.userId, session.id, chosen));
-    const unlink = () => run(() => unlinkSession(actions!.userId, session.id));
+    const mark = (status: 'DONE' | 'SKIPPED' | 'PLANNED') =>
+        runOptimistic({ status }, () => markSession(actions!.userId, session.id, status));
+
+    const link = () => {
+        const activityId = chosen;
+        chosen = '';
+        return runOptimistic({ status: 'DONE', activityId }, () =>
+            linkSession(actions!.userId, session.id, activityId),
+        );
+    };
+    const unlink = () =>
+        runOptimistic({ status: 'PLANNED', activityId: null }, () => unlinkSession(actions!.userId, session.id));
 
     function saveTimeTrial() {
         const timeSec = Math.round((ttMinutes ?? 0) * 60 + (ttSeconds ?? 0));
@@ -75,6 +106,7 @@
 
     async function sendToGarmin() {
         busy = true;
+        sending = true;
         message = null;
         const result = await withGarminLogin(
             actions!.userId,
@@ -85,6 +117,7 @@
                 }),
         );
         busy = false;
+        sending = false;
         if (result.ok) message = m.session_sent_to_garmin();
         else if (result.code !== 'LOGIN_CANCELLED')
             message = 'message' in result ? String(result.message) : m.session_send_failed();
@@ -110,7 +143,11 @@
             {:else if session.status === 'DONE'}
                 <p class="text-xs text-emerald-400">✓ {m.session_done()}</p>
             {:else if session.notConfirmed}
-                <p class="text-xs text-amber-300">{m.session_not_confirmed()}</p>
+                <p class="flex items-center gap-1 text-xs text-amber-300">
+                    {m.session_not_confirmed()}
+                    <InfoTooltip id="tip-unconfirmed-{session.id}" ariaLabel={m.help_aria()} placement="top"
+                        >{m.help_not_confirmed()}</InfoTooltip>
+                </p>
             {:else if session.status === 'SKIPPED'}
                 <p class="text-xs text-slate-500">{m.session_skipped()}</p>
             {/if}
@@ -201,19 +238,24 @@
                     <button
                         type="button"
                         class="gc-ghost gc-icon"
-                        title={m.session_send_to_garmin()}
-                        aria-label={m.session_send_to_garmin()}
+                        class:gc-sending={sending}
+                        title={sending ? m.session_sending_to_garmin() : m.session_send_to_garmin()}
+                        aria-label={sending ? m.session_sending_to_garmin() : m.session_send_to_garmin()}
+                        aria-busy={sending}
                         disabled={busy}
                         on:click={sendToGarmin}><UploadCloudIcon size="12" /></button>
                 {/if}
             </div>
             {#if candidates.length > 0}
-                <form class="mt-2 flex flex-wrap items-center gap-1 text-xs" on:submit|preventDefault={link}>
-                    <select aria-label={m.session_synced_activity()} bind:value={chosen}>
+                <form class="mt-2 flex min-w-0 items-center gap-1 text-xs" on:submit|preventDefault={link}>
+                    <select
+                        class="gc-link-select min-w-0 flex-1"
+                        title={chosenActivity ? activityLabel(chosenActivity) : m.session_link_prompt()}
+                        aria-label={m.session_synced_activity()}
+                        bind:value={chosen}>
                         <option value="">{m.session_link_prompt()}</option>
                         {#each candidates as a (a.id)}
-                            <option value={a.id}
-                                >{a.date.slice(5)} · {a.name} · {Math.round(a.durationSec / 60)} min</option>
+                            <option value={a.id}>{activityLabel(a)}</option>
                         {/each}
                     </select>
                     <button
@@ -222,6 +264,8 @@
                         title={m.session_link_chosen()}
                         aria-label={m.session_link_chosen()}
                         disabled={busy || !chosen}><LinkIcon size="12" /></button>
+                    <InfoTooltip id="tip-link-{session.id}" ariaLabel={m.help_aria()} placement="top"
+                        >{m.help_link()}</InfoTooltip>
                 </form>
             {/if}
             {#if timeTrialM && session.status === 'PLANNED'}
@@ -251,7 +295,9 @@
                 </form>
             {/if}
         {/if}
-        {#if message}<p class="mt-1 text-xs text-slate-300" role="status">{message}</p>{/if}
+        {#if sending}
+            <p class="gc-sending-note mt-1 text-xs text-sky-300" role="status">{m.session_sending_to_garmin()}</p>
+        {:else if message}<p class="mt-1 text-xs text-slate-300" role="status">{message}</p>{/if}
     {/if}
 </article>
 
@@ -277,6 +323,32 @@
         color: #f8fafc;
         border-color: #38bdf8;
         background-color: rgba(56, 189, 248, 0.15);
+    }
+    /* The upload icon pulses and the note fades while the workout goes to Garmin. */
+    .gc-sending {
+        color: #38bdf8;
+        border-color: #38bdf8;
+        animation: gc-sending 1s ease-in-out infinite;
+    }
+    .gc-sending-note {
+        animation: gc-sending 1.6s ease-in-out infinite;
+    }
+    @keyframes gc-sending {
+        50% {
+            opacity: 0.4;
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .gc-sending,
+        .gc-sending-note {
+            animation: none;
+        }
+    }
+    .gc-link-select {
+        width: 100%;
+        padding: 0.15rem 0.25rem;
+        font-size: 0.75rem;
+        text-overflow: ellipsis;
     }
     .gc-session[data-status='SKIPPED'] {
         opacity: 0.55;

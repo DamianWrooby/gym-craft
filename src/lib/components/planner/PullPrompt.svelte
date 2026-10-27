@@ -1,5 +1,6 @@
 <script lang="ts">
     import { m } from '$lib/paraglide/messages.js';
+    import InfoTooltip from '$lib/components/info-tooltip/InfoTooltip.svelte';
     import { invalidateAll } from '$app/navigation';
     import { generateWeek, pullWeek } from '$lib/planner/generation-client';
     import { WEEK_OUTLOOKS, type WeekOutlook } from '$lib/planner/core/pull';
@@ -45,7 +46,10 @@
 </script>
 
 <section class="gc-panel p-4 space-y-4" aria-label={m.pull_write_week({ n: pull.weekIndex + 1 })}>
-    <h2 class="text-lg font-bold text-slate-100">{m.pull_next({ n: pull.weekIndex + 1 })}</h2>
+    <h2 class="flex items-center gap-2 text-lg font-bold text-slate-100">
+        {m.pull_next({ n: pull.weekIndex + 1 })}
+        <InfoTooltip id="tip-pull" ariaLabel={m.help_aria()} placement="right">{m.help_pull()}</InfoTooltip>
+    </h2>
 
     {#if pull.unconfirmed.length > 0}
         <div class="space-y-2">

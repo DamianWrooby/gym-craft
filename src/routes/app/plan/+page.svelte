@@ -26,11 +26,26 @@
     $: shown = plan ? (selected ?? plan.currentWeekIndex ?? 0) : null;
     $: adapt = data.adapt;
     $: onCurrent = plan != null && shown === plan.currentWeekIndex;
+
+    function selectWeek(index: number) {
+        if (plan && index >= 0 && index < plan.weeks.length) selected = index;
+    }
+
+    // Arrow keys move between weeks, unless the athlete is typing in a field.
+    function onKeydown(e: KeyboardEvent) {
+        if (shown == null || e.altKey || e.ctrlKey || e.metaKey) return;
+        const target = e.target as HTMLElement | null;
+        if (target?.closest('input, select, textarea, [contenteditable="true"]')) return;
+        if (e.key === 'ArrowLeft') selectWeek(shown - 1);
+        else if (e.key === 'ArrowRight') selectWeek(shown + 1);
+    }
 </script>
+
+<svelte:window on:keydown={onKeydown} />
 
 <svelte:head><title>{m.nav_plan()} | GymCraft</title></svelte:head>
 
-<PlannerShell>
+<PlannerShell wide>
     {#if plan && shown != null}
         <PlanHeader {plan} />
         {#if plan.rationale}<PlanRationale rationale={plan.rationale} />{/if}
@@ -64,7 +79,8 @@
             proxySession={data.proxySession}
             activities={onCurrent ? data.activities : null}
             adapt={onCurrent ? adapt : null}
-            on:recut={() => (recutOpen = true)} />
+            on:recut={() => (recutOpen = true)}
+            on:select={(e) => selectWeek(e.detail)} />
     {:else}
         <section class="gc-panel p-8 text-center space-y-4">
             <h1 class="text-3xl font-black tracking-wide">{m.plan_build_heading()}</h1>
