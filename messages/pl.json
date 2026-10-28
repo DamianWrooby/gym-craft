@@ -867,5 +867,9 @@
     "common_play_video": "Odtwórz wideo",
     "page_profile_load_failed": "Nie można załadować profilu",
     "page_reports_load_failed": "Nie można załadować raportów",
-    "page_report_load_failed": "Nie można załadować raportu"
+    "page_report_load_failed": "Nie można załadować raportu",
+    "email_verify_subject": "GymCraft - Aktywuj swoje konto",
+    "email_verify_thanks": "Dziękujemy za rejestrację w aplikacji GymCraft.",
+    "email_verify_click": "Kliknij poniższy link, aby aktywować konto:",
+    "email_verify_link": "Aktywuj konto"
 }

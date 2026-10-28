@@ -867,5 +867,9 @@
     "common_play_video": "Play video",
     "page_profile_load_failed": "Cannot load profile",
     "page_reports_load_failed": "Cannot load reports",
-    "page_report_load_failed": "Cannot load report"
+    "page_report_load_failed": "Cannot load report",
+    "email_verify_subject": "GymCraft - Activate your account",
+    "email_verify_thanks": "Thank you for registering for the GymCraft app.",
+    "email_verify_click": "Click the link below to activate your account:",
+    "email_verify_link": "Activate your account"
 }

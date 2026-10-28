@@ -4,6 +4,7 @@ import type { ActivityDetailPayload, ActivitySample, ActivitySplit } from '$lib/
 import { ageFromBirthDate } from '$lib/utils/age';
 import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import { isPaceActivityType, paceSecPerKmFromSpeed, formatPaceSecPerKm } from '$lib/utils/pace';
+import { withLanguage } from '$lib/server/i18n/prompt-language';
 
 // Stored samples can be up to ~1000 points; the LLM can't usefully reason over that many
 // raw datapoints and it blows up token cost + payload size. Downsample uniformly for prompting.
@@ -128,7 +129,7 @@ export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt
         'Answer per the system instructions.',
     ].join('\n');
 
-    return { system: SYSTEM_PROMPT, user };
+    return { system: withLanguage(SYSTEM_PROMPT), user };
 }
 
 function downsampleSamplesForLLM(samples: ActivitySample[], isPace: boolean): LlmSample[] {

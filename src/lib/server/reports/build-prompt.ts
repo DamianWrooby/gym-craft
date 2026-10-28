@@ -2,6 +2,7 @@ import type { AthleteProfile, RunningGoal } from '@prisma/client';
 import type { MetricsBundle } from '$lib/server/analytics/types';
 import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
 import { ageFromBirthDate } from '$lib/utils/age';
+import { withLanguage } from '$lib/server/i18n/prompt-language';
 
 export interface BuildPromptParams {
     metrics: MetricsBundle;
@@ -72,7 +73,7 @@ export function buildReportPrompt(params: BuildPromptParams): ReportPrompt {
         '```',
     ].join('\n');
 
-    return { system: SYSTEM_PROMPT, user };
+    return { system: withLanguage(SYSTEM_PROMPT), user };
 }
 
 function serializeProfile(profile: AthleteProfile) {
