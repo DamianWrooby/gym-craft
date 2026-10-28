@@ -867,5 +867,12 @@
     "common_play_video": "Play video",
     "page_profile_load_failed": "Cannot load profile",
     "page_reports_load_failed": "Cannot load reports",
-    "page_report_load_failed": "Cannot load report"
+    "page_report_load_failed": "Cannot load report",
+    "abandon_open": "Start a new plan",
+    "abandon_aria": "Start a new plan",
+    "abandon_intro": "This ends the current plan and opens the setup. Done sessions and their activities stay in your history. It uses 1 of your {left} plan revisions this month.",
+    "abandon_confirm": "End plan and start again",
+    "abandon_working": "Ending plan…",
+    "client_abandon_failed": "Could not end the plan. Try again.",
+    "api_abandon_capped": "You used all {cap} plan revisions this month. You can start a new plan next month."
 }

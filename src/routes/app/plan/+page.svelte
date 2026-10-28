@@ -9,6 +9,7 @@
     import CheckInCard from '$lib/components/planner/CheckInCard.svelte';
     import RecutSuggestion from '$lib/components/planner/RecutSuggestion.svelte';
     import RecutPanel from '$lib/components/planner/RecutPanel.svelte';
+    import StartOverPanel from '$lib/components/planner/StartOverPanel.svelte';
     import { page } from '$app/stores';
     import type { PlanView, PlanViewActivity } from '$lib/planner/plan-view';
     import type { AdaptView } from '$lib/planner/adapt-view';
@@ -61,6 +62,7 @@
             endDate={plan.endDate}
             schoolId={plan.school.id}
             bind:open={recutOpen} />
+        <StartOverPanel userId={$page.data.user.id} revisions={adapt?.revisions ?? null} />
         {#if adapt?.revision && onCurrent}
             <CheckInCard
                 checkIn={adapt.checkIn}

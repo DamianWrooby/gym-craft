@@ -87,3 +87,10 @@ export async function recutPlan(
     if (!ok) return { error: messageOf(json, m.client_recut_failed()) };
     return json?.data as RecutAnswer;
 }
+
+/** Abandons the active plan so the athlete can start a new one (#435). Costs one plan revision. */
+export async function abandonPlan(userId: string): Promise<{ ok: true } | { error: string }> {
+    const { ok, json } = await post(`/api/user/${userId}/plan/abandon`);
+    if (!ok) return { error: messageOf(json, m.client_abandon_failed()) };
+    return { ok: true };
+}
