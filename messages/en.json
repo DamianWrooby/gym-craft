@@ -966,4 +966,8 @@
     "mk_cookie_message": "This web application uses cookies to keep user's session. By continuing to browse or by clicking 'Accept', you agree to the storing of cookies on your device.",
     "mk_language_aria": "Language",
     "mk_legal_english_only": "This document is available in English only."
+    "email_verify_subject": "GymCraft - Activate your account",
+    "email_verify_thanks": "Thank you for registering for the GymCraft app.",
+    "email_verify_click": "Click the link below to activate your account:",
+    "email_verify_link": "Activate your account"
 }

@@ -8,6 +8,7 @@ import { formatVolume } from '$lib/planner/plan-view';
 import { labelPaces } from '$lib/planner/core/targets';
 import type { Anchor } from '$lib/planner/core/anchor';
 import type { WeekOutlook } from '$lib/planner/core/pull';
+import { withLanguage } from '$lib/server/i18n/prompt-language';
 
 export interface AiRequestInput {
     system: string;
@@ -162,7 +163,7 @@ export function buildWeekPrompt(input: WeekPromptInput): AiRequestInput {
     ];
 
     return {
-        system: SYSTEM,
+        system: withLanguage(SYSTEM),
         user: sections.filter(Boolean).join('\n\n'),
         maxTokens: MAX_TOKENS,
         json: true,
