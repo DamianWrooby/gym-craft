@@ -144,8 +144,8 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/finalize', () => {
             plannedLoad: 80,
             loadMethod: 'DURATION',
         });
-        // 15 min z1 ×2 + 4 × (4 min z3 ×4.5 + 2 min z1 ×2) = 30 + 88
-        expect(rows[1]).toMatchObject({ kind: 'RUNNING', plannedLoad: 118, loadMethod: 'LABEL_TABLE' });
+        // 15 min z1 ×2 + 4 × (4 min z3 ×5 + 2 min z1 ×2) = 30 + 96
+        expect(rows[1]).toMatchObject({ kind: 'RUNNING', plannedLoad: 126, loadMethod: 'LABEL_TABLE' });
         expect(rows[1].body.steps[0].target).toMatchObject({ type: 'HR' });
         expect(tx.aiUsage.upsert).toHaveBeenCalledWith(
             expect.objectContaining({ create: expect.objectContaining({ kind: 'plan_pull', day: '2026-10-01' }) }),
@@ -204,7 +204,7 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/finalize', () => {
     });
 
     describe('school versus budget', () => {
-        // The valid week costs 378: lift 80, hard 118, long 180.
+        // The valid week costs 386: lift 80, hard 126, long 180.
         const foundation = {
             kind: 'RUNNING',
             date: '2026-10-16',
@@ -233,9 +233,9 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/finalize', () => {
                     budget: {
                         kind: 'TRIM',
                         facts: expect.objectContaining({
-                            plannedTotal: 418,
+                            plannedTotal: 426,
                             budget: 390,
-                            overspend: 28,
+                            overspend: 36,
                             removed: [{ title: 'Foundation run', plannedLoad: 40, cutKey: 'foundation' }],
                             cutOrder: ['recovery', 'foundation'],
                             protected: ['Hard', 'Long run'],
@@ -246,7 +246,7 @@ describe('POST /api/user/[id]/plan/weeks/[weekId]/finalize', () => {
         });
 
         it('stores the week as written and asks before a key session goes', async () => {
-            db.planWeek.findUnique.mockResolvedValueOnce(week({ recoveryBudget: 300 }));
+            db.planWeek.findUnique.mockResolvedValueOnce(week({ recoveryBudget: 310 }));
             await post();
             expect(tx.plannedSession.createMany.mock.calls[0][0].data).toHaveLength(3);
             const { data } = tx.planWeek.updateMany.mock.calls[0][0];
