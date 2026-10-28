@@ -965,7 +965,7 @@
     "mk_cookie_title": "Zgoda na pliki cookie",
     "mk_cookie_message": "Ta aplikacja używa plików cookie, aby utrzymać sesję użytkownika. Przeglądając dalej lub klikając „Akceptuj”, zgadzasz się na zapisywanie plików cookie na Twoim urządzeniu.",
     "mk_language_aria": "Język",
-    "mk_legal_english_only": "Ten dokument jest dostępny tylko w języku angielskim."
+    "mk_legal_english_only": "Ten dokument jest dostępny tylko w języku angielskim.",
     "email_verify_subject": "GymCraft - Aktywuj swoje konto",
     "email_verify_thanks": "Dziękujemy za rejestrację w aplikacji GymCraft.",
     "email_verify_click": "Kliknij poniższy link, aby aktywować konto:",
