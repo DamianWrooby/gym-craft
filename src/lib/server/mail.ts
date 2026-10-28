@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import nodemailer from 'nodemailer';
 import mg from 'nodemailer-mailgun-transport';
 import { SECRET_MAILGUN_API_KEY, SECRET_MAILGUN_DOMAIN } from '$env/static/private';
@@ -64,7 +65,7 @@ const sendMail = (to: string, content: string) =>
             {
                 from: 'GymCraft <no-reply@gymcraft.damianwroblewski.com>',
                 to,
-                subject: 'GymCraft - Activate your account',
+                subject: m.email_verify_subject(),
                 html: content,
             },
             (err) => {
