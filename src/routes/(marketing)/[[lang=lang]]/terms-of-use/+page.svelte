@@ -1,12 +1,21 @@
 <script lang="ts">
     import Card from '$lib/components/card/Card.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
+    import Hreflang from '$lib/components/seo/Hreflang.svelte';
+    import { m } from '$lib/paraglide/messages.js';
+    import { getLocale } from '$lib/paraglide/runtime';
+
+    // Legal text stays English until a reviewed translation exists (ADR 0028).
+    const englishOnly = getLocale() !== 'en';
 </script>
 
 <Seo title="Terms of Use | GymCraft™" metaDescription="Read our terms and conditions." />
 
+<Hreflang />
+
 <Card width="3/4">
     <h1 class="h2 text-center py-10">Terms of Use</h1>
+    {#if englishOnly}<p class="text-center pb-6" lang={getLocale()}>{m.mk_legal_english_only()}</p>{/if}
     <div class="md:w-3/4 m-auto">
         <h2><strong>1. Introduction</strong></h2>
         <p>
