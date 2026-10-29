@@ -16,7 +16,7 @@ function renderForm(props: Record<string, unknown> = {}) {
 describe('GoalForm', () => {
     it('saves a half-marathon A race', async () => {
         const save = renderForm();
-        await fireEvent.input(screen.getByLabelText('Race date'), { target: { value: '2027-04-11' } });
+        await fireEvent.input(screen.getByLabelText(/Race date/), { target: { value: '2027-04-11' } });
         await fireEvent.input(screen.getByLabelText('Target time (optional)'), { target: { value: '1:45:00' } });
         await fireEvent.click(screen.getByRole('button', { name: 'Save goal' }));
         expect(save).toHaveBeenCalledWith(
@@ -24,11 +24,20 @@ describe('GoalForm', () => {
         );
     });
 
-    it('blocks save with a reason while the race date is today', async () => {
-        renderForm();
-        await fireEvent.input(screen.getByLabelText('Race date'), { target: { value: today } });
-        expect(screen.getByRole('button', { name: 'Save goal' })).toBeDisabled();
+    it('blocks save with a reason under the field while the race date is today', async () => {
+        const save = renderForm();
+        await fireEvent.input(screen.getByLabelText(/Race date/), { target: { value: today } });
+        await fireEvent.click(screen.getByRole('button', { name: 'Save goal' }));
+        expect(save).not.toHaveBeenCalled();
         expect(screen.getByText('The race date must be after today.')).toBeInTheDocument();
+    });
+
+    it('shows the missing race date only after a save attempt', async () => {
+        const save = renderForm();
+        expect(screen.queryByText('Choose the race date.')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Save goal' }));
+        expect(save).not.toHaveBeenCalled();
+        expect(screen.getByText('Choose the race date.')).toBeInTheDocument();
     });
 
     it('saves no race with null date, distance and time', async () => {
