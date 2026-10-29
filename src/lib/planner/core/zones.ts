@@ -26,21 +26,34 @@ export function zonesFromMaxHr(maxHR: number): HrZoneBound[] {
     });
 }
 
-export function isValidZones(value: unknown): value is HrZoneBound[] {
-    if (!Array.isArray(value) || value.length !== 5) return false;
+export const MAX_ZONE_BPM = 250;
+
+/** The first rule a zone list breaks, so the wizard can name the zone; null when the list is valid. */
+export type ZoneIssue =
+    | { kind: 'count' }
+    | { kind: 'missing'; zone: number }
+    | { kind: 'range'; zone: number }
+    | { kind: 'overlap'; zone: number; previousUpper: number }
+    | { kind: 'max'; zone: number };
+
+export function zonesIssue(value: unknown): ZoneIssue | null {
+    if (!Array.isArray(value) || value.length !== 5) return { kind: 'count' };
     let previousUpper = 0;
-    return value.every((z, i) => {
-        const ok =
-            z &&
-            z.zone === i + 1 &&
-            Number.isInteger(z.lowerBpm) &&
-            Number.isInteger(z.upperBpm) &&
-            z.lowerBpm > previousUpper &&
-            z.upperBpm > z.lowerBpm &&
-            z.upperBpm <= 250;
-        previousUpper = z?.upperBpm;
-        return ok;
-    });
+    for (const [i, z] of value.entries()) {
+        const zone = i + 1;
+        if (!z || z.zone !== zone || !Number.isInteger(z.lowerBpm) || !Number.isInteger(z.upperBpm)) {
+            return { kind: 'missing', zone };
+        }
+        if (z.upperBpm <= z.lowerBpm) return { kind: 'range', zone };
+        if (z.lowerBpm <= previousUpper) return { kind: 'overlap', zone, previousUpper };
+        if (z.upperBpm > MAX_ZONE_BPM) return { kind: 'max', zone };
+        previousUpper = z.upperBpm;
+    }
+    return null;
+}
+
+export function isValidZones(value: unknown): value is HrZoneBound[] {
+    return zonesIssue(value) === null;
 }
 
 export function proposeZones(input: {

@@ -969,5 +969,9 @@
     "email_verify_subject": "GymCraft - Activate your account",
     "email_verify_thanks": "Thank you for registering for the GymCraft app.",
     "email_verify_click": "Click the link below to activate your account:",
-    "email_verify_link": "Activate your account"
+    "email_verify_link": "Activate your account",
+    "wizard_zone_missing": "Enter both bounds of zone {zone} as whole numbers.",
+    "wizard_zone_range": "Zone {zone}: the upper bound must be higher than the lower bound.",
+    "wizard_zone_overlap": "Zone {zone} must start above {previousUpper} bpm, where zone {previous} ends.",
+    "wizard_zone_max": "Zone {zone}: the upper bound must be {max} bpm or less."
 }

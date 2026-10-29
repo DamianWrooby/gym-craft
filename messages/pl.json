@@ -969,5 +969,9 @@
     "email_verify_subject": "GymCraft - Aktywuj swoje konto",
     "email_verify_thanks": "Dziękujemy za rejestrację w aplikacji GymCraft.",
     "email_verify_click": "Kliknij poniższy link, aby aktywować konto:",
-    "email_verify_link": "Aktywuj konto"
+    "email_verify_link": "Aktywuj konto",
+    "wizard_zone_missing": "Wpisz obie granice strefy {zone} jako liczby całkowite.",
+    "wizard_zone_range": "Strefa {zone}: górna granica musi być wyższa niż dolna.",
+    "wizard_zone_overlap": "Strefa {zone} musi zaczynać się powyżej {previousUpper} bpm, gdzie kończy się strefa {previous}.",
+    "wizard_zone_max": "Strefa {zone}: górna granica może wynosić najwyżej {max} bpm."
 }
