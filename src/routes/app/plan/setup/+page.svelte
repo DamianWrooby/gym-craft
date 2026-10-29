@@ -251,7 +251,9 @@
                     session: data.proxySession,
                 });
             }
-            await goto('/app/plan');
+            // Fresh data: a hover preload of /app/plan from before the plan existed would otherwise
+            // become this navigation and show the empty "build a plan" state.
+            await goto('/app/plan', { invalidateAll: true });
             return;
         }
         submitError = (await readApiError(response, m.setup_failed())).message;
