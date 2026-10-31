@@ -1,20 +1,25 @@
 <script lang="ts">
+    import { setupViewTransitions } from '$lib/utils/view-transitions';
+    import SiteFooter from '$lib/components/site-footer/SiteFooter.svelte';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
-    import { navigating } from '$app/stores';
     import { initializeStores } from '@skeletonlabs/skeleton';
     import { Modal, Toast } from '@skeletonlabs/skeleton';
     import { HomeIcon } from 'svelte-feather-icons';
-    import Spinner from '$lib/components/loading/spinner/Spinner.svelte';
+    import NavProgress from '$lib/components/loading/nav-progress/NavProgress.svelte';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
     import { onMount } from 'svelte';
     import Banner from '$lib/components/banner/Banner.svelte';
     import { setCookie, getCookie } from '$lib/utils/cookies';
     import { cookieBannerOpened } from '@/stores';
+    import { page } from '$app/stores';
+    import { m } from '$lib/paraglide/messages.js';
+    import { marketingLocale } from '$lib/i18n/marketing-locale';
 
-    const currentDate = new Date();
+    $: locale = marketingLocale($page.url.pathname) ?? null;
 
     initializeStores();
+    setupViewTransitions();
 
     const closeCookieBanner = () => {
         setCookie('cookiesConsentAccepted', 'true', 100);
@@ -36,6 +41,7 @@
 
 <Modal />
 <Toast position={'br'} />
+<NavProgress />
 
 <AppShell>
     <svelte:fragment slot="header">
@@ -50,35 +56,24 @@
             </svelte:fragment>
             <svelte:fragment slot="trail">
                 <nav class="flex items-center text-surface-500 font-semibold whitespace-nowrap">
-                    <a class="px-4 hover:text-tertiary-500" href="/app/login">Login</a>
-                    <a class="px-4 hover:text-tertiary-500" href="/app/register">Register</a>
+                    <a class="px-4 hover:text-tertiary-500" href="/app/login">{m.mk_nav_login()}</a>
+                    <a class="px-4 hover:text-tertiary-500" href="/app/register">{m.mk_nav_register()}</a>
                 </nav>
                 <LightSwitch></LightSwitch>
             </svelte:fragment>
         </AppBar>
     </svelte:fragment>
     <!-- Router Slot -->
-    {#if $navigating}
-        <Spinner size={10} />
-    {:else}
-        <slot />
-    {/if}
+    <!-- The outgoing page stays rendered and interactive during navigation; NavProgress
+         is the only in-flight signal. Swapping in a spinner here blanked the page on
+         every navigation, amplifying any server-load latency into blank-screen time. -->
+    <slot />
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
-        <div class="hidden sm:block bg-primary-500 font-thin text-center py-2 font-semibold">
-            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span> - Your AI powered personal trainer by
-            <a href="https://github.com/DamianWrooby" target="_blank" rel="noopener noreferrer"
-                ><span class="text-surface-200 hover:text-surface-300 font-semibold">Wrooby</span></a>
-        </div>
-        <div class="block sm:hidden bg-primary-500 font-thin text-center py-2 font-semibold">
-            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span>
-        </div>
+        <SiteFooter marketingLocale={locale} />
     </svelte:fragment>
 </AppShell>
 
 {#if $cookieBannerOpened}
-    <Banner
-        title={'Cookie Consent'}
-        message={"This web application uses cookies to keep user's session. By continuing to browse or by clicking 'Accept', you agree to the storing of cookies on your device."}
-        on:accept={closeCookieBanner} />
+    <Banner title={m.mk_cookie_title()} message={m.mk_cookie_message()} on:accept={closeCookieBanner} />
 {/if}

@@ -4,6 +4,7 @@ import type { ActivityDetailPayload, ActivitySample, ActivitySplit } from '$lib/
 import { ageFromBirthDate } from '$lib/utils/age';
 import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import { isPaceActivityType, paceSecPerKmFromSpeed, formatPaceSecPerKm } from '$lib/utils/pace';
+import { withLanguage } from '$lib/server/i18n/prompt-language';
 
 // Stored samples can be up to ~1000 points; the LLM can't usefully reason over that many
 // raw datapoints and it blows up token cost + payload size. Downsample uniformly for prompting.
@@ -73,7 +74,8 @@ Hard rules:
 
 Data units:
 - Pace is given directly as \`paceSecPerKm\`/\`avgPaceSecPerKm\` (seconds per kilometer) with a pre-formatted \`pace\`/\`avgPace\` string (e.g. "5:02 /km"). Use these as-is; do NOT compute pace yourself.
-- Any field ending in \`Mps\` is a speed in meters/second. Distances are meters (\`...M\`), durations are seconds (\`...Sec\`), heart rate is bpm.`;
+- Any field ending in \`Mps\` is a speed in meters/second. Distances are meters (\`...M\`), durations are seconds (\`...Sec\`), heart rate is bpm.
+- \`dynamics\` holds summary running-form figures: cadence (spm), ground contact time (ms), vertical oscillation (cm), vertical ratio (%), and power (W). Reference them only when the question is about form or efficiency.`;
 
 export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt {
     const { question, activity, detail, recentActivities, loadProfile, profile } = params;
@@ -101,6 +103,7 @@ export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt
             elevationLossM: activity.elevationLossM,
             trimpLoad: activity.trimpLoad,
         },
+        dynamics: detail?.dynamics ?? null,
         splits: (detail?.splits ?? []).map((s) => serializeSplitForLlm(s, isPace)),
         samples: downsampleSamplesForLLM(detail?.samples ?? [], isPace),
         recentActivitiesLast14d: recentActivities.map((a) => ({
@@ -126,7 +129,7 @@ export function buildExplainPrompt(params: ExplainActivityParams): ExplainPrompt
         'Answer per the system instructions.',
     ].join('\n');
 
-    return { system: SYSTEM_PROMPT, user };
+    return { system: withLanguage(SYSTEM_PROMPT), user };
 }
 
 function downsampleSamplesForLLM(samples: ActivitySample[], isPace: boolean): LlmSample[] {

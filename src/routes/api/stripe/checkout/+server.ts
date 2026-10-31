@@ -1,29 +1,29 @@
+import { m } from '$lib/paraglide/messages.js';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/database';
 import { createResponse } from '$lib/utils/response';
 import { billingEnabled } from '$lib/utils/billing-flag';
 import { appConfig } from '@/constants/app.constants';
 import { PUBLIC_APP_ENV } from '$env/static/public';
-import { STRIPE_PRICE_ANNUAL, STRIPE_PRICE_LIFETIME, STRIPE_PRICE_MONTHLY } from '$env/static/private';
+import { STRIPE_PRICE_ANNUAL, STRIPE_PRICE_MONTHLY } from '$env/static/private';
 
-type PlanKey = 'monthly' | 'annual' | 'lifetime';
+type PlanKey = 'monthly' | 'annual';
 
-const PLANS: Record<PlanKey, { price: string; mode: 'subscription' | 'payment' }> = {
+const PLANS: Record<PlanKey, { price: string; mode: 'subscription' }> = {
     monthly: { price: STRIPE_PRICE_MONTHLY, mode: 'subscription' },
     annual: { price: STRIPE_PRICE_ANNUAL, mode: 'subscription' },
-    lifetime: { price: STRIPE_PRICE_LIFETIME, mode: 'payment' },
 };
 
 export async function POST({ request, locals }: { request: Request; locals: App.Locals }): Promise<Response> {
     if (!billingEnabled) {
-        return createResponse(503, { code: 'BILLING_DISABLED', message: 'Supporter plans are not available yet' });
+        return createResponse(503, { code: 'BILLING_DISABLED', message: m.api_supporter_unavailable() });
     }
-    if (!locals.user) return createResponse(401, { message: 'Unauthorized' });
+    if (!locals.user) return createResponse(401, { message: m.api_unauthorized() });
 
     const body = await request.json().catch(() => null);
     const plan = body?.plan as PlanKey | undefined;
     if (!plan || !PLANS[plan]) {
-        return createResponse(400, { code: 'INVALID_PLAN', message: 'Unknown plan' });
+        return createResponse(400, { code: 'INVALID_PLAN', message: m.api_unknown_plan() });
     }
     const selected = PLANS[plan];
 

@@ -2,6 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 import { purgeCss } from 'vite-plugin-tailwind-purgecss';
 import path from 'path';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 
 export default defineConfig({
     resolve: {
@@ -17,7 +18,18 @@ export default defineConfig({
         // build keeps its own resolution.
         ...(process.env.VITEST ? { conditions: ['browser'] } : {}),
     },
-    plugins: [sveltekit(), purgeCss()],
+    plugins: [
+        paraglideVitePlugin({
+            project: './project.inlang',
+            outdir: './src/lib/paraglide',
+            // Keep in sync with the i18n:compile script in package.json.
+            // Marketing: the URL prefix. Server: the hook's resolved locale (ADR 0028). Browser: the cookie
+            // the hook mirrors it into.
+            strategy: ['custom-marketing', 'custom-resolved', 'cookie', 'baseLocale'],
+        }),
+        sveltekit(),
+        purgeCss(),
+    ],
     test: {
         setupFiles: ['./vitest-setup.js'],
         include: ['src/**/*.{test,spec}.{js,ts}'],

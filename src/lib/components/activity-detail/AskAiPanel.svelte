@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { page } from '$app/stores';
     import { SendIcon, ZapIcon } from 'svelte-feather-icons';
     import Markdown from '$lib/components/markdown/Markdown.svelte';
@@ -9,12 +10,7 @@
     export let userId: string;
     export let activityDbId: string;
 
-    const PRESETS = [
-        'Why did I fade?',
-        'Was my pacing good?',
-        'Was this productive?',
-        'How does this compare to my recent runs?',
-    ];
+    const PRESETS = [m.ask_preset_fade(), m.ask_preset_pacing(), m.ask_preset_productive(), m.ask_preset_compare()];
 
     let question = '';
     let loading = false;
@@ -26,7 +22,7 @@
         const trimmed = text.trim();
         if (!trimmed) return;
         if (trimmed.length > EXPLAIN_QUESTION_MAX_LENGTH) {
-            error = `Question must be ${EXPLAIN_QUESTION_MAX_LENGTH} characters or fewer.`;
+            error = m.ask_question_too_long({ max: EXPLAIN_QUESTION_MAX_LENGTH });
             return;
         }
 
@@ -43,7 +39,7 @@
             });
             const payload = await res.json();
             if (!res.ok) {
-                error = payload?.message ?? 'Failed to generate explanation.';
+                error = payload?.message ?? m.ask_failed();
                 showUpgradeHint =
                     billingEnabled &&
                     payload?.code === 'EXPLAIN_LIMIT_REACHED' &&
@@ -53,7 +49,7 @@
                 question = trimmed;
             }
         } catch (err) {
-            error = err instanceof Error ? err.message : 'Request failed.';
+            error = err instanceof Error ? err.message : m.common_request_failed();
         } finally {
             loading = false;
         }
@@ -63,7 +59,7 @@
 <section class="card variant-soft-primary p-5">
     <header class="flex items-center gap-2 mb-3">
         <ZapIcon size="20" />
-        <h2 class="h3 font-semibold m-0">Ask the coach about this run</h2>
+        <h2 class="h3 font-semibold m-0">{m.ask_heading()}</h2>
     </header>
 
     <div class="flex flex-wrap gap-2 mb-3">
@@ -82,13 +78,13 @@
         <input
             type="text"
             class="input flex-1"
-            placeholder="Ask anything about this run..."
+            placeholder={m.ask_placeholder()}
             maxlength={EXPLAIN_QUESTION_MAX_LENGTH}
             bind:value={question}
             disabled={loading} />
         <button type="submit" class="btn variant-filled-primary" disabled={loading || !question.trim()}>
             <SendIcon size="16" />
-            <span>Ask</span>
+            <span>{m.ask_submit()}</span>
         </button>
     </form>
 
@@ -101,7 +97,7 @@
     {#if error}
         <p class="text-error-500 text-sm mt-3">{error}</p>
         {#if showUpgradeHint}
-            <a href="/app/my-account" class="anchor text-sm"> Upgrade to Supporter for 5 explanations per day → </a>
+            <a href="/app/my-account" class="anchor text-sm">{m.ask_upgrade()}</a>
         {/if}
     {/if}
 

@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { stripe } from '$lib/server/stripe';
 import { db } from '$lib/database';
 import { createResponse } from '$lib/utils/response';
@@ -5,14 +6,14 @@ import { appConfig } from '@/constants/app.constants';
 import { PUBLIC_APP_ENV } from '$env/static/public';
 
 export async function POST({ locals }: { locals: App.Locals }): Promise<Response> {
-    if (!locals.user) return createResponse(401, { message: 'Unauthorized' });
+    if (!locals.user) return createResponse(401, { message: m.api_unauthorized() });
 
     const dbUser = await db.user.findUnique({
         where: { id: locals.user.id },
         select: { stripeCustomerId: true },
     });
     if (!dbUser?.stripeCustomerId) {
-        return createResponse(400, { code: 'NO_CUSTOMER', message: 'No billing account found' });
+        return createResponse(400, { code: 'NO_CUSTOMER', message: m.api_no_billing_account() });
     }
 
     const baseUrl = PUBLIC_APP_ENV === 'development' ? appConfig.baseAppUrlDEV : appConfig.baseAppUrlPROD;

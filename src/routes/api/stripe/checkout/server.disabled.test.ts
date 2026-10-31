@@ -7,7 +7,6 @@ vi.mock('$env/static/private', () => ({
     SECRET_STRIPE_KEY: 'sk_test_x',
     STRIPE_PRICE_MONTHLY: 'price_monthly',
     STRIPE_PRICE_ANNUAL: 'price_annual',
-    STRIPE_PRICE_LIFETIME: 'price_lifetime',
 }));
 
 const mocks = vi.hoisted(() => ({

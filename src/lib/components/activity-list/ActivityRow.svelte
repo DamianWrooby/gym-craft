@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import ActivityTypeIcon from '$lib/components/activity-type-icon/ActivityTypeIcon.svelte';
     import { PACE_ACTIVITY_TYPES, formatPaceOrSpeed } from '$lib/utils/pace';
     import type { ActivityListItem } from '$lib/server/garmin/activity-row-mapper';
@@ -32,7 +34,7 @@
     function formatActivityDate(iso: string): { month: string; day: string; year: string } {
         const d = new Date(iso);
         return {
-            month: d.toLocaleString('en-US', { month: 'short' }),
+            month: d.toLocaleString(getLocale(), { month: 'short' }),
             day: d.getDate().toString(),
             year: d.getFullYear().toString(),
         };
@@ -66,31 +68,31 @@
             </div>
             <div class="flex flex-col leading-tight w-24">
                 <span class="font-semibold">{formatDistance(activity.distanceM)}</span>
-                <span class="text-xs opacity-70">DISTANCE</span>
+                <span class="text-xs opacity-70 uppercase">{m.activity_distance()}</span>
             </div>
             <div class="flex flex-col leading-tight w-20">
                 <span class="font-semibold">{formatDuration(activity.durationSec)}</span>
-                <span class="text-xs opacity-70">TIME</span>
+                <span class="text-xs opacity-70 uppercase">{m.activity_time()}</span>
             </div>
             <div class="flex flex-col leading-tight w-24">
                 <span class="font-semibold">
                     {formatPaceOrSpeed(activity.averageSpeed ?? undefined, activity.activityType)}
                 </span>
-                <span class="text-xs opacity-70">
-                    {PACE_ACTIVITY_TYPES.has(activity.activityType) ? 'AVG PACE' : 'AVG SPEED'}
+                <span class="text-xs opacity-70 uppercase">
+                    {PACE_ACTIVITY_TYPES.has(activity.activityType) ? m.activity_avg_pace() : m.activity_avg_speed()}
                 </span>
             </div>
             <div class="flex flex-col leading-tight w-20">
                 <span class="font-semibold">{formatElevation(activity.elevationGainM)}</span>
-                <span class="text-xs opacity-70">ELEV GAIN</span>
+                <span class="text-xs opacity-70 uppercase">{m.activity_elev_gain()}</span>
             </div>
             <div class="flex flex-col leading-tight w-20">
                 <span class="font-semibold">{formatHr(activity.averageHr)}</span>
-                <span class="text-xs opacity-70">AVG HR</span>
+                <span class="text-xs opacity-70 uppercase">{m.activity_avg_hr()}</span>
             </div>
             <div class="flex flex-col leading-tight w-20">
                 <span class="font-semibold">{formatCalories(activity.calories)}</span>
-                <span class="text-xs opacity-70">CALORIES</span>
+                <span class="text-xs opacity-70 uppercase">{m.activity_calories()}</span>
             </div>
         </div>
     </a>

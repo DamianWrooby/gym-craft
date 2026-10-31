@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
     import { getModalStore } from '@skeletonlabs/skeleton';
@@ -16,20 +17,18 @@
     const openEmailVerificationModal = () => {
         const modal: ModalSettings = {
             type: 'confirm',
-            title: 'Email verification',
-            body: `<p>Your account is not verified.</p>
-                    <p>Verify email address to get full account functionality.</p>
-                    <p>Click on the link provided in the email we sent you.</p>`,
+            title: m.home_verify_title(),
+            body: `<p>${m.home_verify_body_1()}</p><p>${m.home_verify_body_2()}</p><p>${m.home_verify_body_3()}</p>`,
             modalClasses: 'max-h-fit',
-            buttonTextCancel: 'Cancel',
-            buttonTextConfirm: 'Re-send verification email',
+            buttonTextCancel: m.common_cancel(),
+            buttonTextConfirm: m.home_verify_resend(),
             response: async (response: boolean) => {
                 if (response) {
                     try {
                         await resendVerificationEmail();
                     } catch (err) {
                         console.error(err);
-                        makeToast(toastStore, 'Verification email has not been sent', 'variant-filled-error');
+                        makeToast(toastStore, m.home_verify_not_sent(), 'variant-filled-error');
                     }
                 }
             },
@@ -52,9 +51,9 @@
         });
 
         if (response.ok) {
-            makeToast(toastStore, 'Verification email has been sent', 'variant-filled-success');
+            makeToast(toastStore, m.home_verify_sent(), 'variant-filled-success');
         } else {
-            makeToast(toastStore, 'Cannot send verification email. Try again later.', 'variant-filled-error');
+            makeToast(toastStore, m.home_verify_failed(), 'variant-filled-error');
         }
     };
 
@@ -70,12 +69,12 @@
             <h1 class="h1 inline-block">
                 <span
                     class="bg-gradient-to-br from-primary-500 to-surface-400 bg-clip-text text-transparent box-decoration-clone uppercase text-base"
-                    >AI powered personal trainer</span>
+                    >{m.home_tagline()}</span>
             </h1>
         </div>
         <div class="p-5 text-center">
             {#if user}
-                <p class="text-surface-500 dark:text-surface-300 text-sm pb-4">Choose your sport</p>
+                <p class="text-surface-500 dark:text-surface-300 text-sm pb-4">{m.home_choose_sport()}</p>
                 <div class="flex flex-col sm:flex-row items-stretch justify-center gap-3 sm:gap-4">
                     <a
                         href="/app/gym"
@@ -84,9 +83,10 @@
                         <span class="text-tertiary-500 group-hover:text-tertiary-400">
                             <SportIcon sport="gym" size={36} />
                         </span>
-                        <span class="font-semibold">Gym</span>
+                        <span class="font-semibold">{m.nav_gym()}</span>
                         <span class="text-xs text-surface-500 dark:text-surface-300 flex items-center gap-1">
-                            Open <ArrowRightIcon size="12" />
+                            {m.home_open()}
+                            <ArrowRightIcon size="12" />
                         </span>
                     </a>
                     <a
@@ -96,18 +96,19 @@
                         <span class="text-tertiary-500 group-hover:text-tertiary-400">
                             <SportIcon sport="running" size={36} />
                         </span>
-                        <span class="font-semibold">Running</span>
+                        <span class="font-semibold">{m.nav_running()}</span>
                         <span class="text-xs text-surface-500 dark:text-surface-300 flex items-center gap-1">
-                            Open <ArrowRightIcon size="12" />
+                            {m.home_open()}
+                            <ArrowRightIcon size="12" />
                         </span>
                     </a>
                 </div>
                 {#if !user.emailVerified}
-                    <p class="text-warning-500 text-sm pt-4">Verify your email to create a plan</p>
+                    <p class="text-warning-500 text-sm pt-4">{m.home_verify_to_plan()}</p>
                 {/if}
             {:else}
                 <a href="/app/login" class="btn variant-filled-primary group" data-sveltekit-preload-data="hover">
-                    <span>Log in</span>
+                    <span>{m.login_submit()}</span>
                 </a>
             {/if}
         </div>

@@ -5,7 +5,6 @@ vi.mock('$env/static/private', () => ({
     SECRET_STRIPE_KEY: 'sk_test_x',
     STRIPE_PRICE_MONTHLY: 'price_monthly',
     STRIPE_PRICE_ANNUAL: 'price_annual',
-    STRIPE_PRICE_LIFETIME: 'price_lifetime',
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -66,8 +65,9 @@ describe('POST /api/stripe/checkout', () => {
         expect(json.url).toBe('https://checkout.stripe.com/x');
     });
 
-    it('uses payment mode for the lifetime plan', async () => {
-        await POST({ request: makeRequest({ plan: 'lifetime' }), locals } as never);
-        expect(mocks.sessionsCreate).toHaveBeenCalledWith(expect.objectContaining({ mode: 'payment' }));
+    it('rejects the retired lifetime plan', async () => {
+        const res = await POST({ request: makeRequest({ plan: 'lifetime' }), locals } as never);
+        expect(res.status).toBe(400);
+        expect(mocks.sessionsCreate).not.toHaveBeenCalled();
     });
 });

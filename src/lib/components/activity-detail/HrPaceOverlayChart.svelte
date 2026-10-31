@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { ActivitySample } from '$lib/server/garmin/fetch-activity-detail';
 
     export let samples: ActivitySample[];
@@ -14,6 +15,9 @@
 
     $: hrRange = bounds(hrSamples.map((s) => s.heartRate as number));
     $: paceRange = bounds(speedSamples.map((s) => 1000 / (s.speed as number)));
+
+    $: elevSamples = samples.filter((s) => s.elevationM != null);
+    $: elevRange = bounds(elevSamples.map((s) => s.elevationM as number));
 
     function bounds(values: number[]): { min: number; max: number } {
         if (values.length === 0) return { min: 0, max: 1 };
@@ -39,6 +43,14 @@
         return PADDING.top + ((secPerKm - paceRange.min) / (paceRange.max - paceRange.min)) * usable;
     }
 
+    // Elevation is drawn as a subtle terrain silhouette occupying only the bottom band of the plot,
+    // so it reads as background context and does not compete with the HR/pace lines.
+    function yScaleElev(m: number): number {
+        const plotBottom = HEIGHT - PADDING.bottom;
+        const band = (HEIGHT - PADDING.top - PADDING.bottom) * 0.4;
+        return plotBottom - ((m - elevRange.min) / (elevRange.max - elevRange.min)) * band;
+    }
+
     $: hrPathD = hrSamples
         .map((s, i) => `${i === 0 ? 'M' : 'L'} ${xScale(s.timestampSec)} ${yScaleHr(s.heartRate as number)}`)
         .join(' ');
@@ -46,6 +58,18 @@
     $: pacePathD = speedSamples
         .map((s, i) => `${i === 0 ? 'M' : 'L'} ${xScale(s.timestampSec)} ${yScalePace(1000 / (s.speed as number))}`)
         .join(' ');
+
+    $: elevAreaD =
+        elevSamples.length > 1
+            ? elevSamples
+                  .map(
+                      (s, i) =>
+                          `${i === 0 ? 'M' : 'L'} ${xScale(s.timestampSec)} ${yScaleElev(s.elevationM as number)}`,
+                  )
+                  .join(' ') +
+              ` L ${xScale(elevSamples[elevSamples.length - 1].timestampSec)} ${HEIGHT - PADDING.bottom}` +
+              ` L ${xScale(elevSamples[0].timestampSec)} ${HEIGHT - PADDING.bottom} Z`
+            : '';
 
     function formatTime(sec: number): string {
         const m = Math.floor(sec / 60);
@@ -61,14 +85,20 @@
 </script>
 
 {#if samples.length === 0}
-    <p class="text-sm opacity-70 italic">No time-series data available for this activity.</p>
+    <p class="text-sm opacity-70 italic">{m.overlay_none()}</p>
 {:else}
     <div
         class="rounded-xl border border-surface-300 dark:border-surface-700 p-3 bg-surface-100 dark:bg-surface-800 overflow-x-auto">
-        <svg viewBox="0 0 {WIDTH} {HEIGHT}" class="w-full h-auto" aria-label="Heart rate and pace over time">
-            <text x={PADDING.left} y={12} class="fill-error-500 text-xs">Heart rate (bpm)</text>
+        <svg viewBox="0 0 {WIDTH} {HEIGHT}" class="w-full h-auto" aria-label={m.overlay_aria()}>
+            {#if elevAreaD}
+                <path d={elevAreaD} class="fill-tertiary-500 opacity-15" />
+                <text x={PADDING.left} y={HEIGHT - PADDING.bottom - 4} class="fill-tertiary-500 text-[10px] opacity-70"
+                    >Elevation {Math.round(elevRange.min)}–{Math.round(elevRange.max)} m</text>
+            {/if}
+
+            <text x={PADDING.left} y={12} class="fill-error-500 text-xs">{m.overlay_hr()}</text>
             <text x={WIDTH - PADDING.right} y={12} class="fill-primary-500 text-xs" text-anchor="end"
-                >Pace (min/km)</text>
+                >{m.overlay_pace()}</text>
 
             <line
                 x1={PADDING.left}
@@ -98,6 +128,11 @@
                 class="fill-current text-[10px] opacity-60">{formatPace(paceRange.max)}</text>
 
             <text x={PADDING.left} y={HEIGHT - 8} class="fill-current text-[10px] opacity-60">0:00</text>
+            <text
+                x={xScale(maxTime / 2)}
+                y={HEIGHT - 8}
+                class="fill-current text-[10px] opacity-60"
+                text-anchor="middle">{formatTime(maxTime / 2)}</text>
             <text x={WIDTH - PADDING.right} y={HEIGHT - 8} class="fill-current text-[10px] opacity-60" text-anchor="end"
                 >{formatTime(maxTime)}</text>
 

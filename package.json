@@ -1,6 +1,6 @@
 {
     "name": "gym-craft",
-    "version": "3.0.0",
+    "version": "4.0.0",
     "private": true,
     "scripts": {
         "dev": "vite dev",
@@ -8,7 +8,7 @@
         "migrate": "npx prisma migrate deploy",
         "build-and-migrate": "npm run build && npm run migrate",
         "preview": "vite preview",
-        "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+        "check": "npm run i18n:compile && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
         "test:unit": "vitest",
         "lint": "eslint .",
@@ -16,12 +16,14 @@
         "format": "prettier --plugin-search-dir . --write .",
         "postinstall": "prisma generate",
         "test": "vitest run",
+        "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --strategy custom-marketing custom-resolved cookie baseLocale",
         "test:ui": "vitest --ui",
         "test:watch": "vitest",
         "deploy": "npm run format-check && npm run lint && npm run test && npm run build-and-migrate"
     },
     "devDependencies": {
         "@floating-ui/dom": "^1.7.2",
+        "@inlang/paraglide-js": "^2.29.1",
         "@netlify/edge-functions": "^2.16.0",
         "@skeletonlabs/skeleton": "^2.11.0",
         "@skeletonlabs/tw-plugin": "^0.3.1",

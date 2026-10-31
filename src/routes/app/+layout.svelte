@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
+    import { setupViewTransitions } from '$lib/utils/view-transitions';
+    import SiteFooter from '$lib/components/site-footer/SiteFooter.svelte';
     import '../../app.pcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
     import Seo from '$lib/components/seo/Seo.svelte';
@@ -16,7 +19,6 @@
     import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom';
     import { storePopup } from '@skeletonlabs/skeleton';
 
-    const currentDate = new Date();
     $: user = $page.data.user;
 
     const initializePopups = () => {
@@ -37,6 +39,7 @@
     };
 
     initializeStores();
+    setupViewTransitions();
     initializePopups();
 
     onMount(() => {
@@ -76,20 +79,10 @@
     <slot />
     <!-- ---- / ---- -->
     <svelte:fragment slot="footer">
-        <div class="hidden sm:block bg-primary-500 font-thin text-center py-2 font-semibold">
-            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span> - Your AI powered personal trainer by
-            <a href="https://github.com/DamianWrooby" target="_blank" rel="noopener noreferrer"
-                ><span class="text-surface-200 hover:text-surface-300 font-semibold">Wrooby</span></a>
-        </div>
-        <div class="block sm:hidden bg-primary-500 font-thin text-center py-2 font-semibold">
-            © {currentDate.getFullYear()} <span class="font-bold">GymCraft</span>
-        </div>
+        <SiteFooter />
     </svelte:fragment>
 </AppShell>
 
 {#if $cookieBannerOpened}
-    <Banner
-        title={'Cookie Consent'}
-        message={"This web application uses cookies to keep user's session. By continuing to browse or by clicking 'Accept', you agree to the storing of cookies on your device."}
-        on:accept={closeCookieBanner} />
+    <Banner title={m.cookie_banner_title()} message={m.cookie_banner_message()} on:accept={closeCookieBanner} />
 {/if}

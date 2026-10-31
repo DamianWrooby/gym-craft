@@ -1,0 +1,79 @@
+// Browser side of week generation (ADR 0014): ask the proxy to run the AI request, then ask the app
+// to finalize it. The browser holds only ids; a closed tab loses nothing because the proxy writes
+// the output to the row and the next visit finalizes it.
+import { m } from '$lib/paraglide/messages.js';
+import { appConfig } from '@/constants/app.constants';
+import type { DecisionOption } from './core/conflict';
+import { isProduction } from '$lib/utils/environment';
+
+export type WeekGenerationResult =
+    { generation: 'GENERATED' } | { generation: 'FAILED'; retriesLeft: number } | { generation: 'PENDING' };
+
+const proxyUrl = () => (isProduction() ? appConfig.aiRequestApiUrlPROD : appConfig.aiRequestApiUrlDEV);
+
+/** Runs the proxy call; its own result does not matter, because the row records the outcome. */
+export async function runOnProxy(session: string, aiRequestId: string): Promise<void> {
+    try {
+        await fetch(proxyUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session, aiRequestId }),
+        });
+    } catch (e) {
+        console.warn('[week-generation] proxy call failed', e);
+    }
+}
+
+export async function finalizeWeek(userId: string, weekId: string): Promise<WeekGenerationResult> {
+    const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/finalize`, { method: 'POST' });
+    if (!response.ok) return { generation: 'PENDING' };
+    const { data } = await response.json();
+    return data as WeekGenerationResult;
+}
+
+export async function generateWeek(input: {
+    userId: string;
+    weekId: string;
+    aiRequestId: string;
+    session: string;
+}): Promise<WeekGenerationResult> {
+    await runOnProxy(input.session, input.aiRequestId);
+    return finalizeWeek(input.userId, input.weekId);
+}
+
+export async function retryWeek(userId: string, weekId: string): Promise<{ aiRequestId: string } | { error: string }> {
+    const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/retry`, { method: 'POST' });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) return { error: body?.message ?? m.client_retry_failed() };
+    return { aiRequestId: body.data.aiRequestId };
+}
+
+export async function pullWeek(
+    userId: string,
+    weekId: string,
+    body: { outlook: string; confirmations: { sessionId: string; status: 'DONE' | 'SKIPPED' }[] },
+): Promise<{ aiRequestId: string } | { error: string }> {
+    const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/pull`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok) return { error: json?.message ?? m.client_write_week_failed() };
+    return { aiRequestId: json.data.aiRequestId };
+}
+
+export async function answerDecision(
+    userId: string,
+    weekId: string,
+    choice: DecisionOption,
+): Promise<{ ok: true } | { error: string }> {
+    const response = await fetch(`/api/user/${userId}/plan/weeks/${weekId}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ choice }),
+    });
+    if (response.ok) return { ok: true };
+    const json = await response.json().catch(() => null);
+    return { error: json?.message ?? m.client_answer_failed() };
+}

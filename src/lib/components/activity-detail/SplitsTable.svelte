@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import type { ActivitySplit } from '$lib/server/garmin/fetch-activity-detail';
     import { formatPaceOrSpeed } from '$lib/utils/pace';
 
@@ -28,18 +29,18 @@
 </script>
 
 {#if splits.length === 0}
-    <p class="text-sm opacity-70 italic">No split data available for this activity.</p>
+    <p class="text-sm opacity-70 italic">{m.splits_none()}</p>
 {:else}
     <div class="overflow-x-auto rounded-xl border border-surface-300 dark:border-surface-700">
         <table class="table table-compact w-full">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Distance</th>
-                    <th>Time</th>
-                    <th>Pace / Speed</th>
-                    <th>Avg HR</th>
-                    <th>Elev +/−</th>
+                    <th>{m.activity_distance()}</th>
+                    <th>{m.activity_time()}</th>
+                    <th>{m.splits_pace_speed()}</th>
+                    <th>{m.activity_avg_hr()}</th>
+                    <th>{m.splits_elev()}</th>
                 </tr>
             </thead>
             <tbody>

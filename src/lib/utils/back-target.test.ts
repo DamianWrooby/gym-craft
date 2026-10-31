@@ -14,6 +14,12 @@ describe('resolveBackTarget', () => {
         );
     });
 
+    it('preserves the list query string so the window and revealed rows survive', () => {
+        expect(
+            resolveBackTarget('/app/running/analytics/activities?from=2026-05-01&to=2026-08-08&shown=60', FALLBACK),
+        ).toBe('/app/running/analytics/activities?from=2026-05-01&to=2026-08-08&shown=60');
+    });
+
     it('falls back when there is no referrer (deep link / refresh)', () => {
         expect(resolveBackTarget(null, FALLBACK)).toBe(FALLBACK);
         expect(resolveBackTarget(undefined, FALLBACK)).toBe(FALLBACK);

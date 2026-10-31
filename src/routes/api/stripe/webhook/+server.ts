@@ -20,17 +20,7 @@ export async function POST({ request }: { request: Request }): Promise<Response>
             const userId = session.metadata?.userId ?? session.client_reference_id ?? undefined;
             if (!userId) break;
 
-            if (session.mode === 'payment') {
-                // One-time "lifetime" purchase.
-                await db.user.update({
-                    where: { id: userId },
-                    data: {
-                        lifetimeSupporter: true,
-                        subscriptionTier: 'SUPPORTER',
-                        stripeCustomerId: typeof session.customer === 'string' ? session.customer : undefined,
-                    },
-                });
-            } else if (session.mode === 'subscription' && session.subscription) {
+            if (session.mode === 'subscription' && session.subscription) {
                 const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
                 const sub = await stripe.subscriptions.retrieve(subId);
                 await applySubscription(userId, sub);

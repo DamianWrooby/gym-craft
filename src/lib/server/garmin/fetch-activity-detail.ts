@@ -1,7 +1,8 @@
+import { m } from '$lib/paraglide/messages.js';
 import { to } from 'await-to-js';
-import { getGarminSessionToken } from '$lib/prisma/prisma';
-import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
 import { garminApiUrl, garminBearerHeaders } from './config';
+import { classifyGarminStatus } from './fetch-activities';
+import { withGarminSession, type GarminAttemptErrorCode, type GarminAttemptResult } from './with-garmin-session';
 
 export interface ActivitySplit {
     splitIndex: number;
@@ -18,6 +19,25 @@ export interface ActivitySample {
     heartRate: number | null;
     speed: number | null;
     elevationM: number | null;
+    cadence: number | null;
+    power: number | null;
+}
+
+export interface RoutePoint {
+    lat: number;
+    lng: number;
+}
+
+export interface ActivityDynamics {
+    avgCadence: number | null;
+    maxCadence: number | null;
+    avgGroundContactTimeMs: number | null;
+    avgVerticalOscillationCm: number | null;
+    avgVerticalRatioPct: number | null;
+    avgPowerW: number | null;
+    maxPowerW: number | null;
+    minTemperatureC: number | null;
+    maxTemperatureC: number | null;
 }
 
 export interface ActivityDetailPayload {
@@ -29,14 +49,11 @@ export interface ActivityDetailPayload {
     distance: number | null;
     splits: ActivitySplit[];
     samples: ActivitySample[];
+    route: RoutePoint[];
+    dynamics: ActivityDynamics | null;
 }
 
-export type FetchActivityDetailErrorCode =
-    | 'GARMIN_EMAIL_NOT_CONFIGURED'
-    | 'GARMIN_SERVICE_UNREACHABLE'
-    | 'GARMIN_SERVICE_PARSE_ERROR'
-    | 'INVALID_TOKEN'
-    | 'GARMIN_SERVICE_ERROR';
+export type FetchActivityDetailErrorCode = GarminAttemptErrorCode;
 
 export type FetchActivityDetailResult =
     | { ok: true; detail: ActivityDetailPayload }
@@ -47,23 +64,27 @@ export interface FetchActivityDetailParams {
     garminActivityId: bigint | number;
 }
 
+/**
+ * Fetches one activity's splits + downsampled samples. Session handling — including silently
+ * renewing an expired one and retrying once — belongs to `withGarminSession`.
+ */
 export async function fetchActivityDetail(params: FetchActivityDetailParams): Promise<FetchActivityDetailResult> {
     const { userId, garminActivityId } = params;
-
-    const [tokenError, sessionToken] = await to(getGarminSessionToken(userId));
-    if (tokenError || !sessionToken) {
-        return {
-            ok: false,
-            status: 401,
-            code: 'INVALID_TOKEN',
-            message: 'No valid token found',
-        };
-    }
 
     const body: Record<string, unknown> = {
         activityId: typeof garminActivityId === 'bigint' ? Number(garminActivityId) : garminActivityId,
     };
 
+    const result = await withGarminSession(userId, (sessionToken) => requestActivityDetail(sessionToken, body));
+    if (!result.ok) return result;
+
+    return { ok: true, detail: result.value };
+}
+
+async function requestActivityDetail(
+    sessionToken: string,
+    body: Record<string, unknown>,
+): Promise<GarminAttemptResult<ActivityDetailPayload>> {
     const url = `${garminApiUrl}/activity/detail`;
 
     const [fetchError, pyResponse] = await to(
@@ -89,14 +110,13 @@ export async function fetchActivityDetail(params: FetchActivityDetailParams): Pr
             ok: false,
             status: 502,
             code: 'GARMIN_SERVICE_PARSE_ERROR',
-            message: 'Invalid response from Garmin service',
+            message: m.api_garmin_invalid_response(),
         };
     }
 
     if (!pyResponse.ok) {
         const message: string = data?.message || 'Garmin service error';
-        const code: FetchActivityDetailErrorCode =
-            pyResponse.status === 401 || isInvalidTokenMessage(message) ? 'INVALID_TOKEN' : 'GARMIN_SERVICE_ERROR';
+        const code = classifyGarminStatus(pyResponse.status, data, message);
         return { ok: false, status: pyResponse.status, code, message };
     }
 
@@ -110,10 +130,10 @@ export async function fetchActivityDetail(params: FetchActivityDetailParams): Pr
         };
     }
 
-    return { ok: true, detail: normalizeDetail(payload) };
+    return { ok: true, value: normalizeDetail(payload) };
 }
 
-function normalizeDetail(payload: Record<string, unknown>): ActivityDetailPayload {
+export function normalizeDetail(payload: Record<string, unknown>): ActivityDetailPayload {
     const splits = Array.isArray(payload.splits)
         ? (payload.splits as Record<string, unknown>[]).map((s, i) => normalizeSplit(s, i))
         : [];
@@ -130,7 +150,33 @@ function normalizeDetail(payload: Record<string, unknown>): ActivityDetailPayloa
         distance: numberOrNull(payload.distance),
         splits,
         samples,
+        route: normalizeRoute(payload),
+        dynamics: normalizeDynamics(payload),
     };
+}
+
+function normalizeRoute(payload: Record<string, unknown>): RoutePoint[] {
+    if (!Array.isArray(payload.route)) return [];
+    return (payload.route as Record<string, unknown>[])
+        .map((p) => ({ lat: numberOrNull(p.lat), lng: numberOrNull(p.lng) }))
+        .filter((p): p is RoutePoint => p.lat !== null && p.lng !== null);
+}
+
+function normalizeDynamics(payload: Record<string, unknown>): ActivityDynamics | null {
+    const d = payload.dynamics as Record<string, unknown> | null | undefined;
+    if (!d || typeof d !== 'object') return null;
+    const out: ActivityDynamics = {
+        avgCadence: numberOrNull(d.avgCadence),
+        maxCadence: numberOrNull(d.maxCadence),
+        avgGroundContactTimeMs: numberOrNull(d.avgGroundContactTimeMs),
+        avgVerticalOscillationCm: numberOrNull(d.avgVerticalOscillationCm),
+        avgVerticalRatioPct: numberOrNull(d.avgVerticalRatioPct),
+        avgPowerW: numberOrNull(d.avgPowerW),
+        maxPowerW: numberOrNull(d.maxPowerW),
+        minTemperatureC: numberOrNull(d.minTemperatureC),
+        maxTemperatureC: numberOrNull(d.maxTemperatureC),
+    };
+    return Object.values(out).every((v) => v === null) ? null : out;
 }
 
 function normalizeSplit(split: Record<string, unknown>, fallbackIndex: number): ActivitySplit {
@@ -151,6 +197,8 @@ function normalizeSample(sample: Record<string, unknown>): ActivitySample {
         heartRate: numberOrNull(sample.heartRate),
         speed: numberOrNull(sample.speed),
         elevationM: numberOrNull(sample.elevationM),
+        cadence: numberOrNull(sample.cadence),
+        power: numberOrNull(sample.power),
     };
 }
 
@@ -165,3 +213,6 @@ function numberOrNull(value: unknown): number | null {
 function stringOrNull(value: unknown): string | null {
     return typeof value === 'string' && value.length > 0 ? value : null;
 }
+
+/** Test-only re-export so the normalizer can be unit-tested without a live fetch. */
+export const normalizeDetailForTest = normalizeDetail;

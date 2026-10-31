@@ -2,12 +2,14 @@ import { to } from 'await-to-js';
 import { appConfig } from '@/constants/app.constants';
 import { isProduction } from '$lib/utils/environment';
 import { resolveSyncWindow, type SyncMode, type SyncStateSnapshot } from '$lib/garmin/sync-window';
-import { isInvalidTokenMessage } from '$lib/garmin/invalid-token';
+import { classifyGarminFailure } from '$lib/garmin/garmin-failure';
+import { refreshGarminSession } from '$lib/garmin/refresh-session';
 import { splitDateRange } from '$lib/garmin/date-chunks';
 
 export type RunProxySyncErrorCode =
     | 'GARMIN_EMAIL_NOT_CONFIGURED'
     | 'INVALID_TOKEN'
+    | 'RATE_LIMITED'
     | 'STALE_STATE'
     | 'GARMIN_TIMEOUT'
     | 'PROXY_ERROR'
@@ -17,6 +19,8 @@ export interface SyncSummary {
     mode: SyncMode;
     activitiesUpserted: number;
     lastSyncedAt: string;
+    /** Garmin IDs of runs still on Garmin's zones with no stored samples (ADR 0027). */
+    runsNeedingDetail?: string[];
 }
 
 export type RunProxySyncResult =
@@ -36,6 +40,8 @@ export interface RunProxySyncArgs {
      * `total: 1` for an incremental sync, so callers need no special case.
      */
     onProgress?: (completed: number, total: number) => void;
+    /** Called after each run's detail is fetched and scored against the athlete's zones. */
+    onScoringProgress?: (completed: number, total: number) => void;
 }
 
 const GARMIN_WAKE_BUDGET_MS = 120_000;
@@ -136,14 +142,16 @@ function classifyProxyFailure(
 ): { code: RunProxySyncErrorCode; message: string } {
     const message = typeof payload.message === 'string' ? payload.message : undefined;
 
-    if (status === 401 || payload.code === 'INVALID_TOKEN' || isInvalidTokenMessage(message)) {
-        return { code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
+    switch (classifyGarminFailure(status, payload)) {
+        case 'RATE_LIMITED':
+            return { code: 'RATE_LIMITED', message: message ?? 'Garmin is rate limiting requests' };
+        case 'INVALID_TOKEN':
+            return { code: 'INVALID_TOKEN', message: message ?? 'Invalid Garmin session' };
+        case 'TIMEOUT':
+            return { code: 'GARMIN_TIMEOUT', message: message ?? 'Garmin service timed out' };
+        default:
+            return { code: 'PROXY_ERROR', message: message ?? 'Garmin service error' };
     }
-    // 504 is the proxy giving up on Garmin after 120s — transient, and worth retrying.
-    if (status === 504) {
-        return { code: 'GARMIN_TIMEOUT', message: message ?? 'Garmin service timed out' };
-    }
-    return { code: 'PROXY_ERROR', message: message ?? 'Garmin service error' };
 }
 
 /**
@@ -153,7 +161,10 @@ function classifyProxyFailure(
  *   2. Browser → SvelteKit (`/api/user/{id}/garmin/sync`) — fast map + upsert + state update.
  *
  * Returns a normalized result so each page can render its own toasts / inline errors.
- * On `INVALID_TOKEN` the caller should prompt for the Garmin password and call again with it.
+ * On `INVALID_TOKEN` the caller should prompt for the Garmin password and call again with it — but
+ * only after a silent renewal has already been tried and refused here, so the prompt means the
+ * stored Garmin authorization is genuinely dead rather than merely expired.
+ * On `RATE_LIMITED` the caller must back off and must NOT prompt: the credentials are fine.
  * On `STALE_STATE` the caller should reload fresh sync state and retry once.
  * On `GARMIN_TIMEOUT` Garmin itself was too slow — offer a plain retry.
  */
@@ -181,14 +192,38 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
     // goes out as month-sized requests. Incremental syncs are a week and stay a single call.
     const windows = mode === 'backfill' ? splitDateRange(startDate, endDate) : [{ startDate, endDate }];
 
+    // A backfill sends several windows in sequence, so the token has to be a mutable local: after a
+    // mid-loop renewal the remaining windows must use the new session, not the one already refused.
+    let activeToken = sessionToken;
+    let renewalTried = false;
+
     const activities: unknown[] = [];
     for (const [index, range] of windows.entries()) {
         // The Bearer token is the identity; the proxy forwards it to the microservice. No credentials.
-        const proxy = await postJson(
-            proxyUrl,
-            { startDate: range.startDate, endDate: range.endDate },
-            { headers: { Authorization: `Bearer ${sessionToken}` }, timeoutMs: PROXY_REQUEST_TIMEOUT_MS },
-        );
+        const requestWindow = () =>
+            postJson(
+                proxyUrl,
+                { startDate: range.startDate, endDate: range.endDate },
+                { headers: { Authorization: `Bearer ${activeToken}` }, timeoutMs: PROXY_REQUEST_TIMEOUT_MS },
+            );
+
+        let proxy = await requestWindow();
+
+        // Renew once per sync, never per window: a second refusal against a session minted moments
+        // ago means the stored authorization is dead, and looping would only reach that prompt slower.
+        if (!('error' in proxy) && !proxy.ok && !renewalTried) {
+            const failure = classifyProxyFailure(proxy.status, proxy.payload);
+            if (failure.code === 'INVALID_TOKEN') {
+                renewalTried = true;
+                const renewed = await refreshGarminSession(userId, activeToken);
+                if (!renewed.ok) {
+                    return { ok: false, code: renewed.code, message: renewed.message };
+                }
+                activeToken = renewed.sessionToken;
+                proxy = await requestWindow();
+            }
+        }
+
         if ('error' in proxy) {
             const code = proxy.aborted ? 'GARMIN_TIMEOUT' : 'PROXY_ERROR';
             return { ok: false, code, message: proxy.aborted ? 'Garmin service timed out' : proxy.error };
@@ -219,5 +254,73 @@ export async function runProxySync(args: RunProxySyncArgs): Promise<RunProxySync
         return { ok: false, code, message };
     }
 
-    return { ok: true, summary: persist.payload.data as SyncSummary };
+    const summary = persist.payload.data as SyncSummary;
+    await scoreRunsNeedingDetail({
+        userId,
+        garminActivityIds: summary.runsNeedingDetail ?? [],
+        sessionToken: activeToken,
+        renewalTried,
+        onProgress: args.onScoringProgress,
+    });
+    return { ok: true, summary };
+}
+
+interface ScoreRunsArgs {
+    userId: string;
+    garminActivityIds: string[];
+    sessionToken: string;
+    renewalTried: boolean;
+    onProgress?: (completed: number, total: number) => void;
+}
+
+/**
+ * Third step of the sync (ADR 0027): for each new run still on Garmin's zones, fetch its detail
+ * through the proxy and post it back so the app scores it against the athlete's own zones. Runs
+ * in sequence because the Garmin microservice is a single free-tier instance.
+ *
+ * Best effort: the activities are already saved, so a failure never fails the sync. A run that
+ * fails keeps Garmin's load and its flag, and the next sync returns it again. A refused session
+ * gets the same single renewal as the windows; a second refusal stops the loop.
+ */
+async function scoreRunsNeedingDetail(args: ScoreRunsArgs): Promise<void> {
+    const { userId, garminActivityIds } = args;
+    if (garminActivityIds.length === 0) return;
+
+    const proxyUrl = isProduction()
+        ? appConfig.garminActivityDetailApiUrlPROD
+        : appConfig.garminActivityDetailApiUrlDEV;
+    let activeToken = args.sessionToken;
+    let renewalTried = args.renewalTried;
+
+    for (const [index, garminActivityId] of garminActivityIds.entries()) {
+        const requestDetail = () =>
+            postJson(
+                proxyUrl,
+                { activityId: Number(garminActivityId) },
+                { headers: { Authorization: `Bearer ${activeToken}` }, timeoutMs: PROXY_REQUEST_TIMEOUT_MS },
+            );
+
+        let proxy = await requestDetail();
+        if (!('error' in proxy) && !proxy.ok) {
+            if (classifyProxyFailure(proxy.status, proxy.payload).code === 'INVALID_TOKEN') {
+                if (renewalTried) return;
+                renewalTried = true;
+                const renewed = await refreshGarminSession(userId, activeToken);
+                if (!renewed.ok) return;
+                activeToken = renewed.sessionToken;
+                proxy = await requestDetail();
+            }
+        }
+
+        const detail = 'error' in proxy || !proxy.ok ? null : proxy.payload.data;
+        if (detail && typeof detail === 'object') {
+            const stored = await postJson(`/api/user/${userId}/garmin/activity-detail`, { garminActivityId, detail });
+            if ('error' in stored || !stored.ok) {
+                console.warn('[garmin-sync] could not score run', { garminActivityId });
+            }
+        } else {
+            console.warn('[garmin-sync] could not fetch run detail', { garminActivityId });
+        }
+        args.onProgress?.(index + 1, garminActivityIds.length);
+    }
 }

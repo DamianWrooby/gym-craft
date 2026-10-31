@@ -1,7 +1,10 @@
+import { m } from '$lib/paraglide/messages.js';
+
+// Written in the request's locale (ADR 0028): at signup that is the Accept-Language pick.
 export function generateEmailTemplate(baseUrl: string, userId: string, token: string): string {
-    return `<p>Thank you for registering for the GymCraft app.</p>
+    return `<p>${m.email_verify_thanks()}</p>
 			</br>
-			<p>Click the link below to activate your account:</p>
+			<p>${m.email_verify_click()}</p>
 			</br>
-			<a style="" href="${baseUrl}/verify/${userId}/${token}">Activate your account</a>`;
+			<a style="" href="${baseUrl}/verify/${userId}/${token}">${m.email_verify_link()}</a>`;
 }

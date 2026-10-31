@@ -2,8 +2,10 @@ import { db } from '$lib/database';
 import { resolveTier } from '$lib/server/subscription/tier';
 import { hashSessionToken } from '$lib/server/session-token';
 import { getGeneralPlanLimit } from '$lib/prisma/prisma';
-import { TIER_LIMITS } from '@/constants/subscription.constants';
+import { TIER_LIMITS, resolveAiModel } from '@/constants/subscription.constants';
 import { currentMonthStartIso } from '$lib/utils/iso-week';
+import { PUBLIC_APP_ENV } from '$env/static/public';
+import { DEFAULT_LOCALE, enabledLocales, isEnabledLocale } from '@/constants/locale.constants';
 import type { RequestEvent } from '@sveltejs/kit';
 
 /** SUPPORTER: monthly allowance tracked via AiUsage kind='gym_plan'. */
@@ -34,7 +36,8 @@ export async function updateUser(event: RequestEvent) {
             email: true,
             subscriptionStatus: true,
             currentPeriodEnd: true,
-            lifetimeSupporter: true,
+            aiModelPreference: true,
+            locale: true,
         },
     });
 
@@ -42,7 +45,6 @@ export async function updateUser(event: RequestEvent) {
 
     const { id, username, role, generatedPlansNumber, emailVerified, marketingAgreement, email } = user;
     const subscriptionTier = resolveTier({
-        lifetimeSupporter: user.lifetimeSupporter,
         subscriptionStatus: user.subscriptionStatus,
         currentPeriodEnd: user.currentPeriodEnd,
     });
@@ -70,6 +72,8 @@ export async function updateUser(event: RequestEvent) {
             marketingAgreement,
             email,
             subscriptionTier,
+            aiModel: resolveAiModel(subscriptionTier, user.aiModelPreference),
+            locale: isEnabledLocale(user.locale, enabledLocales(PUBLIC_APP_ENV)) ? user.locale : DEFAULT_LOCALE,
         };
     }
 }

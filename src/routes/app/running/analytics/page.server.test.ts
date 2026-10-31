@@ -80,7 +80,7 @@ describe('load /app/running/analytics (dashboard)', () => {
                 id,
                 periodStart: '2026-06-01',
                 periodEnd: '2026-06-07',
-                summary: id.toUpperCase(),
+                summaryPreview: id.toUpperCase(),
                 createdAt: new Date('2026-06-08T00:00:00Z'),
             })),
         );
@@ -95,6 +95,7 @@ describe('load /app/running/analytics (dashboard)', () => {
         const reports = await result.recentReports;
         expect(reports).toHaveLength(3);
         expect(reports[0].id).toBe('r-1');
+        expect(reports[0].summaryPreview).toBe('R-1');
 
         const summary = await result.summary;
         expect(summary.hasActivities).toBe(true);
@@ -136,13 +137,13 @@ describe('load /app/running/analytics (dashboard)', () => {
             .map(([args]) => args)
             .find((c) => c.where.startTime != null);
         // Auto-logged walks would pad the chronic baseline and depress ACWR.
-        expect(windowCall.where.activityType).toEqual({ notIn: ['walking'] });
+        expect(windowCall.where.activityType).toEqual({ notIn: ['walking', 'casual_walking', 'speed_walking'] });
         expect(windowCall.select.activityType).toBe(true);
 
         // The _min probe must exclude them too: a two-year-old commute walk would otherwise
         // report a brand-new runner as having a mature chronic baseline.
         const [aggregateArgs] = mocks.db.activity.aggregate.mock.calls[0];
-        expect(aggregateArgs.where.activityType).toEqual({ notIn: ['walking'] });
+        expect(aggregateArgs.where.activityType).toEqual({ notIn: ['walking', 'casual_walking', 'speed_walking'] });
     });
 
     it('keeps non-training activities visible in the recent-activities list', async () => {

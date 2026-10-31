@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
+    import { getLocale } from '$lib/paraglide/runtime.js';
     import { page } from '$app/stores';
     import { afterNavigate, goto } from '$app/navigation';
     import { ArrowLeftIcon, DownloadIcon } from 'svelte-feather-icons';
@@ -16,7 +18,7 @@
     import TrainingLoadCard from '$lib/components/training-report/TrainingLoadCard.svelte';
     import RecommendationsPanel from '$lib/components/training-report/RecommendationsPanel.svelte';
     import { splitRecommendations } from '$lib/utils/split-recommendations';
-    import { GOAL_TYPE_LABELS } from '@/constants/training-report.constants';
+    import { goalTypeLabel } from '$lib/i18n/labels';
     import type { MetricsBundle } from '$lib/server/analytics/types';
     import type { GoalType } from '@prisma/client';
 
@@ -57,7 +59,7 @@
     $: exportUrl = `/api/user/${user.id}/reports/weekly/${report.id}/export`;
 
     function exportBlocked() {
-        makeUpgradeToast(toastStore, 'Report export is a Supporter feature.');
+        makeUpgradeToast(toastStore, m.report_export_supporter());
     }
 
     function exportPdf() {
@@ -66,7 +68,7 @@
 
     function formatPeriod(start: string, end: string): string {
         const fmt = (s: string) =>
-            new Date(`${s}T00:00:00Z`).toLocaleDateString('en-US', {
+            new Date(`${s}T00:00:00Z`).toLocaleDateString(getLocale(), {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -76,11 +78,11 @@
     }
 </script>
 
-<Seo title="Weekly report | GymCraft™" metaDescription="Coach-style weekly training review." />
+<Seo title={`${m.report_modal_heading_short()} | GymCraft™`} metaDescription="Coach-style weekly training review." />
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-4">
-        <button type="button" on:click={() => goto(backTarget)} aria-label="Go back">
+        <button type="button" on:click={() => goto(backTarget)} aria-label={m.common_go_back()}>
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
         <div class="flex items-center gap-3">
@@ -89,45 +91,49 @@
                     href={exportUrl}
                     download
                     class="btn btn-sm variant-soft-primary"
-                    aria-label="Export report as Markdown">
+                    aria-label={m.report_export_md_aria()}>
                     <DownloadIcon size="16" />
-                    <span>Export .md</span>
+                    <span>{m.report_export_md()}</span>
                 </a>
                 <button
                     type="button"
                     class="btn btn-sm variant-soft-primary"
                     on:click={exportPdf}
-                    aria-label="Export report as PDF">
+                    aria-label={m.report_export_pdf_aria()}>
                     <DownloadIcon size="16" />
-                    <span>Export .pdf</span>
+                    <span>{m.report_export_pdf()}</span>
                 </button>
             {:else}
                 <button
                     type="button"
                     class="btn btn-sm variant-soft-surface opacity-60"
                     on:click={exportBlocked}
-                    aria-label="Export report (Supporter feature)">
+                    aria-label={m.report_export_locked_aria()}>
                     <DownloadIcon size="16" />
-                    <span>Export</span>
+                    <span>{m.report_export()}</span>
                 </button>
             {/if}
-            <p class="text-xs opacity-60">Generated {new Date(report.createdAt).toLocaleString('en-US')}</p>
+            <p class="text-xs opacity-60">
+                {m.report_generated_at({ date: new Date(report.createdAt).toLocaleString(getLocale()) })}
+            </p>
         </div>
     </div>
 
     <header class="mb-10">
-        <h1 class="h2 text-xl font-bold">Week of {formatPeriod(report.periodStart, report.periodEnd)}</h1>
+        <h1 class="h2 text-xl font-bold">
+            {m.report_week_of({ period: formatPeriod(report.periodStart, report.periodEnd) })}
+        </h1>
         {#if report.goalContext.goals.length > 0}
             <div class="flex flex-wrap gap-2 mt-2">
                 {#each report.goalContext.goals as goal (goal.id)}
                     <span class="chip variant-soft-primary">
-                        {GOAL_TYPE_LABELS[goal.goalType]}{goal.targetEventName ? ` — ${goal.targetEventName}` : ''}
+                        {goalTypeLabel(goal.goalType)}{goal.targetEventName ? ` — ${goal.targetEventName}` : ''}
                     </span>
                 {/each}
             </div>
         {/if}
         {#if report.goalContext.notes}
-            <p class="text-sm opacity-80 mt-2">Notes: {report.goalContext.notes}</p>
+            <p class="text-sm opacity-80 mt-2">{m.report_notes({ notes: report.goalContext.notes })}</p>
         {/if}
     </header>
 
@@ -138,29 +144,28 @@
     {/if}
 
     {#if report.metrics.flags.noActivities}
-        <p class="text-center italic opacity-70 my-8">No activities were recorded for this period.</p>
+        <p class="text-center italic opacity-70 my-8">{m.report_no_activities()}</p>
     {:else}
         {#if report.metrics.flags.noRunningActivities}
             <p class="italic opacity-70 mb-10">
-                No running sessions were recorded this week. Charts below are for running only; the coach review still
-                reflects any cross-training in this period.
+                {m.report_no_running()}
             </p>
         {:else}
             {#if report.metrics.deltas}
                 <section class="mb-16">
-                    <h2 class="h3 font-semibold mb-4">Week over week</h2>
+                    <h2 class="h3 font-semibold mb-4">{m.report_week_over_week()}</h2>
                     <StatDeltas deltas={report.metrics.deltas} />
                 </section>
             {/if}
 
             <section class="mb-16">
-                <h2 class="h3 font-semibold mb-4">Daily volume</h2>
+                <h2 class="h3 font-semibold mb-4">{m.report_daily_volume()}</h2>
                 <DailyVolumeChart byDay={report.metrics.volume.byDay} />
             </section>
 
             {#if !report.metrics.flags.missingHRZones && report.metrics.intensity.hrZoneSeconds}
                 <section class="mb-16">
-                    <h2 class="h3 font-semibold mb-4">Heart rate zone distribution</h2>
+                    <h2 class="h3 font-semibold mb-4">{m.report_hr_zones()}</h2>
                     <HrZoneDonut
                         hrZoneSeconds={report.metrics.intensity.hrZoneSeconds}
                         hrZonePercents={report.metrics.intensity.hrZonePercents} />
@@ -168,14 +173,14 @@
             {/if}
 
             <section class="mb-16">
-                <h2 class="h3 font-semibold mb-4">Pace vs HR</h2>
+                <h2 class="h3 font-semibold mb-4">{m.report_pace_vs_hr()}</h2>
                 <PaceHrScatter efficiency={report.metrics.efficiency} />
             </section>
         {/if}
 
         {@const split = splitRecommendations(report.summary)}
         <section class="mb-10">
-            <h2 class="h3 font-semibold mb-4">Coach review</h2>
+            <h2 class="h3 font-semibold mb-4">{m.report_coach_review()}</h2>
             <Markdown source={split.review} />
         </section>
 

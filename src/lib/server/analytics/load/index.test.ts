@@ -40,7 +40,7 @@ describe('computeLoadProfile', () => {
         // 2 TRIMP/min via the duration fallback and pad the 28-day chronic baseline —
         // which depresses ACWR and makes the report recommend training harder.
         const [args] = mocks.db.activity.findMany.mock.calls[0];
-        expect(args.where.activityType).toEqual({ notIn: ['walking'] });
+        expect(args.where.activityType).toEqual({ notIn: ['walking', 'casual_walking', 'speed_walking'] });
     });
 
     it('bounds the query to the chronic window plus the previous week', async () => {
@@ -67,7 +67,7 @@ describe('computeLoadProfile', () => {
         expect(profile.weeklyTotalLoad).toBe(200);
         // The query never filters by modality, so cycling and swimming rows reach the engine.
         const [args] = mocks.db.activity.findMany.mock.calls[0];
-        expect(args.where.activityType).toEqual({ notIn: ['walking'] });
+        expect(args.where.activityType).toEqual({ notIn: ['walking', 'casual_walking', 'speed_walking'] });
         expect(Object.keys(args.where)).not.toContain('OR');
     });
 });

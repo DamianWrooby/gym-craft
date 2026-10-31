@@ -1,0 +1,587 @@
+<script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
+    import { getLocale } from '$lib/paraglide/runtime.js';
+    import { goalTypeLabel } from '$lib/i18n/labels';
+    import type { GoalType } from '@prisma/client';
+    import { goto, invalidateAll } from '$app/navigation';
+    import { page } from '$app/stores';
+    import PlannerShell from '$lib/components/planner/PlannerShell.svelte';
+    import SchoolDetailsModal from '$lib/components/planner/SchoolDetailsModal.svelte';
+    import type { SchoolDefinition } from '$lib/planner/schools/types';
+    import GoalForm from '$lib/components/running-goal/GoalForm.svelte';
+    import type { GoalInput, GoalRank } from '$lib/running-goal/goal-form';
+    import { readApiError } from '$lib/utils/api-error';
+    import { generateWeek } from '$lib/planner/generation-client';
+    import { addDays } from '$lib/utils/iso-week';
+    import { SCHOOLS, getSchool } from '$lib/planner/schools/catalogue';
+    import { displaySchool } from '$lib/i18n/school-text';
+    import { deriveAnchor } from '$lib/planner/core/anchor';
+    import { recommendSchool } from '$lib/planner/core/recommend';
+    import {
+        choosablePhases,
+        defaultCompression,
+        horizonWeekCount,
+        layoutHorizon,
+        type RecentVolume,
+    } from '$lib/planner/core/layout';
+    import type { HrZoneBound, ZoneSource } from '$lib/planner/core/zones';
+    import type { AnchorRun } from '$lib/planner/core/anchor';
+    import {
+        WEEKDAYS,
+        WIZARD_STEPS,
+        canFinish,
+        initialWizardState,
+        stepIssue,
+        type WizardStep,
+    } from '$lib/planner/wizard';
+
+    type Goal = { id: string; goalType: string; name: string | null; date: string | null; distanceM: number | null };
+    export let data:
+        | { profileMissing: true }
+        | {
+              profileMissing: false;
+              today: string;
+              proxySession: string | null;
+              goals: Goal[];
+              goalRanks: GoalRank[];
+              zoneProposal: { source: ZoneSource; zones: HrZoneBound[] } | null;
+              recentVolume: RecentVolume;
+              raceResults: { id: string; date: string; distanceM: number; timeSec: number }[];
+              runs: AnchorRun[];
+          };
+
+    const STEP_TITLES: Record<WizardStep, string> = {
+        goal: m.setup_step_goal(),
+        school: m.setup_step_school(),
+        horizon: m.setup_step_horizon(),
+        zones: m.setup_step_zones(),
+        results: m.setup_step_results(),
+        availability: m.setup_step_availability(),
+    };
+    const ZONE_SOURCE_LABEL: Record<ZoneSource, string> = {
+        profile: m.setup_zones_from_profile(),
+        'max-hr': m.setup_zones_from_max_hr(),
+        age: m.setup_zones_from_age(),
+    };
+    // 2024-01-01 was a Monday: seven days from it give the locale's short weekday names.
+    const DAY_LABELS = [1, 2, 3, 4, 5, 6, 7].map((d) =>
+        new Date(Date.UTC(2024, 0, d)).toLocaleDateString(getLocale(), { weekday: 'short', timeZone: 'UTC' }),
+    );
+    const asGoalType = (goalType: string) => goalType as GoalType;
+    const capitalize = (s: string) => s[0].toUpperCase() + s.slice(1);
+    // `example` is a typical finish time, shown as the placeholder in the right format.
+    const DISTANCES = [
+        { label: '1500 m', m: 1500, format: 'm:ss', example: '6:30' },
+        { label: '5 km', m: 5000, format: 'mm:ss', example: '24:30' },
+        { label: '10 km', m: 10000, format: 'mm:ss', example: '52:00' },
+        { label: capitalize(m.race_half_marathon()), m: 21097, format: 'h:mm:ss', example: '1:45:00' },
+        { label: capitalize(m.race_marathon()), m: 42195, format: 'h:mm:ss', example: '3:45:00' },
+    ];
+    const distanceLabel = (m: number) => DISTANCES.find((d) => d.m === m)?.label ?? `${(m / 1000).toFixed(1)} km`;
+    $: newDistance = DISTANCES.find((d) => d.m === newResult.distanceM) ?? DISTANCES[1];
+
+    let state = initialWizardState(data.profileMissing ? null : (data.zoneProposal?.zones ?? null));
+    let stepIndex = 0;
+    let submitting = false;
+    let submitError: string | null = null;
+    /** Week 1 is being written: the plan exists, only the AI call is in flight. */
+    let generating = false;
+    let addingGoal = false;
+    let detailsSchool: SchoolDefinition | null = null;
+    let savingGoal = false;
+    let goalError: string | null = null;
+    let newResult = { date: '', distanceM: 5000, time: '' };
+    let resultError: string | null = null;
+
+    $: step = WIZARD_STEPS[stepIndex];
+    $: ready = !data.profileMissing ? data : null;
+    $: goal = ready?.goals.find((g) => g.id === state.goalId) ?? null;
+    $: anchor = ready
+        ? deriveAnchor({
+              results: [...ready.raceResults, ...state.raceResults.map((r, i) => ({ ...r, id: `new-${i}` }))],
+              runs: ready.runs,
+              goalDistanceM: goal?.distanceM ?? null,
+              today: ready.today,
+          })
+        : null;
+    $: endDate = state.goalDate ?? state.endDate;
+    $: weeks = ready && endDate && endDate > ready.today ? horizonWeekCount(ready.today, endDate) : null;
+    $: recommendation = recommendSchool({
+        goal: { isRace: !!goal?.date, distanceM: goal?.distanceM ?? null },
+        // An undated goal has no horizon yet, so nothing is filtered at this step.
+        horizonWeeks: weeks ?? 52,
+        anchorPresent: anchor != null,
+        recentMetresPerWeek: ready?.recentVolume.metresPerWeek ?? 0,
+    });
+    $: school = state.schoolId ? displaySchool(getSchool(state.schoolId)) : null;
+    $: runsPerWeek = WEEKDAYS.filter((d) => state.availability[d]).length;
+    $: layout =
+        ready && school && endDate
+            ? layoutHorizon({
+                  school,
+                  startDate: ready.today,
+                  endDate,
+                  goal: { isRace: goal?.goalType === 'RACE' && !!goal?.date, distanceM: goal?.distanceM ?? null },
+                  compression: state.compression ?? undefined,
+                  recentVolume: ready.recentVolume,
+                  runsPerWeek,
+                  anchorPresent: anchor != null,
+              })
+            : null;
+    // Layout refusal feeds the gating without writing back into `state` (no reactive cycle).
+    $: gated = { ...state, layoutRefused: layout != null && !layout.ok };
+    $: issue = stepIssue(step, gated);
+    // Auto-satisfied phases (Daniels' Foundation) take whatever room is left, so only the choosable
+    // phases decide whether the athlete must compress.
+    $: needsCompression =
+        school && weeks != null && weeks < choosablePhases(school).reduce((n, p) => n + p.idealWeeks.value, 0);
+
+    function chooseGoal(g: Goal) {
+        state = { ...state, goalId: g.id, goalDate: g.date, endDate: null, compression: null };
+    }
+
+    function cancelGoal() {
+        addingGoal = false;
+        goalError = null;
+    }
+
+    async function addGoal(e: CustomEvent<GoalInput>) {
+        savingGoal = true;
+        goalError = null;
+        const response = await fetch(`/api/user/${$page.data.user.id}/running-goals`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(e.detail),
+        });
+        if (!response.ok) {
+            goalError = (await readApiError(response, m.setup_goal_not_saved())).message;
+            savingGoal = false;
+            return;
+        }
+        const { data: created } = (await response.json()) as { data: { id: string } };
+        await invalidateAll();
+        savingGoal = false;
+        addingGoal = false;
+        const fresh = ready?.goals.find((g) => g.id === created.id);
+        if (fresh) chooseGoal(fresh);
+        else goalError = m.setup_goal_date_passed();
+    }
+
+    function chooseSchool(id: (typeof SCHOOLS)[number]['id']) {
+        const s = getSchool(id);
+        const defaultEnd =
+            state.goalDate || !ready
+                ? state.endDate
+                : addDays(ready.today, 7 * s.phases.reduce((n, p) => n + p.idealWeeks.value, 0));
+        state = { ...state, schoolId: id, compression: null, endDate: defaultEnd };
+    }
+
+    function setPhaseWeeks(key: string, value: number) {
+        if (!school || weeks == null) return;
+        state = {
+            ...state,
+            compression: { ...(state.compression ?? defaultCompression(school, weeks)), [key]: value },
+        };
+    }
+
+    function parseTime(text: string): number | null {
+        const parts = text.trim().split(':');
+        if (parts.length < 2 || parts.length > 3 || !parts.every((p) => /^\d+$/.test(p))) return null;
+        const nums = parts.map(Number);
+        // Minutes and seconds after the first field must stay below 60.
+        if (nums.slice(1).some((n) => n > 59)) return null;
+        return nums.reduce((total, n) => total * 60 + n, 0);
+    }
+
+    function addResult() {
+        const timeSec = parseTime(newResult.time);
+        if (!newResult.date || !ready || newResult.date > ready.today) {
+            resultError = m.setup_result_future_date();
+            return;
+        }
+        if (!timeSec) {
+            resultError = m.setup_result_time_format({ format: newDistance.format, example: newDistance.example });
+            return;
+        }
+        state = {
+            ...state,
+            raceResults: [...state.raceResults, { date: newResult.date, distanceM: newResult.distanceM, timeSec }],
+        };
+        newResult = { date: '', distanceM: 5000, time: '' };
+        resultError = null;
+    }
+
+    function updateZone(i: number, field: 'lowerBpm' | 'upperBpm', value: number) {
+        if (!state.zones) return;
+        const zones = state.zones.map((z, j) => (j === i ? { ...z, [field]: value } : z));
+        state = { ...state, zones, zonesConfirmed: false };
+    }
+
+    function formatTime(sec: number) {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = String(sec % 60).padStart(2, '0');
+        return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+    }
+
+    async function finish() {
+        if (!canFinish(gated) || submitting) return;
+        submitting = true;
+        submitError = null;
+        const response = await fetch(`/api/user/${$page.data.user.id}/plan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                goalId: state.goalId,
+                schoolId: state.schoolId,
+                endDate: state.goalDate ? null : state.endDate,
+                compression: state.compression,
+                hrZoneBounds: state.zones,
+                raceResults: state.raceResults,
+                availability: state.availability,
+                longRunDay: state.longRunDay,
+            }),
+        });
+        if (response.ok) {
+            const { data: created } = await response.json();
+            generating = true;
+            // The plan page finalizes or retries whatever happens here, so the outcome is not read.
+            if (!data.profileMissing && data.proxySession) {
+                await generateWeek({
+                    userId: $page.data.user.id,
+                    weekId: created.weekId,
+                    aiRequestId: created.aiRequestId,
+                    session: data.proxySession,
+                });
+            }
+            // Fresh data: a hover preload of /app/plan from before the plan existed would otherwise
+            // become this navigation and show the empty "build a plan" state.
+            await goto('/app/plan', { invalidateAll: true });
+            return;
+        }
+        submitError = (await readApiError(response, m.setup_failed())).message;
+        submitting = false;
+    }
+</script>
+
+<svelte:head><title>{m.setup_progress()} | GymCraft</title></svelte:head>
+
+<PlannerShell fullscreen>
+    {#if generating}
+        <section class="gc-panel p-8 text-center space-y-4" aria-live="polite">
+            <div class="gc-pulse mx-auto" aria-hidden="true">◆</div>
+            <h1 class="text-2xl font-black tracking-wide">{m.setup_writing_week_1()}</h1>
+            <p class="text-slate-300 max-w-prose mx-auto">
+                {m.setup_writing_body()}
+            </p>
+            <p class="text-sm text-sky-300">{m.setup_writing_close()}</p>
+        </section>
+    {:else if data.profileMissing}
+        <section class="gc-panel p-8 space-y-4 text-center">
+            <h1 class="text-2xl font-black">{m.setup_profile_first()}</h1>
+            <p class="text-slate-300">{m.setup_profile_needs()}</p>
+            <a class="gc-button inline-block" href="/app/profile">{m.setup_open_profile()}</a>
+        </section>
+    {:else}
+        <ol class="flex gap-1" aria-label={m.setup_progress()}>
+            {#each WIZARD_STEPS as s, i}
+                <li
+                    class="h-1.5 flex-1 {i < stepIndex
+                        ? 'bg-rose-600'
+                        : i === stepIndex
+                          ? 'bg-sky-400'
+                          : 'bg-slate-700'}"
+                    aria-current={i === stepIndex ? 'step' : undefined}>
+                    <span class="sr-only">{STEP_TITLES[s]}</span>
+                </li>
+            {/each}
+        </ol>
+        <div class="text-[11px] uppercase tracking-[0.3em] text-rose-400">
+            {m.setup_step_of({ step: stepIndex + 1, total: WIZARD_STEPS.length })}
+        </div>
+        <h1 class="text-3xl font-black tracking-wide">{STEP_TITLES[step]}</h1>
+
+        {#if step === 'goal'}
+            {#if data.goals.length === 0 && !addingGoal}
+                <p class="text-slate-400">{m.setup_no_goals()}</p>
+            {/if}
+            <div class="grid gap-3 sm:grid-cols-2">
+                {#each data.goals as g}
+                    <button
+                        type="button"
+                        class="gc-panel gc-choice p-4 text-left"
+                        aria-pressed={state.goalId === g.id}
+                        on:click={() => chooseGoal(g)}>
+                        <div class="font-bold text-lg">{g.name ?? goalTypeLabel(asGoalType(g.goalType))}</div>
+                        <div class="text-sm text-slate-400">
+                            {g.date ? m.setup_race_day({ date: g.date }) : m.setup_no_date()}
+                            {g.distanceM ? ` · ${(g.distanceM / 1000).toFixed(1)} km` : ''}
+                        </div>
+                    </button>
+                {/each}
+            </div>
+            {#if addingGoal}
+                <section class="gc-panel p-5 space-y-3">
+                    <h2 class="font-bold">{m.setup_new_goal()}</h2>
+                    <GoalForm
+                        others={ready?.goalRanks ?? []}
+                        today={ready?.today ?? ''}
+                        saving={savingGoal}
+                        on:save={addGoal}
+                        on:cancel={cancelGoal} />
+                    {#if goalError}<p class="text-rose-400 text-sm">{goalError}</p>{/if}
+                </section>
+            {:else}
+                <button type="button" class="gc-ghost" on:click={() => (addingGoal = true)}
+                    >+ {m.setup_add_goal()}</button>
+            {/if}
+        {:else if step === 'school'}
+            <div class="grid gap-3 sm:grid-cols-2">
+                {#each SCHOOLS.map(displaySchool) as s}
+                    {@const filtered = recommendation.filtered.find((f) => f.schoolId === s.id)}
+                    {@const recommended = recommendation.recommended?.schoolId === s.id}
+                    <div class="flex flex-col gap-1">
+                        <button
+                            type="button"
+                            disabled={!!filtered}
+                            class="gc-panel gc-choice p-5 text-left space-y-2 disabled:opacity-40 flex-1"
+                            aria-pressed={state.schoolId === s.id}
+                            on:click={() => chooseSchool(s.id)}>
+                            {#if recommended}
+                                <div class="text-[11px] uppercase tracking-[0.25em] text-sky-300">
+                                    ★ {m.setup_recommended()} · {recommendation.recommended?.reason}
+                                </div>
+                            {/if}
+                            <div class="text-xl font-black">{s.name}</div>
+                            <div class="text-sm text-rose-300">{s.tagline}</div>
+                            <p class="text-sm text-slate-300">{s.lore}</p>
+                            {#if filtered}<p class="text-sm text-amber-300">
+                                    {m.setup_not_available({ reason: filtered.reason })}
+                                </p>{/if}
+                        </button>
+                        <button
+                            type="button"
+                            class="self-start text-sm text-sky-300 underline underline-offset-4 hover:text-sky-200"
+                            on:click={() => (detailsSchool = s)}>
+                            {m.setup_what_to_expect()} →
+                        </button>
+                    </div>
+                {/each}
+            </div>
+            <SchoolDetailsModal bind:school={detailsSchool} />
+        {:else if step === 'horizon'}
+            <section class="gc-panel p-5 space-y-4">
+                {#if state.goalDate}
+                    <p>{m.setup_horizon_race_day()} <b>{state.goalDate}</b>.</p>
+                {:else}
+                    <label class="block space-y-1">
+                        <span class="text-sm text-slate-300">
+                            {m.setup_horizon_end({
+                                school: school?.name ?? '',
+                                weeks: school?.phases.reduce((n, p) => n + p.idealWeeks.value, 0) ?? 0,
+                            })}
+                        </span>
+                        <input type="date" min={data.today} bind:value={state.endDate} />
+                    </label>
+                {/if}
+                {#if weeks}<p class="text-sm text-slate-400">{m.setup_weeks_from_today({ weeks })}</p>{/if}
+
+                {#if school && weeks != null && needsCompression}
+                    <div class="space-y-2">
+                        <h2 class="font-bold">{m.setup_horizon_short({ school: school.name })}</h2>
+                        <p class="text-sm text-slate-400">{m.setup_choose_phases()}</p>
+                        {#each choosablePhases(school) as p}
+                            {@const value = (state.compression ?? defaultCompression(school, weeks))[p.key]}
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="w-44">{p.name}</span>
+                                <input
+                                    type="number"
+                                    class="w-20"
+                                    min={p.floorWeeks.value}
+                                    max={p.idealWeeks.value}
+                                    disabled={value === 0}
+                                    {value}
+                                    on:change={(e) => setPhaseWeeks(p.key, Number(e.currentTarget.value))} />
+                                <span class="text-xs text-slate-500"
+                                    >{m.school_weeks({ weeks: `${p.floorWeeks.value}–${p.idealWeeks.value}` })}</span>
+                                {#if p.droppable.value}
+                                    <label class="text-sm flex items-center gap-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={value === 0}
+                                            on:change={(e) =>
+                                                setPhaseWeeks(
+                                                    p.key,
+                                                    e.currentTarget.checked ? 0 : p.floorWeeks.value,
+                                                )} />
+                                        {m.setup_drop()}
+                                    </label>
+                                {/if}
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
+
+                {#if layout && !layout.ok}
+                    <p class="text-amber-300">{layout.reason}</p>
+                {:else if layout?.ok}
+                    {#each layout.layout.losses as loss}<p class="text-sm text-amber-300">⚠ {loss}</p>{/each}
+                    <ol class="space-y-1">
+                        {#each layout.layout.phases as p}
+                            <li class="flex justify-between border-b border-slate-700 py-1">
+                                <span>
+                                    {p.source === 'LEAD_IN' ? m.lead_in_name() : p.name}
+                                    {#if p.source === 'LEAD_IN'}
+                                        <span class="text-xs text-slate-400">· {p.intent}</span>
+                                    {/if}
+                                </span>
+                                <span class="text-slate-400">{m.school_weeks({ weeks: p.weekCount })}</span>
+                            </li>
+                        {/each}
+                    </ol>
+                    {#if layout.layout.timeTrial}
+                        <p class="text-sm text-sky-300">
+                            {m.setup_time_trial_scheduled({
+                                km: layout.layout.timeTrial.distanceM / 1000,
+                                week: layout.layout.timeTrial.weekIndex + 1,
+                            })}
+                        </p>
+                    {/if}
+                {/if}
+            </section>
+        {:else if step === 'zones'}
+            <section class="gc-panel p-5 space-y-3">
+                {#if data.zoneProposal}
+                    <p class="text-sm text-slate-300">{ZONE_SOURCE_LABEL[data.zoneProposal.source]}</p>
+                {:else}
+                    <p class="text-sm text-amber-300">
+                        {m.setup_enter_zones()}
+                    </p>
+                {/if}
+                {#each state.zones ?? [] as z, i}
+                    <div class="flex items-center gap-3">
+                        <span class="w-16 font-bold">{m.setup_zone({ zone: z.zone })}</span>
+                        <input
+                            type="number"
+                            class="w-20"
+                            value={z.lowerBpm}
+                            aria-label={m.setup_zone_lower({ zone: z.zone })}
+                            on:change={(e) => updateZone(i, 'lowerBpm', Number(e.currentTarget.value))} />
+                        <span>–</span>
+                        <input
+                            type="number"
+                            class="w-20"
+                            value={z.upperBpm}
+                            aria-label={m.setup_zone_upper({ zone: z.zone })}
+                            on:change={(e) => updateZone(i, 'upperBpm', Number(e.currentTarget.value))} />
+                        <span class="text-slate-400 text-sm">bpm</span>
+                    </div>
+                {/each}
+                <label class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" bind:checked={state.zonesConfirmed} />
+                    {m.setup_zones_confirm()}
+                </label>
+            </section>
+        {:else if step === 'results'}
+            <section class="gc-panel p-5 space-y-3">
+                <p class="text-sm text-slate-300">
+                    {m.setup_results_intro()}
+                </p>
+                <ul class="space-y-1">
+                    {#each data.raceResults as r}
+                        <li class="text-sm text-slate-400">
+                            {r.date} · {distanceLabel(r.distanceM)} · {formatTime(r.timeSec)} ({m.setup_saved()})
+                        </li>
+                    {/each}
+                    {#each state.raceResults as r, i}
+                        <li class="text-sm flex gap-3">
+                            {r.date} · {distanceLabel(r.distanceM)} · {formatTime(r.timeSec)}
+                            <button
+                                type="button"
+                                class="text-rose-400"
+                                on:click={() =>
+                                    (state = { ...state, raceResults: state.raceResults.filter((_, j) => j !== i) })}
+                                >{m.setup_remove()}</button>
+                        </li>
+                    {/each}
+                </ul>
+                <div class="flex flex-wrap gap-2 items-end">
+                    <label class="flex flex-col gap-1 text-xs text-slate-400">
+                        {m.setup_date()}
+                        <input type="date" max={data.today} bind:value={newResult.date} />
+                    </label>
+                    <label class="flex flex-col gap-1 text-xs text-slate-400">
+                        {m.goal_distance()}
+                        <select bind:value={newResult.distanceM}>
+                            {#each DISTANCES as d}<option value={d.m}>{d.label}</option>{/each}
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1 text-xs text-slate-400">
+                        {m.setup_time({ format: newDistance.format })}
+                        <input
+                            placeholder={newDistance.example}
+                            inputmode="numeric"
+                            class="w-28"
+                            bind:value={newResult.time} />
+                    </label>
+                    <button type="button" class="gc-ghost" on:click={addResult}>{m.setup_add()}</button>
+                </div>
+                {#if resultError}<p class="text-sm text-amber-300">{resultError}</p>{/if}
+                <p class="text-sm text-sky-300">
+                    {#if !anchor}
+                        {m.setup_anchor_none()}
+                    {:else if anchor.provenance === 'RACE_RESULT'}
+                        {m.setup_anchor_race({
+                            distance: distanceLabel(anchor.distanceM),
+                            date: anchor.date,
+                            time: formatTime(anchor.timeSec),
+                        })}
+                    {:else}
+                        {m.setup_anchor_inferred({
+                            distance: distanceLabel(anchor.distanceM),
+                            date: anchor.date,
+                            time: formatTime(anchor.timeSec),
+                        })}
+                    {/if}
+                    {#if anchor?.stale}{m.setup_anchor_stale()}{/if}
+                </p>
+            </section>
+        {:else if step === 'availability'}
+            <section class="gc-panel p-5 space-y-4">
+                <div class="flex flex-wrap gap-2">
+                    {#each WEEKDAYS as d, i}
+                        <label
+                            class="px-3 py-2 border cursor-pointer {state.availability[d]
+                                ? 'border-sky-400 text-sky-200'
+                                : 'border-slate-600 text-slate-500'}">
+                            <input type="checkbox" class="sr-only" bind:checked={state.availability[d]} />
+                            {DAY_LABELS[i]}
+                        </label>
+                    {/each}
+                </div>
+                <label class="flex items-center gap-3">
+                    {m.setup_long_run_day()}
+                    <select bind:value={state.longRunDay}>
+                        {#each DAY_LABELS as label, i}<option value={i}>{label}</option>{/each}
+                    </select>
+                </label>
+            </section>
+        {/if}
+
+        {#if issue}<p class="text-sm text-amber-300" role="status">{issue}</p>{/if}
+        {#if submitError}<p class="text-sm text-red-400" role="alert">{submitError}</p>{/if}
+
+        <div class="flex justify-between pt-2">
+            <button type="button" class="gc-ghost" disabled={stepIndex === 0} on:click={() => stepIndex--}
+                >{m.setup_back()}</button>
+            {#if stepIndex < WIZARD_STEPS.length - 1}
+                <button type="button" class="gc-button" disabled={!!issue} on:click={() => stepIndex++}
+                    >{m.setup_next()}</button>
+            {:else}
+                <button type="button" class="gc-button" disabled={!canFinish(gated) || submitting} on:click={finish}>
+                    {submitting ? m.setup_laying_out() : m.setup_lay_out()}
+                </button>
+            {/if}
+        </div>
+    {/if}
+</PlannerShell>

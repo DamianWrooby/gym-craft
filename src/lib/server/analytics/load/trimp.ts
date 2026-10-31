@@ -1,4 +1,5 @@
-import type { AthleteProfile } from '@prisma/client';
+import { isRunningTypeKey } from '$lib/utils/activity-type';
+import type { AthleteProfile, LoadMethod } from '@prisma/client';
 
 const EDWARDS_ZONE_WEIGHTS = [1, 2, 3, 4, 5] as const;
 
@@ -34,11 +35,30 @@ export interface TrimpInputs {
     restingHr?: number | null;
     maxHr?: number | null;
     sex?: TrimpSex;
+    /** Strength is costed at the flat duration rate: a lift's heart rate does not measure its cost. */
+    modality?: TrimpModality;
+}
+
+export type TrimpModality = 'running' | 'strength' | 'other';
+
+/** The `LoadMethod` values the load engine can produce. */
+export type TrimpMethod = Extract<LoadMethod, 'EDWARDS' | 'BANISTER' | 'DURATION'>;
+
+export interface TrimpScore {
+    load: number;
+    method: TrimpMethod;
 }
 
 export function computeTrimp(inputs: TrimpInputs): number {
+    return scoreTrimp(inputs).load;
+}
+
+export function scoreTrimp(inputs: TrimpInputs): TrimpScore {
+    if (inputs.modality === 'strength') {
+        return { load: durationFallbackTrimp(inputs.durationSec), method: 'DURATION' };
+    }
     if (inputs.hrZoneSeconds) {
-        return edwardsTrimp(inputs.hrZoneSeconds);
+        return { load: edwardsTrimp(inputs.hrZoneSeconds), method: 'EDWARDS' };
     }
     if (
         inputs.averageHr != null &&
@@ -46,15 +66,62 @@ export function computeTrimp(inputs: TrimpInputs): number {
         inputs.maxHr != null &&
         inputs.maxHr > inputs.restingHr
     ) {
-        return banisterTrimp(
-            inputs.durationSec,
-            inputs.averageHr,
-            inputs.restingHr,
-            inputs.maxHr,
-            inputs.sex ?? 'male',
-        );
+        return {
+            load: banisterTrimp(
+                inputs.durationSec,
+                inputs.averageHr,
+                inputs.restingHr,
+                inputs.maxHr,
+                inputs.sex ?? 'male',
+            ),
+            method: 'BANISTER',
+        };
     }
-    return durationFallbackTrimp(inputs.durationSec);
+    return { load: durationFallbackTrimp(inputs.durationSec), method: 'DURATION' };
+}
+
+export function trimpModality(activityType: string | null | undefined): TrimpModality {
+    if (isRunningTypeKey(activityType)) return 'running';
+    if (activityType?.startsWith('strength')) return 'strength';
+    return 'other';
+}
+
+export interface ZoneBound {
+    lowerBpm: number;
+    upperBpm: number;
+}
+
+export interface HrSample {
+    timestampSec: number;
+    heartRate: number | null;
+}
+
+/**
+ * Bins HR samples into the athlete's own five zones. Each sample holds until the next one;
+ * the last sample has no interval. Below zone 1 does not count (Edwards ignores it); above
+ * zone 5 counts as zone 5. Returns null when no sample carries a heart rate.
+ */
+export function zoneSecondsFromSamples(samples: HrSample[], bounds: ZoneBound[]): TrimpZoneSeconds | null {
+    const seconds = [0, 0, 0, 0, 0];
+    let sawHr = false;
+    for (let i = 0; i < samples.length - 1; i++) {
+        const hr = samples[i].heartRate;
+        const dt = samples[i + 1].timestampSec - samples[i].timestampSec;
+        if (hr == null || dt <= 0) continue;
+        sawHr = true;
+        const zone = zoneIndex(hr, bounds);
+        if (zone != null) seconds[zone] += dt;
+    }
+    if (!sawHr) return null;
+    return { zone1: seconds[0], zone2: seconds[1], zone3: seconds[2], zone4: seconds[3], zone5: seconds[4] };
+}
+
+function zoneIndex(hr: number, bounds: ZoneBound[]): number | null {
+    if (hr < bounds[0].lowerBpm) return null;
+    for (let i = 0; i < bounds.length; i++) {
+        if (hr <= bounds[i].upperBpm) return i;
+    }
+    return bounds.length - 1;
 }
 
 export function edwardsTrimp(zones: TrimpZoneSeconds): number {

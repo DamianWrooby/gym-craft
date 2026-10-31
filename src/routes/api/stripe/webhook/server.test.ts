@@ -50,19 +50,14 @@ describe('POST /api/stripe/webhook', () => {
         expect(mocks.userUpdate).not.toHaveBeenCalled();
     });
 
-    it('marks a lifetime supporter on a one-time checkout.session.completed', async () => {
+    it('ignores a one-time payment checkout', async () => {
         mocks.constructEvent.mockReturnValue({
             type: 'checkout.session.completed',
             data: { object: { mode: 'payment', metadata: { userId: 'user-1' }, customer: 'cus_1' } },
         });
         const res = await POST({ request: makeRequest() } as never);
         expect(res.status).toBe(200);
-        expect(mocks.userUpdate).toHaveBeenCalledWith(
-            expect.objectContaining({
-                where: { id: 'user-1' },
-                data: expect.objectContaining({ lifetimeSupporter: true, subscriptionTier: 'SUPPORTER' }),
-            }),
-        );
+        expect(mocks.userUpdate).not.toHaveBeenCalled();
     });
 
     it('writes subscription status on customer.subscription.updated', async () => {

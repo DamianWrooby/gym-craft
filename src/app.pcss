@@ -26,3 +26,61 @@ body {
 article.modal-body {
     max-height: unset;
 }
+
+/* ---- Motion (#235) ---- */
+/* Page cross-fade, driven by setupViewTransitions() in the layouts. */
+::view-transition-old(root) {
+    animation: 160ms ease-in both vt-fade-out;
+}
+::view-transition-new(root) {
+    animation: 260ms ease-out both vt-fade-in;
+}
+/* The top bar stays still while the page content changes. */
+.app-bar {
+    view-transition-name: app-bar;
+}
+
+@keyframes vt-fade-out {
+    to {
+        opacity: 0;
+    }
+}
+@keyframes vt-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+/* Page cards rise in on first render; buttons lift slightly on hover. */
+.card-rise {
+    animation: 320ms ease-out both card-rise;
+}
+@keyframes card-rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
+.btn:not(:disabled) {
+    transition:
+        transform 150ms ease,
+        filter 150ms ease;
+}
+.btn:not(:disabled):hover {
+    transform: translateY(-1px);
+}
+.btn:not(:disabled):active {
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root),
+    .card-rise {
+        animation: none;
+    }
+    .btn:not(:disabled):hover {
+        transform: none;
+    }
+}

@@ -1,9 +1,9 @@
 import { db } from '$lib/database';
 import { currentMonthStartIso } from '$lib/utils/iso-week';
+import { reportSummaryPreview } from '$lib/utils/report-format';
 import { fail } from 'assert';
 import NodeCache from 'node-cache';
-import type { AthleteProfile, Plan, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
-import type { NewPlan } from '../../models/plan/plan.model';
+import type { AthleteProfile, Prisma, ReportType, RunningGoal, TrainingReport, User } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const cache = new NodeCache({ stdTTL: 120 });
@@ -13,7 +13,7 @@ const runningGoalsKey = (userId: string, includeArchived: boolean) =>
     `running_goals_${includeArchived ? 'all' : 'active'}_${userId}`;
 const trainingReportsKey = (userId: string) => `training_reports_${userId}`;
 
-function invalidateAthleteProfile(userId: string): void {
+export function invalidateAthleteProfile(userId: string): void {
     cache.del(athleteProfileKey(userId));
 }
 
@@ -39,60 +39,6 @@ export async function getUserBySession(session: string): Promise<Pick<User, 'id'
     return user;
 }
 
-export async function addPlan(userId: string, plan: NewPlan): Promise<Plan> {
-    const createdPlan = await db.plan.create({
-        data: {
-            ...plan,
-        },
-    });
-    cache.del(`plans_${userId}`);
-
-    return createdPlan;
-}
-
-export async function deletePlan(planId: string, userId: string): Promise<Plan> {
-    const plan = await db.plan.findUnique({
-        where: { id: planId },
-    });
-
-    if (!plan) {
-        return fail('Plan not found');
-    }
-
-    if (plan.userId !== userId) {
-        return fail('User not authorized');
-    }
-
-    cache.del(`plans_${userId}`);
-    return await db.plan.delete({
-        where: {
-            id: planId,
-        },
-    });
-}
-
-export async function updateGeneratedPlansNumber(userId: string): Promise<number | Error> {
-    const user = await db.user.findUnique({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        return fail('User not found');
-    }
-
-    const generatedPlansNumber = user.generatedPlansNumber;
-    const newGeneratedPlansNumber = generatedPlansNumber + 1;
-
-    await db.user.update({
-        where: { id: userId },
-        data: {
-            generatedPlansNumber: newGeneratedPlansNumber,
-        },
-    });
-
-    return newGeneratedPlansNumber;
-}
-
 const generalPlanLimitKey = 'configuration_general_plan_limit';
 /**
  * Longer than the default TTL. This is a global config row with no in-app writer — it
@@ -113,61 +59,6 @@ export async function getGeneralPlanLimit(): Promise<number> {
     const value = generalPlanLimit ? +generalPlanLimit.value : 0;
     cache.set(generalPlanLimitKey, value, GENERAL_PLAN_LIMIT_TTL_S);
     return value;
-}
-
-export async function updatePlanName(planId: string, newName: string, userId: string): Promise<void> {
-    const result = await db.plan.updateMany({
-        where: { id: planId, userId },
-        data: { name: newName },
-    });
-
-    if (result.count === 0) {
-        return fail('Plan not found or not authorized');
-    }
-
-    cache.del(`plans_${userId}`);
-}
-
-export async function getPlans(userId: string): Promise<Plan[] | Error> {
-    const cacheKey = `plans_${userId}`;
-    const cachedPlans = cache.get(cacheKey);
-
-    if (cachedPlans) return cachedPlans as Plan[];
-    if (!userId) return fail('User not found');
-
-    const plans = await db.plan.findMany({
-        where: { userId: userId },
-    });
-    cache.set(cacheKey, plans);
-
-    return plans;
-}
-
-export async function getPlan(planId: string, userId: string): Promise<Plan | null> {
-    return await db.plan.findUnique({
-        where: { userId: userId, id: planId },
-    });
-}
-
-export async function incrementUserGeneretedPlans(userId: string): Promise<User> {
-    return await db.user.update({
-        where: { id: userId },
-        data: {
-            generatedPlansNumber: {
-                increment: 1,
-            },
-        },
-    });
-}
-
-export async function getGeneratedPlansNumber(userId: string): Promise<number> {
-    const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { generatedPlansNumber: true },
-    });
-
-    if (!user) return -1;
-    return user.generatedPlansNumber;
 }
 
 export async function verifyToken(userId: string, token: string): Promise<boolean> {
@@ -390,8 +281,17 @@ export async function getRunningGoalsByIds(
     });
 }
 
-/** The fields both report list surfaces actually render. */
-export type WeeklyReportListItem = Pick<TrainingReport, 'id' | 'periodStart' | 'periodEnd' | 'summary' | 'createdAt'>;
+/**
+ * The fields both report list surfaces actually render. Neither renders the full
+ * `summary`; both show a short preview of it. So the list item carries a computed
+ * `summaryPreview`, never the full @db.Text — see getWeeklyReports.
+ */
+export type WeeklyReportListItem = Pick<
+    TrainingReport,
+    'id' | 'periodStart' | 'periodEnd' | 'createdAt' | 'acwrStatus' | 'weeklyTotalLoad' | 'monotonyIsHigh'
+> & {
+    summaryPreview: string;
+};
 
 export async function getWeeklyReports(userId: string): Promise<WeeklyReportListItem[]> {
     const key = trainingReportsKey(userId);
@@ -406,10 +306,45 @@ export async function getWeeklyReports(userId: string): Promise<WeeklyReportList
         // page, which loads its own row via getReportById. Selecting them here meant up to
         // 52 of each were fetched, cached and serialised to the browser on both
         // /running/analytics and /running/analytics/reports with no consumer.
-        select: { id: true, periodStart: true, periodEnd: true, summary: true, createdAt: true },
+        // `acwrStatus` / `weeklyTotalLoad` are the cheap scalars denormalized out of
+        // metrics.loadProfile (ADR 0006) so the border colour and load chart never read the blob.
+        select: {
+            id: true,
+            periodStart: true,
+            periodEnd: true,
+            summary: true,
+            createdAt: true,
+            acwrStatus: true,
+            weeklyTotalLoad: true,
+            monotonyIsHigh: true,
+        },
     });
-    cache.set(key, reports);
-    return reports;
+    // Both list surfaces render only a preview of `summary` (a full LLM-written report
+    // held in @db.Text). Compute it here so the full text is never cached or shipped to
+    // the browser — only the ~140-char preview crosses the wire. Recompute-on-read, per
+    // ADR 0002; no stored preview column.
+    const items: WeeklyReportListItem[] = reports.map(({ summary, ...rest }) => ({
+        ...rest,
+        summaryPreview: reportSummaryPreview(summary),
+    }));
+    cache.set(key, items);
+    return items;
+}
+
+/**
+ * Minimal activity rows for the load timeline's "did they train this week?" signal
+ * (CONTEXT.md "Report gap"). Bounded by the caller's `since` (the 12-week window),
+ * so uncached: it is a small, already-windowed read.
+ */
+export async function getTimelineActivities(
+    userId: string,
+    since: Date,
+): Promise<Array<{ startTime: Date; activityType: string }>> {
+    return db.activity.findMany({
+        where: { userId, startTime: { gte: since } },
+        select: { startTime: true, activityType: true },
+        orderBy: { startTime: 'asc' },
+    });
 }
 
 export async function getReportById(reportId: string, userId: string): Promise<TrainingReport | null> {
@@ -429,25 +364,6 @@ export async function getMonthlyWeeklyReportCount(userId: string): Promise<numbe
     return row?.count ?? 0;
 }
 
-export async function getMonthlyGymPlanCount(userId: string): Promise<number> {
-    // NOT cached — mirrors getMonthlyWeeklyReportCount; pre-flight hint only.
-    const monthKey = currentMonthStartIso();
-    const row = await db.aiUsage.findUnique({
-        where: { userId_kind_day: { userId, kind: 'gym_plan', day: monthKey } },
-        select: { count: true },
-    });
-    return row?.count ?? 0;
-}
-
-export async function incrementMonthlyGymPlanCount(userId: string): Promise<void> {
-    const monthKey = currentMonthStartIso();
-    await db.aiUsage.upsert({
-        where: { userId_kind_day: { userId, kind: 'gym_plan', day: monthKey } },
-        create: { userId, kind: 'gym_plan', day: monthKey, count: 1 },
-        update: { count: { increment: 1 } },
-    });
-}
-
 export interface PersistTrainingReportInput {
     userId: string;
     type: ReportType;
@@ -456,6 +372,11 @@ export interface PersistTrainingReportInput {
     metrics: Prisma.InputJsonValue;
     summary: string;
     goalContext: Prisma.InputJsonValue;
+    // Denormalized from metrics.loadProfile for cheap list/chart reads (ADR 0006).
+    // Null when the report has no load profile.
+    acwrStatus?: string | null;
+    weeklyTotalLoad?: number | null;
+    monotonyIsHigh?: boolean | null;
 }
 
 /**
@@ -472,7 +393,18 @@ export async function persistTrainingReport(
     options: { consumeSlot: boolean } = { consumeSlot: true },
 ): Promise<TrainingReport> {
     const { userId, type, periodStart, periodEnd, metrics, summary, goalContext } = input;
-    const reportPayload = { userId, type, periodStart, periodEnd, metrics, summary, goalContext };
+    const reportPayload = {
+        userId,
+        type,
+        periodStart,
+        periodEnd,
+        metrics,
+        summary,
+        goalContext,
+        acwrStatus: input.acwrStatus ?? null,
+        weeklyTotalLoad: input.weeklyTotalLoad ?? null,
+        monotonyIsHigh: input.monotonyIsHigh ?? null,
+    };
     const monthKey = currentMonthStartIso();
 
     const report = await db.$transaction(async (tx) => {

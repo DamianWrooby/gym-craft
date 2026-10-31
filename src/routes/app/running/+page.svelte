@@ -1,17 +1,17 @@
 <script lang="ts">
+    import { m } from '$lib/paraglide/messages.js';
     import { BarChart2Icon, ArrowRightIcon, RefreshCwIcon, CheckCircleIcon } from 'svelte-feather-icons';
     import { page } from '$app/stores';
     import { invalidateAll } from '$app/navigation';
-    import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
+    import { getModalStore } from '@skeletonlabs/skeleton';
     import Card from '@components/card/Card.svelte';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
     import Seo from '$lib/components/seo/Seo.svelte';
-    import { makeToast } from '$lib/utils/toasts';
-    import { validateGarminLoginFormData } from '$lib/utils/form-validation';
     import { runProxySync } from '$lib/garmin/run-proxy-sync';
     import { TIER_LIMITS, type SubscriptionTier } from '@/constants/subscription.constants';
-    import { authenticateGarmin } from '$lib/garmin/authenticate';
-    import { triggerGarminLoginModal, type GarminLoginResponse } from '$lib/garmin/garmin-login-modal';
+    import { withGarminLogin } from '$lib/garmin/garmin-login';
+    import { askGarminCredentials, askGarminMfaCode } from '$lib/garmin/garmin-login-modal';
+    import { formatRelativeTime } from '$lib/utils/relative-time';
 
     export let data: {
         garminConnected: boolean;
@@ -21,30 +21,19 @@
     };
 
     const modalStore = getModalStore();
-    const toastStore = getToastStore();
 
     let syncing = false;
     let syncError: string | null = null;
     let syncMessage: string | null = null;
     /** Only set while a multi-window backfill is running — a single-call sync has nothing to count. */
     let syncProgress: string | null = null;
-    // The Garmin session token; refreshed in-place when the user re-authenticates via the modal.
+    // The Garmin session and email; replaced in place when the user signs in again via the modal.
     let sessionToken: string | null = data.garminSessionToken;
+    let garminEmail: string | null = data.garminEmail;
 
     $: backfillDays = TIER_LIMITS[($page.data.user?.subscriptionTier as SubscriptionTier) ?? 'FREE'].garminBackfillDays;
     $: backfillNeeded = data.garminConnected && (!data.syncState || !data.syncState.backfillComplete);
-    $: lastSyncedLabel = data.syncState?.lastSyncedAt ? formatRelative(data.syncState.lastSyncedAt) : null;
-
-    function formatRelative(iso: string): string {
-        const then = new Date(iso).getTime();
-        const diffMin = Math.round((Date.now() - then) / 60000);
-        if (diffMin < 1) return 'just now';
-        if (diffMin < 60) return `${diffMin} min ago`;
-        const diffHr = Math.round(diffMin / 60);
-        if (diffHr < 24) return `${diffHr}h ago`;
-        const diffDay = Math.round(diffHr / 24);
-        return `${diffDay}d ago`;
-    }
+    $: lastSyncedLabel = data.syncState?.lastSyncedAt ? formatRelativeTime(data.syncState.lastSyncedAt) : null;
 
     async function runSync(retriedOnStale = false) {
         syncing = true;
@@ -52,32 +41,43 @@
         syncMessage = null;
         syncProgress = null;
         try {
-            const result = await runProxySync({
-                userId: $page.data.user?.id ?? '',
-                garminEmail: data.garminEmail,
-                sessionToken,
-                syncState: data.syncState,
-                backfillDays,
-                onProgress: (completed, total) => {
-                    syncProgress = total > 1 ? `Imported ${completed} of ${total} periods…` : null;
+            const userId = $page.data.user?.id ?? '';
+            const result = await withGarminLogin(
+                userId,
+                (login) => {
+                    if (login) ({ sessionToken, email: garminEmail } = login);
+                    return runProxySync({
+                        userId: userId,
+                        garminEmail,
+                        sessionToken,
+                        syncState: data.syncState,
+                        backfillDays: backfillDays,
+                        onProgress: (completed, total) => {
+                            syncProgress = total > 1 ? m.running_sync_progress({ completed, total }) : null;
+                        },
+                    });
                 },
-            });
+                () =>
+                    askGarminCredentials(modalStore, {
+                        body: m.running_garmin_login_body(),
+                    }),
+                (retry) => askGarminMfaCode(modalStore, retry),
+            );
 
             if (result.ok) {
-                syncMessage = `Imported ${result.summary.activitiesUpserted} activities (${result.summary.mode}).`;
+                syncMessage = m.running_sync_done({ count: result.summary.activitiesUpserted });
                 await invalidateAll();
                 return;
             }
 
-            if (result.code === 'INVALID_TOKEN') {
-                makeToast(
-                    toastStore,
-                    'Invalid token <br> Please log in to your Garmin account',
-                    'variant-filled-warning',
-                );
-                openGarminLoginModal();
+            if (result.code === 'RATE_LIMITED') {
+                // Credentials are fine and Garmin is busy. A login prompt here would send the
+                // athlete through a cold password login, the most throttled path of all.
+                syncError = m.running_sync_rate_limited();
                 return;
             }
+
+            if (result.code === 'LOGIN_CANCELLED') return;
 
             if (result.code === 'STALE_STATE' && !retriedOnStale) {
                 // Sync state changed since the page loaded — refresh state and retry once with it.
@@ -89,58 +89,32 @@
             if (result.code === 'GARMIN_TIMEOUT') {
                 // Garmin itself was too slow, not a credentials or data problem — a plain retry
                 // often succeeds, and each retry picks up where the last sync left off.
-                syncError = 'Garmin took too long to respond. Please try syncing again.';
+                syncError = m.running_sync_timeout();
                 return;
             }
 
             syncError = result.message;
         } catch (err) {
-            syncError = err instanceof Error ? err.message : 'Sync failed';
+            syncError = err instanceof Error ? err.message : m.running_sync_failed();
         } finally {
             syncing = false;
             syncProgress = null;
         }
     }
-
-    function openGarminLoginModal() {
-        triggerGarminLoginModal(modalStore, {
-            body: 'Provide credentials to connect to your Garmin Connect account and sync your activities.',
-            response: handleGarminLogin,
-        });
-    }
-
-    async function handleGarminLogin(loginFormData: GarminLoginResponse) {
-        if (!loginFormData) return;
-
-        const formValidationError = validateGarminLoginFormData(loginFormData);
-        if (formValidationError) {
-            makeToast(toastStore, 'Form validation error', 'variant-filled-error');
-            return;
-        }
-
-        // Exchange the password for a session token, then retry the sync with it.
-        syncing = true;
-        const auth = await authenticateGarmin($page.data.user?.id ?? '', loginFormData.password);
-        syncing = false;
-        if (!auth.ok) {
-            makeToast(toastStore, auth.message || 'Garmin login failed', 'variant-filled-error');
-            return;
-        }
-        sessionToken = auth.sessionToken;
-        await runSync();
-    }
 </script>
 
-<Seo title="Running | GymCraft™" metaDescription="Running hub — review your activity analytics from Garmin Connect." />
+<Seo
+    title={`${m.nav_running()} | GymCraft™`}
+    metaDescription="Running hub — review your activity analytics from Garmin Connect." />
 
 <Card width="3/4">
     <div class="flex flex-col items-center text-center gap-3 pb-8">
         <span class="text-tertiary-500">
             <SportIcon sport="running" size={48} />
         </span>
-        <h2 class="h2 text-2xl md:text-3xl">Running</h2>
+        <h2 class="h2 text-2xl md:text-3xl">{m.nav_running()}</h2>
         <p class="text-surface-500 dark:text-surface-300 max-w-xl">
-            Review your training activity synced from Garmin Connect. More running tools are coming soon.
+            {m.running_intro()}
         </p>
     </div>
 
@@ -149,26 +123,25 @@
             {#if backfillNeeded}
                 <aside class="card variant-soft-warning p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div class="flex-1">
-                        <p class="font-semibold">Import your Garmin history</p>
+                        <p class="font-semibold">{m.running_import_heading()}</p>
                         <p class="text-sm opacity-80">
-                            We'll fetch your last {backfillDays} days of activities so training-load analytics can work. This
-                            runs once and can take a few minutes — keep this tab open.
+                            {m.running_import_body({ days: backfillDays })}
                         </p>
                     </div>
                     <button class="btn variant-filled-warning" on:click={() => runSync()} disabled={syncing}>
                         <RefreshCwIcon size="16" class={syncing ? 'animate-spin' : ''} />
-                        <span>{syncing ? 'Importing…' : 'Import now'}</span>
+                        <span>{syncing ? m.running_importing() : m.running_import_now()}</span>
                     </button>
                 </aside>
             {:else if data.syncState}
                 <aside class="card variant-soft-surface p-3 flex items-center gap-3 text-sm">
                     <CheckCircleIcon size="18" class="text-success-500" />
                     <span class="flex-1">
-                        Synced{lastSyncedLabel ? ` ${lastSyncedLabel}` : ''}. Training history ready.
+                        {lastSyncedLabel ? m.running_synced_ago({ ago: lastSyncedLabel }) : m.running_synced()}
                     </span>
                     <button class="btn btn-sm variant-ghost-surface" on:click={() => runSync()} disabled={syncing}>
                         <RefreshCwIcon size="14" class={syncing ? 'animate-spin' : ''} />
-                        <span>{syncing ? 'Syncing…' : 'Refresh'}</span>
+                        <span>{syncing ? m.running_syncing() : m.running_refresh()}</span>
                     </button>
                 </aside>
             {/if}
@@ -195,9 +168,9 @@
                 </span>
                 <ArrowRightIcon size="20" class="opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <h3 class="h3 text-lg font-semibold">Analytics</h3>
+            <h3 class="h3 text-lg font-semibold">{m.running_analytics()}</h3>
             <p class="text-sm text-surface-500 dark:text-surface-300">
-                Browse your Garmin activities — pace, distance, and trends over time.
+                {m.running_analytics_description()}
             </p>
         </a>
     </div>

@@ -26,8 +26,15 @@ model User {
     stripeSubscriptionId String?
     subscriptionStatus   String?
     currentPeriodEnd     DateTime?
-    lifetimeSupporter    Boolean             @default(false)
+    // Account-wide AI model setting; null = tier default. Resolved per request (ADR 0016).
+    aiModelPreference    String?
+    // Language the athlete reads GymCraft in (ADR 0028). Seeded from Accept-Language at signup.
+    locale               String              @default("en") @db.VarChar(8)
     plans                Plan[]
+    planWeeks            PlanWeek[]
+    raceResults          RaceResult[]
+    plannedSessions      PlannedSession[]
+    aiRequests           AiRequest[]
     verificationTokens   VerificationToken[]
     garminData           GarminData?
     athleteProfile       AthleteProfile?
@@ -36,6 +43,7 @@ model User {
     activities           Activity[]
     garminSyncState      GarminSyncState?
     aiUsage              AiUsage[]
+    checkIns             WellbeingCheckIn[]
 
     @@index([roleId])
 }
@@ -46,15 +54,233 @@ model Roles {
     User User[]
 }
 
+// A bounded horizon working toward one goal (ADRs 0008, 0012). One ACTIVE plan per user,
+// enforced by a partial unique index in the migration. Table name avoids the legacy "Plan".
 model Plan {
-    id          String   @id @default(uuid())
-    name        String
-    description String
-    workouts    Json     @default("{}")
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+    id                String      @id @default(uuid())
+    userId            String
+    goalId            String
+    startDate         DateTime    @db.Date
+    endDate           DateTime    @db.Date
+    state             PlanState   @default(ACTIVE)
+    // { mon: true, tue: false, ... } — the availability map.
+    availability      Json
+    // 0 = Monday … 6 = Sunday.
+    longRunDay        Int
+    // How the athlete's data shaped the layout (PlanRationale), frozen at creation.
+    rationale         Json?
+    // Start of the drift week the athlete dismissed the recut suggestion for (ADR 0015).
+    recutDismissedFor DateTime?   @db.Date
+    createdAt         DateTime    @default(now())
+    updatedAt         DateTime    @updatedAt
+    User              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    goal              RunningGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+    phases            PlanPhase[]
+
+    @@index([userId, state])
+    @@map("HorizonPlan")
+}
+
+enum PlanState {
+    ACTIVE
+    COMPLETED
+    ABANDONED
+}
+
+model PlanPhase {
+    id         String      @id @default(uuid())
+    planId     String
+    key        String
+    name       String
+    ordinal    Int
+    startDate  DateTime    @db.Date
+    endDate    DateTime    @db.Date
+    intent     String
+    source     PhaseSource
+    // Training school id from the catalogue; stamped per phase so past phases keep theirs.
+    school     String
+    volumeUnit VolumeUnit
+    plan       Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+    weeks      PlanWeek[]
+
+    @@unique([planId, ordinal])
+}
+
+enum PhaseSource {
+    SCHOOL
+    LEAD_IN
+}
+
+enum VolumeUnit {
+    MINUTES
+    METRES
+}
+
+model PlanWeek {
+    id                    String           @id @default(uuid())
+    userId                String
+    phaseId               String
+    startDate             DateTime         @db.Date
+    endDate               DateTime         @db.Date
+    inHorizonDays         Int
+    // Struck once at the pull and frozen (ADR 0011); null until then.
+    recoveryBudget        Float?
+    chronicLoad           Float?
+    budgetStruckAt        DateTime?
+    // Share of the chronic load costed at a flat rate or guessed (ADR 0011).
+    chronicFallbackShare  Float?
+    // Why no budget was struck; null when one was, or before the strike.
+    budgetAbsence         BudgetAbsence?
+    // The trim, ask or placement trim the finalize recorded (ADR 0013); null when nothing was cut.
+    conflict              Json?
+    // The athlete's answer to an ask; KEPT is the per-week override record.
+    decision              WeekDecision?
+    // Set by the athlete at the pull that writes this week.
+    outlook               WeekOutlook?
+    outlookFactor         Float?
+    generation            WeekGeneration   @default(PENDING)
+    isCutback             Boolean          @default(false)
+    // Taper weeks count as recovery for the cutback cap (ADR 0021).
+    isTaper               Boolean          @default(false)
+    // Set on the week holding the time trial when no anchor existed at layout (ADR 0020).
+    timeTrialDistanceM    Int?
+    volumeTarget          Int
+    volumeUnit            VolumeUnit
+    strengthSessionTarget Int
+    revision              Int              @default(0)
+    revisedAt             DateTime?
+    // The latest re-evaluation's cause: { trigger, activityIds?, plannedSessionId? } (ADR 0015).
+    revisionCause         Json?
+    // Its verdict in numbers, the scope it rewrites and the day it rewrites from (ADR 0015).
+    revisionReason        Json?
+    // The latest revision's AI request; null when no revision was requested.
+    revisionRequestId     String?          @unique
+    revisionGeneration    WeekGeneration?
+    // The day the athlete dismissed a check-in proposal; earlier check-ins are spent.
+    checkInDismissedOn    DateTime?        @db.Date
+    // The AI request that writes this week's sessions (ADR 0014); null until generation starts.
+    aiRequestId           String?          @unique
+    User                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    phase                 PlanPhase        @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+    aiRequest             AiRequest?       @relation("PlanWeekGeneration", fields: [aiRequestId], references: [id], onDelete: SetNull)
+    revisionRequest       AiRequest?       @relation("PlanWeekRevision", fields: [revisionRequestId], references: [id], onDelete: SetNull)
+    sessions              PlannedSession[]
+
+    @@index([userId, startDate])
+    @@index([phaseId])
+}
+
+enum BudgetAbsence {
+    // No tracked activity at all: the athlete has not linked Garmin or never synced.
+    NO_TRACKED_ACTIVITY
+    // Under 28 days of history, or a chronic load of zero.
+    SHORT_HISTORY
+}
+
+enum WeekDecision {
+    PENDING
+    DROPPED
+    DOWNGRADED
+    KEPT
+}
+
+enum WeekOutlook {
+    NORMAL
+    BUSY
+    TRAVEL
+    ILL
+}
+
+enum WeekGeneration {
+    PENDING
+    GENERATED
+    FAILED
+}
+
+// One training session written onto a date (ADRs 0007, 0009). The body is per kind, typed in
+// src/lib/planner/core/session.ts and versioned by bodyVersion.
+model PlannedSession {
+    id            String        @id @default(uuid())
+    userId        String
+    planWeekId    String
+    kind          SessionKind
+    scheduledDate DateTime      @db.Date
+    sequence      Int           @default(0)
+    status        SessionStatus @default(PLANNED)
+    origin        SessionOrigin
+    plannedLoad   Float
+    loadMethod    LoadMethod
+    activityId    String?
+    supersedesId  String?
+    // Anchor provenance behind the pace targets: { provenance, sourceId, date, stale } or null.
+    anchor        Json?
+    body          Json
+    bodyVersion   Int           @default(1)
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+    User          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    planWeek      PlanWeek      @relation(fields: [planWeekId], references: [id], onDelete: Cascade)
+
+    @@index([planWeekId, scheduledDate])
+    @@index([userId, scheduledDate])
+}
+
+enum SessionKind {
+    STRENGTH
+    RUNNING
+    OTHER
+}
+
+enum SessionStatus {
+    PLANNED
+    DONE
+    SKIPPED
+    SUPERSEDED
+}
+
+enum SessionOrigin {
+    AI
+    ATHLETE
+}
+
+// One paid AI call, recorded before it is made (ADR 0014). Generic: the app writes the input and
+// model, the proxy writes the output and status. Nothing here knows about plans.
+model AiRequest {
+    id          String          @id @default(uuid())
     userId      String
-    User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    model       String
+    // { system, user, maxTokens } — the complete prompt, built by the app server.
+    input       Json
+    status      AiRequestStatus @default(PENDING)
+    output      String?         @db.Text
+    error       String?
+    retryCount  Int             @default(0)
+    createdAt   DateTime        @default(now())
+    updatedAt   DateTime        @updatedAt
+    User        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+    planWeek    PlanWeek?       @relation("PlanWeekGeneration")
+    revisedWeek PlanWeek?       @relation("PlanWeekRevision")
+
+    @@index([userId, status])
+}
+
+enum AiRequestStatus {
+    PENDING
+    RUNNING
+    DONE
+    FAILED
+}
+
+// Athlete-entered timed effort, 1500–42195 m (ADR 0010). Never inferred.
+model RaceResult {
+    id        String   @id @default(uuid())
+    userId    String
+    date      DateTime @db.Date
+    distanceM Int
+    timeSec   Int
+    label     String?  @db.VarChar(100)
+    createdAt DateTime @default(now())
+    User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
 }
@@ -142,6 +368,7 @@ model RunningGoal {
     createdAt       DateTime  @default(now())
     updatedAt       DateTime  @updatedAt
     User            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    plans           Plan[]
 
     @@index([userId])
 }
@@ -155,16 +382,21 @@ enum GoalType {
 }
 
 model TrainingReport {
-    id          String     @id @default(uuid())
-    userId      String
-    type        ReportType
-    periodStart String     @db.VarChar(10)
-    periodEnd   String     @db.VarChar(10)
-    metrics     Json
-    summary     String     @db.Text
-    goalContext Json
-    createdAt   DateTime   @default(now())
-    User        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id              String     @id @default(uuid())
+    userId          String
+    type            ReportType
+    periodStart     String     @db.VarChar(10)
+    periodEnd       String     @db.VarChar(10)
+    metrics         Json
+    summary         String     @db.Text
+    goalContext     Json
+    createdAt       DateTime   @default(now())
+    // Denormalized from metrics.loadProfile for cheap list/chart reads (ADR 0006).
+    // Nullable: loadProfile is absent when computeLoadProfile throws at generation.
+    acwrStatus      String?
+    weeklyTotalLoad Float?
+    monotonyIsHigh  Boolean?
+    User            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, type, periodStart])
 }
@@ -203,6 +435,9 @@ model Activity {
     elevationGainM    Float?
     elevationLossM    Float?
     trimpLoad         Float?
+    loadMethod        LoadMethod?
+    // Which zones scored a run; GARMIN_ZONES runs in the 42-day window are retried each sync.
+    zoneSource        ZoneSource?
     raw               Json
     fetchedAt         DateTime        @default(now())
     User              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -213,13 +448,29 @@ model Activity {
     @@index([userId, activityType, startTime(sort: Desc)])
 }
 
+enum LoadMethod {
+    EDWARDS
+    BANISTER
+    DURATION
+    LABEL_TABLE
+    ATHLETE_ESTIMATE
+}
+
+enum ZoneSource {
+    ATHLETE_ZONES
+    GARMIN_ZONES
+}
+
 model ActivityDetail {
-    activityId String   @id
-    splits     Json
-    samples    Json
-    raw        Json?
-    fetchedAt  DateTime @default(now())
-    Activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+    activityId    String   @id
+    splits        Json
+    samples       Json
+    route         Json?
+    dynamics      Json?
+    schemaVersion Int      @default(1)
+    raw           Json?
+    fetchedAt     DateTime @default(now())
+    Activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 }
 
 model AiUsage {
@@ -242,4 +493,33 @@ model GarminSyncState {
     backfillComplete Boolean   @default(false)
     updatedAt        DateTime  @updatedAt
     User             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Wellbeing check-in (spec #409, story 77): one optional answer per day. Missing is no data.
+model WellbeingCheckIn {
+    id        String         @id @default(uuid())
+    userId    String
+    date      DateTime       @db.Date
+    feeling   Feeling
+    // Only on a poor day.
+    reason    CheckInReason?
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+    User      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, date])
+}
+
+enum Feeling {
+    GOOD
+    SO_SO
+    POOR
+}
+
+enum CheckInReason {
+    ILL
+    TIRED
+    SORE
+    STRESSED
+    POOR_SLEEP
 }

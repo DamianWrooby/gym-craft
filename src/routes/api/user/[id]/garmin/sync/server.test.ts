@@ -78,6 +78,7 @@ describe('POST /api/user/[id]/garmin/sync', () => {
             mode: 'incremental',
             activitiesUpserted: 0,
             lastSyncedAt: new Date('2026-06-02T12:00:00Z'),
+            runsNeedingDetail: ['42'],
         });
 
         const res = await makePost({ activities: [rawActivity(1)], mode: 'incremental' });
@@ -85,6 +86,7 @@ describe('POST /api/user/[id]/garmin/sync', () => {
 
         expect(res.status).toBe(200);
         expect(payload.data.mode).toBe('incremental');
+        expect(payload.data.runsNeedingDetail).toEqual(['42']);
         expect(mocks.persistActivities).toHaveBeenCalledWith(userId, expect.any(Array), 'incremental', 60);
     });
 

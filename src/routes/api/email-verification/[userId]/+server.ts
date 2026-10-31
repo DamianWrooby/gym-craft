@@ -1,3 +1,4 @@
+import { m } from '$lib/paraglide/messages.js';
 import { sendVerificationToken } from '$lib/server/mail';
 import { invalidatePreviousToken } from '$lib/prisma/prisma';
 import { to } from 'await-to-js';
@@ -16,7 +17,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
     await invalidatePreviousToken(user.id);
 
     const [verificationError] = await to(sendVerificationToken(user.id, email));
-    if (verificationError) return createResponse(400, { message: 'Verification email not sent' });
+    if (verificationError) return createResponse(400, { message: m.api_verify_not_sent() });
 
-    return createResponse(200, { message: 'Verification email has been sent' });
+    return createResponse(200, { message: m.home_verify_sent() });
 }

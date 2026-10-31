@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/prisma/prisma', () => mocks);
+const rescore = vi.hoisted(() => ({ rescoreIfZonesChanged: vi.fn() }));
+vi.mock('$lib/server/garmin/score-runs', () => rescore);
 
 import { GET, PUT } from './+server';
 import { validateAthleteProfileInput } from '$lib/server/athlete-profile/validation';
@@ -148,5 +150,22 @@ describe('validateAthleteProfileInput', () => {
     it('rejects hrZoneBounds when not an array', () => {
         const result = validateAthleteProfileInput({ ...validPayload, hrZoneBounds: 'invalid' });
         expect('error' in result).toBe(true);
+    });
+});
+
+describe('PUT /api/user/[id]/athlete-profile zone change', () => {
+    it('re-scores recent runs against the previous and the new zones', async () => {
+        const zones = [{ zone: 1, lowerBpm: 100, upperBpm: 120 }];
+        mocks.getAthleteProfile.mockResolvedValueOnce({ hrZoneBounds: null });
+        mocks.upsertAthleteProfile.mockResolvedValueOnce({ userId });
+
+        const response = await PUT({
+            request: makeRequest({ ...validPayload, hrZoneBounds: zones }),
+            params: { id: userId },
+            locals,
+        });
+
+        expect(response.status).toBe(200);
+        expect(rescore.rescoreIfZonesChanged).toHaveBeenCalledWith(userId, null, zones);
     });
 });

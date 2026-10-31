@@ -36,13 +36,18 @@ export function daysBetween(from: string, to: string): number {
 }
 
 export function todayInTimezone(timezone: string = 'UTC'): string {
+    return dateInTimezone(new Date(), timezone);
+}
+
+/** The YYYY-MM-DD calendar date of an instant in a timezone. */
+export function dateInTimezone(instant: Date, timezone: string = 'UTC'): string {
     const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone: timezone,
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
     });
-    return formatter.format(new Date());
+    return formatter.format(instant);
 }
 
 export function isFutureDate(yyyymmdd: string, timezone: string = 'UTC'): boolean {
@@ -50,8 +55,23 @@ export function isFutureDate(yyyymmdd: string, timezone: string = 'UTC'): boolea
     return yyyymmdd > todayInTimezone(timezone);
 }
 
+/** A YYYY-MM-DD date as UTC midnight, the way date columns store it. */
+export function fromIsoDate(yyyymmdd: string): Date {
+    return new Date(`${yyyymmdd}T00:00:00Z`);
+}
+
 export function toIsoDate(d: Date): string {
     return d.toISOString().slice(0, 10);
+}
+
+/** The Monday (UTC) of the ISO week containing `yyyymmdd`. */
+export function mondayOf(yyyymmdd: string): string {
+    if (!isValidDateString(yyyymmdd)) {
+        throw new Error(`Invalid date string: ${yyyymmdd}`);
+    }
+    let cursor = yyyymmdd;
+    while (!isMonday(cursor)) cursor = addDays(cursor, -1);
+    return cursor;
 }
 
 export function currentMonthStartIso(date: Date = new Date()): string {

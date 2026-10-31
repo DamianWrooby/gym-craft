@@ -2,13 +2,23 @@ import { db } from '$lib/database';
 import { fetchGarminActivities } from './fetch-activities';
 import { toIsoDate } from '$lib/utils/iso-week';
 import { pickIncrementalStart, type SyncMode } from '$lib/garmin/sync-window';
-import { computeTrimp, mapProfileSex, type TrimpProfile } from '$lib/server/analytics/load/trimp';
+import { mapProfileSex, scoreTrimp, trimpModality, type TrimpProfile } from '$lib/server/analytics/load/trimp';
+import { rebinRunsAfterSync } from './score-runs';
+import { linkSyncedActivities } from '$lib/server/planner/link';
+import { reevaluateCurrentWeek } from '$lib/server/planner/revision';
 import { hrZoneSecondsFromRow } from '$lib/utils/hr-zones';
 import type { GarminActivity } from '@/models/garmin/activity.model';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, ZoneSource } from '@prisma/client';
 
 export type SyncResult =
-    | { ok: true; mode: 'backfill' | 'incremental' | 'skipped'; activitiesUpserted: number; lastSyncedAt: Date }
+    | {
+          ok: true;
+          mode: 'backfill' | 'incremental' | 'skipped';
+          activitiesUpserted: number;
+          lastSyncedAt: Date;
+          /** Garmin IDs of runs still on Garmin's zones with no stored samples (ADR 0027). */
+          runsNeedingDetail: string[];
+      }
     | { ok: false; status: number; code: string; message: string };
 
 export async function syncUserActivities(userId: string, backfillDays: number): Promise<SyncResult> {
@@ -78,7 +88,9 @@ export async function persistActivities(
     mode: SyncMode,
     backfillDays: number,
 ): Promise<SyncResult> {
-    const upserted = await upsertActivities(userId, activities);
+    const { upserted, createdIds } = await upsertActivities(userId, activities);
+    const runsNeedingDetail = await rebinRuns(userId);
+    await linkNewActivities(userId, createdIds);
     const now = new Date();
 
     if (mode === 'backfill') {
@@ -92,7 +104,7 @@ export async function persistActivities(
             update: { lastSyncedAt: now, oldestActivityAt, backfillComplete: true },
         });
 
-        return { ok: true, mode: 'backfill', activitiesUpserted: upserted, lastSyncedAt: now };
+        return { ok: true, mode: 'backfill', activitiesUpserted: upserted, lastSyncedAt: now, runsNeedingDetail };
     }
 
     await db.garminSyncState.update({
@@ -100,11 +112,14 @@ export async function persistActivities(
         data: { lastSyncedAt: now },
     });
 
-    return { ok: true, mode: 'incremental', activitiesUpserted: upserted, lastSyncedAt: now };
+    return { ok: true, mode: 'incremental', activitiesUpserted: upserted, lastSyncedAt: now, runsNeedingDetail };
 }
 
-async function upsertActivities(userId: string, activities: GarminActivity[]): Promise<number> {
-    if (activities.length === 0) return 0;
+async function upsertActivities(
+    userId: string,
+    activities: GarminActivity[],
+): Promise<{ upserted: number; createdIds: string[] }> {
+    if (activities.length === 0) return { upserted: 0, createdIds: [] };
 
     const profile = await db.athleteProfile.findUnique({
         where: { userId },
@@ -117,6 +132,7 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
     };
 
     const rows = activities.map((activity) => toRow(userId, activity, trimpProfile));
+    const existing = await findExisting(userId, rows);
 
     const results = await db.$transaction(
         rows.map((row) =>
@@ -128,12 +144,66 @@ async function upsertActivities(userId: string, activities: GarminActivity[]): P
                     },
                 },
                 create: row,
-                update: row,
+                update: existing.get(row.garminActivityId) === 'ATHLETE_ZONES' ? withoutLoad(row) : row,
             }),
         ),
     );
 
-    return results.length;
+    const createdIds = results.filter((r) => !existing.has(r.garminActivityId)).map((r) => r.id);
+    return { upserted: results.length, createdIds };
+}
+
+/**
+ * Links only activities new to this sync: a re-synced activity the athlete unlinked stays
+ * unlinked. Then one re-evaluation for the whole batch (story 76), so three synced runs never
+ * spend three revisions. Best effort, like re-binning: a failure never fails the sync.
+ */
+async function linkNewActivities(userId: string, createdIds: string[]): Promise<void> {
+    let result: { linked: string[]; unscheduled: string[] };
+    try {
+        result = await linkSyncedActivities(userId, createdIds);
+    } catch (e) {
+        console.error('Linking synced activities to planned sessions failed', e);
+        return;
+    }
+    if (result.linked.length === 0 && result.unscheduled.length === 0) return;
+    try {
+        const trigger = result.unscheduled.length > 0 ? 'UNSCHEDULED' : 'SESSION_DONE';
+        await reevaluateCurrentWeek(userId, trigger, { activityIds: [...result.linked, ...result.unscheduled] });
+    } catch (e) {
+        console.error('Re-evaluating the plan week after sync failed', e);
+    }
+}
+
+/** Re-binning is best effort: a failure leaves the flag set and never fails the sync. */
+async function rebinRuns(userId: string): Promise<string[]> {
+    try {
+        return (await rebinRunsAfterSync(userId)).needsDetail;
+    } catch (e) {
+        console.error('Re-binning runs failed; the next sync retries', e);
+        return [];
+    }
+}
+
+/**
+ * Rows already stored, with their zone source. A sync must not overwrite a run already scored
+ * against the athlete's zones with Garmin's load.
+ */
+async function findExisting(
+    userId: string,
+    rows: { garminActivityId: bigint }[],
+): Promise<Map<bigint, ZoneSource | null>> {
+    const existing = await db.activity.findMany({
+        where: { userId, garminActivityId: { in: rows.map((r) => r.garminActivityId) } },
+        select: { garminActivityId: true, zoneSource: true },
+    });
+    return new Map(existing.map((e) => [e.garminActivityId, e.zoneSource]));
+}
+
+function withoutLoad<T extends { trimpLoad: unknown; loadMethod: unknown; zoneSource: unknown }>(row: T) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { trimpLoad, loadMethod, zoneSource, ...rest } = row;
+    return rest;
 }
 
 function toRow(userId: string, activity: GarminActivity, profile: TrimpProfile) {
@@ -172,17 +242,23 @@ function toRow(userId: string, activity: GarminActivity, profile: TrimpProfile) 
     };
 
     // Computed at write time so a synced row always carries a load; re-syncs recompute
-    // deterministically from the same inputs (and pick up profile changes).
+    // deterministically from the same inputs (and pick up profile changes). A run starts on
+    // Garmin's zones; `rebinRunsAfterSync` then re-scores it against the athlete's.
+    const modality = trimpModality(row.activityType);
+    const score = scoreTrimp({
+        durationSec: row.durationSec,
+        hrZoneSeconds: hrZoneSecondsFromRow(row),
+        averageHr: row.averageHr,
+        restingHr: profile.restingHR,
+        maxHr: profile.maxHR,
+        sex: profile.sex ?? 'male',
+        modality,
+    });
     return {
         ...row,
-        trimpLoad: computeTrimp({
-            durationSec: row.durationSec,
-            hrZoneSeconds: hrZoneSecondsFromRow(row),
-            averageHr: row.averageHr,
-            restingHr: profile.restingHR,
-            maxHr: profile.maxHR,
-            sex: profile.sex ?? 'male',
-        }),
+        trimpLoad: score.load,
+        loadMethod: score.method,
+        zoneSource: modality === 'running' ? ('GARMIN_ZONES' as const) : null,
     };
 }
 
