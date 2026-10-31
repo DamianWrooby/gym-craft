@@ -14,6 +14,7 @@ import {
 import { computeMonotony, computeStrain } from './monotony';
 import { interpretAcwr, interpretMonotony } from './interpret';
 import { toIsoDate } from '$lib/utils/iso-week';
+import { NON_TRAINING_TYPE_KEYS } from '$lib/utils/activity-type';
 import type { MetricsLoadProfile } from '../types';
 
 const PREVIOUS_WEEK_OFFSET = 7;
@@ -28,8 +29,15 @@ export async function computeLoadProfile(
     const windowEnd = new Date(asOf);
     windowEnd.setUTCDate(windowEnd.getUTCDate() + 1);
 
+    // Spans every training modality — a hard ride is systemic stress whether or not it was a run.
+    // Walking is excluded: Move IQ auto-logs it, and padding the chronic baseline with phantom
+    // load would *depress* ACWR. See docs/adr/0003-training-load-scope-and-modalities.md.
     const activities = await db.activity.findMany({
-        where: { userId, startTime: { gte: windowStart, lt: windowEnd } },
+        where: {
+            userId,
+            startTime: { gte: windowStart, lt: windowEnd },
+            activityType: { notIn: NON_TRAINING_TYPE_KEYS },
+        },
         orderBy: { startTime: 'asc' },
         select: {
             id: true,

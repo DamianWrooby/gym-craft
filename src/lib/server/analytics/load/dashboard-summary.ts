@@ -11,18 +11,34 @@ import {
 } from './acwr';
 import { computeMonotony } from './monotony';
 import { interpretAcwr, interpretMonotony, type AcwrStatus } from './interpret';
+import { classifyModality, type ActivityModality } from '$lib/utils/activity-type';
 
 export interface DashboardSummaryActivity {
     /** ISO timestamp string. */
     startTime: string;
+    activityType: string;
     distanceM: number | null;
     trimpLoad: number | null;
+}
+
+export interface ModalityDistance {
+    modality: ActivityModality;
+    /** Distance in the last 7 days — the figure a tile displays. */
+    sevenDayDistanceM: number;
+    /**
+     * Distance over the last 28 days — the figure that decides whether a tile exists at all.
+     * Bounded here rather than left to the caller's query: that query spans 35 days (chronic plus
+     * a week of headroom for timezone edges), and letting the headroom leak in would keep a tile
+     * on screen for a week after the sport stopped counting toward chronic load.
+     */
+    chronicDistanceM: number;
 }
 
 export interface DashboardSummary {
     acwr: number;
     loadStatus: AcwrStatus;
-    sevenDayDistanceM: number;
+    /** Per-modality: a kilometre of swimming is not a kilometre of running, so these never sum. */
+    distanceByModality: ModalityDistance[];
     sessions7d: number;
     monotony: number;
     monotonyIsHigh: boolean;
@@ -31,9 +47,17 @@ export interface DashboardSummary {
     hasSufficientHistory: boolean;
 }
 
+/** Running always renders, so it leads. The rest keep a stable order as they appear and disappear. */
+const MODALITY_ORDER: ActivityModality[] = ['running', 'cycling', 'swimming', 'other'];
+
 /**
- * @param activities Activities within the rolling load window (28d chronic + headroom).
- * @param earliestActivityAt Start time of the user's *first ever* activity, or null if
+ * Load, monotony and sessions span *every* training modality — a hard ride is systemic stress
+ * whether or not it was a run. Only distance is split per modality, because distances across
+ * modalities are not commensurable. See docs/adr/0003-training-load-scope-and-modalities.md.
+ *
+ * @param activities Training activities within the rolling load window (28d chronic + headroom).
+ *   The caller is expected to have already excluded non-training rows (walking).
+ * @param earliestActivityAt Start time of the user's *first ever* training activity, or null if
  *   they have none. Passed in rather than derived from `activities` because the caller
  *   queries a bounded window: the oldest row in that window says nothing about how long
  *   the athlete has been training, which is what `hasSufficientHistory` reports.
@@ -55,11 +79,19 @@ export function computeDashboardSummary(
     const monotonyRaw = computeMonotony(dailyLoads, asOf, ACUTE_DAYS);
 
     const last7 = new Set(enumerateDates(asOf, ACUTE_DAYS));
-    let sevenDayDistanceM = 0;
+    const last28 = new Set(enumerateDates(asOf, CHRONIC_DAYS));
+    const sevenDayMetresByModality = new Map<ActivityModality, number>();
+    const chronicMetresByModality = new Map<ActivityModality, number>();
     let sessions7d = 0;
     for (const a of activities) {
-        if (last7.has(toIsoDate(new Date(a.startTime)))) {
-            sevenDayDistanceM += a.distanceM ?? 0;
+        const modality = classifyModality(a.activityType);
+        const distance = a.distanceM ?? 0;
+        const date = toIsoDate(new Date(a.startTime));
+        if (last28.has(date)) {
+            chronicMetresByModality.set(modality, (chronicMetresByModality.get(modality) ?? 0) + distance);
+        }
+        if (last7.has(date)) {
+            sevenDayMetresByModality.set(modality, (sevenDayMetresByModality.get(modality) ?? 0) + distance);
             sessions7d += 1;
         }
     }
@@ -67,7 +99,11 @@ export function computeDashboardSummary(
     return {
         acwr: round(acwr, 2),
         loadStatus: interpretAcwr(acwr).status,
-        sevenDayDistanceM,
+        distanceByModality: MODALITY_ORDER.map((modality) => ({
+            modality,
+            sevenDayDistanceM: sevenDayMetresByModality.get(modality) ?? 0,
+            chronicDistanceM: chronicMetresByModality.get(modality) ?? 0,
+        })),
         sessions7d,
         monotony: isFinite(monotonyRaw) ? round(monotonyRaw, 2) : 0,
         monotonyIsHigh: interpretMonotony(monotonyRaw).isHigh,

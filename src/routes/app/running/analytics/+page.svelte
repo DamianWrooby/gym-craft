@@ -20,6 +20,8 @@
     import { withGarminLogin } from '$lib/garmin/garmin-login';
     import { askGarminCredentials, askGarminMfaCode } from '$lib/garmin/garmin-login-modal';
     import type { User } from '@/models/user/user.model';
+    import type { ActivityModality } from '$lib/utils/activity-type';
+    import type { ModalityDistance } from '$lib/server/analytics/load/dashboard-summary';
     import type { DashboardPageData } from './+page.server';
 
     export let data: DashboardPageData;
@@ -119,6 +121,23 @@
     function formatKm(meters: number): string {
         return `${(meters / 1000).toFixed(1)} km`;
     }
+
+    const MODALITY_LABEL: Record<ActivityModality, () => string> = {
+        running: m.analytics_modality_running,
+        cycling: m.analytics_modality_cycling,
+        swimming: m.analytics_modality_swimming,
+        other: m.analytics_modality_other,
+    };
+
+    /**
+     * Running always renders, even at zero — it is what this dashboard is for. The rest render
+     * only once the athlete has covered ground in them over the 28-day window, so a runner who
+     * lifts never sees a permanent `Other · 0.0 km`, while a triathlete keeps a stable row
+     * through a run-only week and can tell zero apart from absent.
+     */
+    function visibleDistances(distances: ModalityDistance[]): ModalityDistance[] {
+        return distances.filter((d) => d.modality === 'running' || d.chronicDistanceM > 0);
+    }
 </script>
 
 <Seo title={`${m.running_analytics()} | GymCraft™`} metaDescription="Training analytics dashboard." />
@@ -144,8 +163,9 @@
         </div>
 
         {#await data.summary}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
-                {#each [m.analytics_load(), m.analytics_7d_distance(), m.analytics_monotony(), m.analytics_sessions()] as label (label)}
+            <h3 class="text-xs uppercase tracking-wide opacity-60 mb-2">{m.analytics_load_heading()}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-6">
+                {#each [m.analytics_load(), m.analytics_monotony(), m.analytics_sessions()] as label (label)}
                     <div class="card variant-soft-surface p-4 flex flex-col gap-2">
                         <span class="text-xs uppercase opacity-60">{label}</span>
                         <SkeletonBlock height="h-6" width="w-2/3" />
@@ -153,8 +173,20 @@
                     </div>
                 {/each}
             </div>
-        {:then summary}
+            <h3 class="text-xs uppercase tracking-wide opacity-60 mb-2">{m.analytics_distance_heading()}</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
+                <div class="card variant-soft-surface p-4 flex flex-col gap-2">
+                    <span class="text-xs uppercase opacity-60">{m.analytics_modality_running()}</span>
+                    <SkeletonBlock height="h-6" width="w-2/3" />
+                    <SkeletonBlock height="h-3" width="w-1/2" />
+                </div>
+            </div>
+        {:then summary}
+            <!-- Load, monotony and sessions span every training modality; only distance is split
+                 per sport. The two headings state that, so no tile has to be read as a claim
+                 about running alone. -->
+            <h3 class="text-xs uppercase tracking-wide opacity-60 mb-2">{m.analytics_load_heading()}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-6">
                 <div class="card variant-soft-surface p-4 flex flex-col gap-1">
                     <span class="text-xs uppercase opacity-60">{m.analytics_load()}</span>
                     {#if summary.hasActivities && summary.hasSufficientHistory && summary.acwr > 0}
@@ -166,12 +198,6 @@
                         <span class="text-lg font-bold opacity-50">—</span>
                         <span class="text-xs opacity-70">{m.analytics_not_enough_history()}</span>
                     {/if}
-                </div>
-                <div class="card variant-soft-surface p-4 flex flex-col gap-1">
-                    <span class="text-xs uppercase opacity-60">{m.analytics_7d_distance()}</span>
-                    <span class="text-lg font-bold"
-                        >{summary.hasActivities ? formatKm(summary.sevenDayDistanceM) : '—'}</span>
-                    <span class="text-xs opacity-70">{m.analytics_last_7_days()}</span>
                 </div>
                 <div class="card variant-soft-surface p-4 flex flex-col gap-1">
                     <span class="text-xs uppercase opacity-60">{m.analytics_monotony()}</span>
@@ -190,6 +216,20 @@
                     <span class="text-lg font-bold">{summary.hasActivities ? summary.sessions7d : '—'}</span>
                     <span class="text-xs opacity-70">{m.analytics_per_7_days()}</span>
                 </div>
+            </div>
+
+            <h3 class="text-xs uppercase tracking-wide opacity-60 mb-2">{m.analytics_distance_heading()}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
+                {#each visibleDistances(summary.distanceByModality) as entry (entry.modality)}
+                    <div class="card variant-soft-surface p-4 flex flex-col gap-1">
+                        <span class="text-xs uppercase opacity-60">{MODALITY_LABEL[entry.modality]()}</span>
+                        <span class="text-lg font-bold"
+                            >{summary.hasActivities ? formatKm(entry.sevenDayDistanceM) : '—'}</span>
+                        <span class="text-xs opacity-70">
+                            {entry.modality === 'other' ? m.analytics_mixed_last_7_days() : m.analytics_last_7_days()}
+                        </span>
+                    </div>
+                {/each}
             </div>
         {:catch}
             <!-- Never fall back to a zeroed summary: interpretAcwr(0) reads as
