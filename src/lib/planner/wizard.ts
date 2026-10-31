@@ -1,7 +1,7 @@
 // Setup-wizard step gating (ADR 0018). Pure, so the component stays a thin view over it.
 import { m } from '$lib/paraglide/messages.js';
 import type { HrZoneBound } from './core/zones';
-import { isValidZones } from './core/zones';
+import { MAX_ZONE_BPM, zonesIssue, type ZoneIssue } from './core/zones';
 import type { Compression } from './core/layout';
 import type { SchoolId } from './schools/types';
 
@@ -53,6 +53,26 @@ export function initialWizardState(zones: HrZoneBound[] | null): WizardState {
     };
 }
 
+/** Names the zone and the rule it breaks, so an overlap does not read as "enter five zones". */
+function zoneIssueMessage(issue: ZoneIssue): string {
+    switch (issue.kind) {
+        case 'count':
+            return m.wizard_zones_invalid();
+        case 'missing':
+            return m.wizard_zone_missing({ zone: issue.zone });
+        case 'range':
+            return m.wizard_zone_range({ zone: issue.zone });
+        case 'overlap':
+            return m.wizard_zone_overlap({
+                zone: issue.zone,
+                previous: issue.zone - 1,
+                previousUpper: issue.previousUpper,
+            });
+        case 'max':
+            return m.wizard_zone_max({ zone: issue.zone, max: MAX_ZONE_BPM });
+    }
+}
+
 /** Why the athlete cannot leave this step yet, or null when they can. */
 export function stepIssue(step: WizardStep, s: WizardState): string | null {
     switch (step) {
@@ -63,9 +83,11 @@ export function stepIssue(step: WizardStep, s: WizardState): string | null {
         case 'horizon':
             if (!s.goalDate && !s.endDate) return m.wizard_choose_end();
             return s.layoutRefused ? m.wizard_layout_refused() : null;
-        case 'zones':
-            if (!isValidZones(s.zones)) return m.wizard_zones_invalid();
+        case 'zones': {
+            const issue = zonesIssue(s.zones);
+            if (issue) return zoneIssueMessage(issue);
             return s.zonesConfirmed ? null : m.wizard_zones_confirm();
+        }
         case 'results':
             return null; // Optional: no result schedules a time trial.
         case 'availability': {

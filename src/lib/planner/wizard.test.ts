@@ -40,6 +40,11 @@ describe('wizard step gating', () => {
         expect(stepIssue('horizon', complete({ goalDate: null, endDate: '2027-01-31' }))).toBeNull();
     });
 
+    it('names the overlapping zone instead of asking for five zones', () => {
+        const zones = zonesFromMaxHr(190).map((z) => (z.zone === 5 ? { ...z, lowerBpm: 171 } : z));
+        expect(stepIssue('zones', complete({ zones }))).toBe('Zone 5 must start above 171 bpm, where zone 4 ends.');
+    });
+
     it('blocks the horizon step while the layout is refused', () => {
         expect(firstBlockedStep(complete({ layoutRefused: true }))).toBe('horizon');
     });
