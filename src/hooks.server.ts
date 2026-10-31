@@ -12,6 +12,9 @@ const publicPaths = new Set([
     '/verification-mail-sent',
     '/privacy-policy',
     '/terms-of-use',
+    '/pl',
+    '/pl/privacy-policy',
+    '/pl/terms-of-use',
     '/api/stripe/webhook',
 ]);
 

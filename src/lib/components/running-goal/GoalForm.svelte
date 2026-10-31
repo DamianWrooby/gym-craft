@@ -8,9 +8,10 @@
         DISTANCES,
         NOTES_MAX,
         fromGoal,
-        goalFormIssue,
+        goalFieldIssues,
         toGoalInput,
         type Focus,
+        type GoalField,
         type GoalInput,
         type GoalRank,
         type RaceClass,
@@ -37,11 +38,17 @@
     let form = fromGoal(goal, others);
     let detailsOpen = form.notes !== '';
 
-    $: issue = goalFormIssue(form, today);
+    $: issues = goalFieldIssues(form, today);
+    // A field shows its error once the athlete has left it, or after a save attempt.
+    let touched: Partial<Record<GoalField, boolean>> = {};
+    let submitted = false;
+    $: shown = (field: GoalField) => (submitted || touched[field] ? issues[field] : undefined);
+    const touch = (field: GoalField) => () => (touched = { ...touched, [field]: true });
 
     function onSubmit(e: Event) {
         e.preventDefault();
-        if (issue) return;
+        submitted = true;
+        if (Object.keys(issues).length > 0) return;
         dispatch('save', toGoalInput(form, others));
     }
 </script>
@@ -82,12 +89,30 @@
             {#if form.distance === 'custom'}
                 <label class="label">
                     <span>{m.goal_distance_km({ min: CUSTOM_KM.min, max: CUSTOM_KM.max })}</span>
-                    <input type="text" class="input" inputmode="decimal" bind:value={form.customKm} />
+                    <input
+                        type="text"
+                        class="input"
+                        class:input-error={shown('distance')}
+                        inputmode="decimal"
+                        aria-required="true"
+                        aria-invalid={shown('distance') != null}
+                        on:blur={touch('distance')}
+                        bind:value={form.customKm} />
+                    {#if shown('distance')}<span class="text-sm text-error-500">{shown('distance')}</span>{/if}
                 </label>
             {/if}
             <label class="label">
-                <span>{m.goal_race_date()}</span>
-                <input type="date" class="input" bind:value={form.date} />
+                <span>{m.goal_race_date()} <span class="text-error-500" aria-hidden="true">*</span></span>
+                <input
+                    type="date"
+                    class="input"
+                    class:input-error={shown('date')}
+                    aria-required="true"
+                    aria-invalid={shown('date') != null}
+                    on:blur={touch('date')}
+                    on:change={touch('date')}
+                    bind:value={form.date} />
+                {#if shown('date')}<span class="text-sm text-error-500">{shown('date')}</span>{/if}
             </label>
             <label class="label">
                 <span>{m.goal_event_name()}</span>
@@ -100,7 +125,16 @@
             </label>
             <label class="label">
                 <span>{m.goal_target_time()}</span>
-                <input type="text" class="input" inputmode="numeric" bind:value={form.time} placeholder="1:45:00" />
+                <input
+                    type="text"
+                    class="input"
+                    class:input-error={shown('time')}
+                    inputmode="numeric"
+                    aria-invalid={shown('time') != null}
+                    on:blur={touch('time')}
+                    bind:value={form.time}
+                    placeholder="1:45:00" />
+                {#if shown('time')}<span class="text-sm text-error-500">{shown('time')}</span>{/if}
             </label>
         </div>
         <fieldset class="space-y-2">
@@ -135,13 +169,13 @@
         <label class="label mt-2">
             <span>{m.goal_notes()}</span>
             <textarea class="textarea" rows="2" maxlength={NOTES_MAX} bind:value={form.notes}></textarea>
+            {#if issues.notes}<span class="text-sm text-error-500">{issues.notes}</span>{/if}
         </label>
     </details>
 
-    {#if issue}<p class="text-sm text-amber-300">{issue}</p>{/if}
     <div class="flex justify-end gap-2">
         <button type="button" class="btn variant-soft" on:click={() => dispatch('cancel')}>{m.common_cancel()}</button>
-        <button type="submit" class="btn variant-filled-primary" disabled={saving || issue != null}>
+        <button type="submit" class="btn variant-filled-primary" disabled={saving}>
             {saving ? m.common_saving() : m.goal_save()}
         </button>
     </div>

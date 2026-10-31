@@ -23,8 +23,9 @@ export default defineConfig({
             project: './project.inlang',
             outdir: './src/lib/paraglide',
             // Keep in sync with the i18n:compile script in package.json.
-            // Server: the hook's resolved locale (ADR 0028). Browser: the cookie the hook mirrors it into.
-            strategy: ['custom-resolved', 'cookie', 'baseLocale'],
+            // Marketing: the URL prefix. Server: the hook's resolved locale (ADR 0028). Browser: the cookie
+            // the hook mirrors it into.
+            strategy: ['custom-marketing', 'custom-resolved', 'cookie', 'baseLocale'],
         }),
         sveltekit(),
         purgeCss(),

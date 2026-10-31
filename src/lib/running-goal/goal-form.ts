@@ -141,20 +141,28 @@ export function toGoalInput(form: GoalFormState, others: GoalRank[]): GoalInput 
 export const CUSTOM_KM = { min: RACE_MIN_M / 1000, max: Math.ceil(RACE_MAX_M / 100) / 10 };
 export const NOTES_MAX = 500;
 
-/** The one reason save is blocked, or null. `today` is the athlete's local YYYY-MM-DD. */
-export function goalFormIssue(form: GoalFormState, today: string): string | null {
-    if (form.notes.length > NOTES_MAX) return m.goal_issue_notes_too_long({ max: NOTES_MAX });
-    if (!form.isRace) return null;
-    if (!form.date) return m.goal_issue_no_date();
-    if (form.date <= today) return m.goal_issue_date_past();
+/** A form field that can block save. */
+export type GoalField = 'notes' | 'date' | 'distance' | 'time';
+
+/** Every reason save is blocked, keyed by the field it belongs to. `today` is the athlete's local YYYY-MM-DD. */
+export function goalFieldIssues(form: GoalFormState, today: string): Partial<Record<GoalField, string>> {
+    const issues: Partial<Record<GoalField, string>> = {};
+    if (form.notes.length > NOTES_MAX) issues.notes = m.goal_issue_notes_too_long({ max: NOTES_MAX });
+    if (!form.isRace) return issues;
+    if (!form.date) issues.date = m.goal_issue_no_date();
+    else if (form.date <= today) issues.date = m.goal_issue_date_past();
     if (form.distance === 'custom') {
         const metres = distanceMetres(form);
         if (metres == null || metres < CUSTOM_KM.min * 1000 || metres > CUSTOM_KM.max * 1000) {
-            return m.goal_issue_distance_range({ min: CUSTOM_KM.min, max: CUSTOM_KM.max });
+            issues.distance = m.goal_issue_distance_range({ min: CUSTOM_KM.min, max: CUSTOM_KM.max });
         }
     }
-    if (form.time.trim() && parseDuration(form.time) == null) {
-        return m.goal_issue_time_format();
-    }
-    return null;
+    if (form.time.trim() && parseDuration(form.time) == null) issues.time = m.goal_issue_time_format();
+    return issues;
+}
+
+/** The first reason save is blocked, or null. */
+export function goalFormIssue(form: GoalFormState, today: string): string | null {
+    const issues = goalFieldIssues(form, today);
+    return issues.notes ?? issues.date ?? issues.distance ?? issues.time ?? null;
 }

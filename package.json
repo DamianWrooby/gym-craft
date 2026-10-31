@@ -16,7 +16,7 @@
         "format": "prettier --plugin-search-dir . --write .",
         "postinstall": "prisma generate",
         "test": "vitest run",
-        "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --strategy custom-resolved cookie baseLocale",
+        "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --strategy custom-marketing custom-resolved cookie baseLocale",
         "test:ui": "vitest --ui",
         "test:watch": "vitest",
         "deploy": "npm run format-check && npm run lint && npm run test && npm run build-and-migrate"
