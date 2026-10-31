@@ -131,7 +131,10 @@
     // Layout refusal feeds the gating without writing back into `state` (no reactive cycle).
     $: gated = { ...state, layoutRefused: layout != null && !layout.ok };
     $: issue = stepIssue(step, gated);
-    $: needsCompression = school && weeks != null && weeks < school.phases.reduce((n, p) => n + p.idealWeeks.value, 0);
+    // Auto-satisfied phases (Daniels' Foundation) take whatever room is left, so only the choosable
+    // phases decide whether the athlete must compress.
+    $: needsCompression =
+        school && weeks != null && weeks < choosablePhases(school).reduce((n, p) => n + p.idealWeeks.value, 0);
 
     function chooseGoal(g: Goal) {
         state = { ...state, goalId: g.id, goalDate: g.date, endDate: null, compression: null };
