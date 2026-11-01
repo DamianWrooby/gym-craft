@@ -3,7 +3,7 @@ import { isSchoolId } from '$lib/planner/schools/catalogue';
 import { isValidZones, type HrZoneBound } from '$lib/planner/core/zones';
 import { WEEKDAYS, type AvailabilityMap } from '$lib/planner/wizard';
 import type { SchoolId } from '$lib/planner/schools/types';
-import type { Compression } from '$lib/planner/core/layout';
+import { GYM_LEVELS, type Compression, type GymLevel } from '$lib/planner/core/layout';
 
 import { RACE_MAX_M, RACE_MIN_M } from '$lib/utils/race';
 
@@ -23,6 +23,8 @@ export interface CreatePlanInput {
     raceResults: RaceResultInput[];
     availability: AvailabilityMap;
     longRunDay: number;
+    gymLevel: GymLevel;
+    sameDaySessions: boolean;
 }
 
 type Result<T> = { input: T } | { error: string };
@@ -105,6 +107,11 @@ export function validateCreatePlanInput(body: unknown, today: string): Result<Cr
     }
     if (!availability[WEEKDAYS[b.longRunDay]]) return { error: 'The long-run day must be a training day' };
 
+    const gymLevel = b.gymLevel ?? 'STANDARD';
+    if (!GYM_LEVELS.includes(gymLevel as GymLevel)) return { error: 'gymLevel is not a known level' };
+    const sameDaySessions = b.sameDaySessions ?? true;
+    if (typeof sameDaySessions !== 'boolean') return { error: 'sameDaySessions must be true or false' };
+
     return {
         input: {
             goalId: b.goalId,
@@ -115,6 +122,8 @@ export function validateCreatePlanInput(body: unknown, today: string): Result<Cr
             raceResults,
             availability,
             longRunDay: b.longRunDay,
+            gymLevel: gymLevel as GymLevel,
+            sameDaySessions,
         },
     };
 }

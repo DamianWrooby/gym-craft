@@ -62,6 +62,7 @@ export async function planRecut(userId: string, plan: ActivePlan, today: string,
         goal: { isRace: plan.goal.goalType === 'RACE' && goalDate != null, distanceM: plan.goal.targetDistanceM },
         recentVolume: recentRunningVolume(context.activities, today),
         runsPerWeek: WEEKDAYS.filter((d) => availability[d]).length,
+        gymLevel: plan.gymLevel,
         anchorPresent: anchorFromContext(context, [], plan.goal.targetDistanceM, today) != null,
     });
 }

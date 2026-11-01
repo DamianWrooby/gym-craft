@@ -125,6 +125,7 @@
                   compression: state.compression ?? undefined,
                   recentVolume: ready.recentVolume,
                   runsPerWeek,
+                  gymLevel: state.gymLevel,
                   anchorPresent: anchor != null,
               })
             : null;
@@ -135,6 +136,13 @@
     // phases decide whether the athlete must compress.
     $: needsCompression =
         school && weeks != null && weeks < choosablePhases(school).reduce((n, p) => n + p.idealWeeks.value, 0);
+
+    const gymLevels = [
+        { value: 'NONE', name: m.setup_gym_none(), hint: m.setup_gym_none_hint() },
+        { value: 'MINIMAL', name: m.setup_gym_minimal(), hint: m.setup_gym_minimal_hint() },
+        { value: 'STANDARD', name: m.setup_gym_standard(), hint: m.setup_gym_standard_hint() },
+        { value: 'MORE', name: m.setup_gym_more(), hint: m.setup_gym_more_hint() },
+    ] as const;
 
     function chooseGoal(g: Goal) {
         state = { ...state, goalId: g.id, goalDate: g.date, endDate: null, compression: null };
@@ -240,6 +248,8 @@
                 raceResults: state.raceResults,
                 availability: state.availability,
                 longRunDay: state.longRunDay,
+                gymLevel: state.gymLevel,
+                sameDaySessions: state.sameDaySessions,
             }),
         });
         if (response.ok) {
@@ -565,6 +575,24 @@
                         {#each DAY_LABELS as label, i}<option value={i}>{label}</option>{/each}
                     </select>
                 </label>
+                <fieldset class="space-y-2">
+                    <legend>{m.setup_gym_level()}</legend>
+                    {#each gymLevels as level}
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="radio" class="mt-1" bind:group={state.gymLevel} value={level.value} />
+                            <span>
+                                <span class="block">{level.name}</span>
+                                <span class="block text-sm text-slate-400">{level.hint}</span>
+                            </span>
+                        </label>
+                    {/each}
+                </fieldset>
+                {#if state.gymLevel !== 'NONE'}
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" bind:checked={state.sameDaySessions} />
+                        {m.setup_same_day()}
+                    </label>
+                {/if}
             </section>
         {/if}
 

@@ -27,7 +27,10 @@ export interface StoredWeek extends Omit<LaidWeek, 'index'> {
     timeTrialDistanceM: number | null;
 }
 
-export interface RecutInput extends Pick<LayoutInput, 'goal' | 'recentVolume' | 'runsPerWeek' | 'anchorPresent'> {
+export interface RecutInput extends Pick<
+    LayoutInput,
+    'goal' | 'recentVolume' | 'runsPerWeek' | 'gymLevel' | 'anchorPresent'
+> {
     today: string;
     /** The plan's current end date. */
     endDate: string;
@@ -100,6 +103,7 @@ export function recut(input: RecutInput): RecutResult {
         goal: input.goal,
         recentVolume: input.recentVolume,
         runsPerWeek: input.runsPerWeek,
+        gymLevel: input.gymLevel,
         anchorPresent: input.anchorPresent,
         resume: resumeFrom(input, keptCount, schoolId),
     });

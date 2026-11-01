@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addDays, isMonday } from '$lib/utils/iso-week';
 import { getSchool } from '../schools/catalogue';
 import { judged, sourced, type SchoolDefinition } from '../schools/types';
-import { defaultCompression, layoutHorizon, type LayoutInput, type Layout } from './layout';
+import { defaultCompression, layoutHorizon, type GymLevel, type LayoutInput, type Layout } from './layout';
 
 const MONDAY = '2026-10-12';
 const polarized = getSchool('POLARIZED');
@@ -300,6 +300,15 @@ describe('layoutHorizon: strength targets', () => {
     it('keeps one lift in the last week when the goal is not a race', () => {
         const w = layout({ goal: { isRace: false, distanceM: null } }).weeks;
         expect(w[15].strengthSessionTarget).toBe(1);
+    });
+
+    it('turns the gym level into each week type target', () => {
+        const at = (gymLevel: GymLevel) =>
+            [0, 3, 14, 15].map((i) => layout({ gymLevel }).weeks[i].strengthSessionTarget);
+        expect(at('NONE')).toEqual([0, 0, 0, 0]);
+        expect(at('MINIMAL')).toEqual([1, 1, 1, 0]);
+        expect(at('STANDARD')).toEqual([2, 1, 1, 0]);
+        expect(at('MORE')).toEqual([3, 2, 1, 0]);
     });
 
     it('writes 1 in a sharpening phase', () => {
