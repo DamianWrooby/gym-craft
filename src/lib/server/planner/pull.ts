@@ -75,6 +75,7 @@ export async function pullWeek(
         },
         availability: readAvailability(plan.availability),
         longRunDay: plan.longRunDay,
+        sameDaySessions: plan.sameDaySessions,
         anchor,
         outlook: input.outlook,
         fixtures: fixturesBetween(context.goals.map(toFixtureGoal), plan.goalId, from, to),

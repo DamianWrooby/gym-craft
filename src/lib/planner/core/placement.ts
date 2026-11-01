@@ -15,6 +15,8 @@ export interface PlacementContext {
     longRunDay: number;
     /** The school's key-session keys; `long` is the long run. */
     keySessions: string[];
+    /** Whether one day may hold both a run and a lift. Absent: allowed. */
+    sameDaySessions?: boolean;
 }
 
 export const LONG_RUN_KEY = 'long';
@@ -23,6 +25,17 @@ const weekday = (date: string, ctx: PlacementContext) => daysBetween(ctx.weekSta
 
 const isKeyRun = (s: TypedSession, ctx: PlacementContext) =>
     s.kind === 'RUNNING' && s.body.keySession != null && ctx.keySessions.includes(s.body.keySession);
+
+/** Lifts on the long-run day, or on a run's day when the athlete keeps them apart: these go first (#452). */
+export function clashingLifts(sessions: TypedSession[], ctx: PlacementContext): TypedSession[] {
+    const runDays = new Set(sessions.filter((s) => s.kind === 'RUNNING').map((s) => s.scheduledDate));
+    return sessions.filter(
+        (s) =>
+            s.kind === 'STRENGTH' &&
+            (weekday(s.scheduledDate, ctx) === ctx.longRunDay ||
+                (ctx.sameDaySessions === false && runDays.has(s.scheduledDate))),
+    );
+}
 
 /** One line per broken rule; empty when the week is placeable as written. */
 export function placementViolations(sessions: TypedSession[], ctx: PlacementContext): string[] {
@@ -54,7 +67,14 @@ export function placementViolations(sessions: TypedSession[], ctx: PlacementCont
     }
 
     if (sessions.some((s) => s.kind === 'STRENGTH' && weekday(s.scheduledDate, ctx) === ctx.longRunDay)) {
-        violations.push('A lift falls on the long-run day');
+        violations.push(m.placement_lift_long_run_day());
+    }
+
+    if (ctx.sameDaySessions === false) {
+        const runDays = new Set(sessions.filter((s) => s.kind === 'RUNNING').map((s) => s.scheduledDate));
+        if (sessions.some((s) => s.kind === 'STRENGTH' && runDays.has(s.scheduledDate))) {
+            violations.push(m.placement_lift_same_day());
+        }
     }
 
     if (daysBetween(ctx.from, ctx.to) === 6) {

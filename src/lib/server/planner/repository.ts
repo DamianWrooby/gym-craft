@@ -97,6 +97,8 @@ export async function persistNewPlan(userId: string, record: NewPlanRecord, week
                     endDate: fromIsoDate(record.endDate),
                     availability: record.availability,
                     longRunDay: record.longRunDay,
+                    gymLevel: record.gymLevel,
+                    sameDaySessions: record.sameDaySessions,
                     rationale: record.rationale as unknown as Prisma.InputJsonValue,
                     phases: {
                         create: layout.phases.map((p) => ({

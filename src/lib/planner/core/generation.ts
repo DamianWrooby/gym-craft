@@ -3,7 +3,7 @@
 import type { SchoolDefinition } from '../schools/types';
 import { costSession } from './cost';
 import { cutCandidates, type PlacementAsk } from './conflict';
-import { placementViolations, type PlacementContext } from './placement';
+import { clashingLifts, placementViolations, type PlacementContext } from './placement';
 import { BODY_VERSION, type Exercise, type RunBlock, type RunStep, type TypedSession } from './session';
 
 export interface GenerationContext {
@@ -183,7 +183,8 @@ const keyOf = (s: TypedSession) => (s.kind === 'RUNNING' ? s.body.keySession : n
 const cutOf = (s: TypedSession) => (s.kind === 'RUNNING' ? s.body.cutKey : null);
 
 /**
- * Removes non-key runs in cut order until the week places. When that is not enough, leaves out one
+ * Removes lifts that clash with a run's day first, since a run comes before a lift for this athlete.
+ * Then removes non-key runs in cut order until the week places. When that is not enough, leaves out one
  * key session, the cheapest that places the week, and the athlete decides (story 60). A week no
  * such removal places is rejected whole, as before.
  */
@@ -201,7 +202,8 @@ function trimForPlacement(sessions: TypedSession[], violations: string[], ctx: G
         })
         .sort((a, b) => loads[a.i] - loads[b.i]);
     // Nothing cut first, then ever longer runs of the cut order.
-    const cuts = [0, ...candidates.map((_, n) => n + 1)].map((n) => new Set(candidates.slice(0, n)));
+    const lifts = clashingLifts(sessions, ctx.placement).map((s) => sessions.indexOf(s));
+    const cuts = [0, ...candidates.map((_, n) => n + 1)].map((n) => new Set([...lifts, ...candidates.slice(0, n)]));
 
     for (const leftOut of [null, ...keyRuns]) {
         for (const removed of cuts) {

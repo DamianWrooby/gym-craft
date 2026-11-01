@@ -24,6 +24,9 @@ export interface RecentVolume {
     metresPerWeek: number;
 }
 
+export const GYM_LEVELS = ['NONE', 'MINIMAL', 'STANDARD', 'MORE'] as const;
+export type GymLevel = (typeof GYM_LEVELS)[number];
+
 export interface LayoutInput {
     school: SchoolDefinition;
     /** The day the athlete sets the plan up (YYYY-MM-DD). */
@@ -35,6 +38,8 @@ export interface LayoutInput {
     recentVolume: RecentVolume;
     /** Training days in the availability map. */
     runsPerWeek: number;
+    /** How much gym work the athlete wants. Absent: STANDARD. */
+    gymLevel?: GymLevel;
     anchorPresent: boolean;
     /** A re-lay that carries on from training already in the plan (ADR 0019). */
     resume?: Resume;
@@ -375,8 +380,13 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
         const slot = weekPhase[i];
         const unit: VolumeUnit = slot.def?.volumeUnit ?? 'MINUTES';
         const { isTaper, isCutback } = flags[i];
-        let strength = slot.def ? STRENGTH[slot.def.strengthKind].value : STRENGTH.leadIn.value;
-        if (isCutback) strength = Math.max(STRENGTH.cutbackFloor.value, strength - STRENGTH.cutbackReduction.value);
+        let strength = atGymLevel(
+            slot.def ? STRENGTH[slot.def.strengthKind].value : STRENGTH.leadIn.value,
+            input.gymLevel ?? 'STANDARD',
+        );
+        if (isCutback && strength > 0) {
+            strength = Math.max(STRENGTH.cutbackFloor.value, strength - STRENGTH.cutbackReduction.value);
+        }
         if (isTaper) strength = Math.min(strength, STRENGTH.taperMax.value);
         if (i === n - 1 && goal.isRace) strength = STRENGTH.raceWeek.value;
         return {
@@ -407,6 +417,13 @@ export function layoutHorizon(input: LayoutInput): LayoutResult {
         ok: true,
         layout: { phases, weeks, leadIn: leadInKind, timeTrial, losses: compressionLosses(school, compression) },
     };
+}
+
+/** The phase's strength target at the athlete's gym level (#452). */
+function atGymLevel(target: number, level: GymLevel): number {
+    if (level === 'NONE') return 0;
+    if (level === 'MINIMAL') return Math.min(target, 1);
+    return level === 'MORE' ? target + 1 : target;
 }
 
 function leadInIntent(school: SchoolDefinition, kind: LeadInKind): string {

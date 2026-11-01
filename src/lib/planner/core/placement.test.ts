@@ -63,6 +63,14 @@ describe('placementViolations', () => {
         expect(placementViolations([liftOn(0, false), liftOn(1, true), ...goodWeek.slice(1)], ctx)).toEqual([]);
     });
 
+    it('keeps lifts off run days only when the athlete asks for it', () => {
+        const week = [runOn(1, 'q1'), liftOn(1, false), runOn(6, 'long')];
+        expect(placementViolations(week, ctx)).toEqual([]);
+        expect(placementViolations(week, { ...ctx, sameDaySessions: false })).toEqual([
+            expect.stringMatching(/shares a day/i),
+        ]);
+    });
+
     it('never puts a lift on the long-run day', () => {
         expect(placementViolations([...goodWeek, liftOn(6, false)], ctx)).toEqual([
             expect.stringMatching(/long-run day/i),

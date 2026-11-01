@@ -240,6 +240,7 @@ async function buildRevisionInput(
         week: { ...week, startDate, from: today, to },
         availability: readAvailability(plan.availability),
         longRunDay: plan.longRunDay,
+        sameDaySessions: plan.sameDaySessions,
         anchor,
         fixtures: fixturesBetween(goals.map(toFixtureGoal), plan.goalId, today, to),
         revision: {

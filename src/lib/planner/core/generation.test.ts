@@ -126,9 +126,26 @@ describe('validateGeneration', () => {
         });
     });
 
-    it('rejects a week that breaks a rule no removal of a run can fix', () => {
+    it('drops a lift on the long-run day and records why', () => {
         const result = validateGeneration(output([q1, { ...lift, date: '2026-10-25' }, long]), ctx);
-        expect(result).toEqual({ ok: false, errors: [expect.stringMatching(/long-run day/i)] });
+        if (!result.ok) throw new Error('expected a trimmed week');
+        expect(result.sessions.map((s) => s.body.title)).toEqual(['Threshold', 'Long run']);
+        expect(result.placementTrim?.removed.map((r) => r.title)).toEqual(['Light lift']);
+        expect(result.placementTrim?.violations).toEqual([expect.stringMatching(/long-run day/i)]);
+    });
+
+    it('drops a lift on a run day when the athlete keeps them apart', () => {
+        const apart = { ...ctx, placement: { ...ctx.placement, sameDaySessions: false } };
+        const result = validateGeneration(output([q1, { ...lift, date: '2026-10-20' }, long]), apart);
+        if (!result.ok) throw new Error('expected a trimmed week');
+        expect(result.sessions.map((s) => s.body.title)).toEqual(['Threshold', 'Long run']);
+        expect(result.placementTrim?.removed.map((r) => r.title)).toEqual(['Light lift']);
+    });
+
+    it('keeps a lift on a run day when the athlete allows it', () => {
+        const result = validateGeneration(output([q1, { ...lift, date: '2026-10-20' }, long]), ctx);
+        if (!result.ok) throw new Error('expected a valid week');
+        expect(result.placementTrim).toBeNull();
     });
 
     it('trims an infeasible week in cut order instead of breaking a placement rule', () => {

@@ -40,6 +40,8 @@ export interface WeekPromptInput {
     };
     availability: AvailabilityMap;
     longRunDay: number;
+    /** Whether one day may hold both a run and a lift. */
+    sameDaySessions: boolean;
     anchor: Anchor | null;
     /** Set at a pull; week 1 has none. */
     outlook?: WeekOutlook;
@@ -126,12 +128,16 @@ function revisionSections(r: RevisionContext, from: string): string[] {
 export function buildWeekPrompt(input: WeekPromptInput): AiRequestInput {
     const { school, phase, week } = input;
     const days: string[] = [];
+    let liftDays = 0;
     for (let i = 0; i <= daysBetween(week.from, week.to); i++) {
         const date = addDays(week.from, i);
         const weekday = daysBetween(week.startDate, date);
         if (!input.availability[WEEKDAYS[weekday]]) continue;
+        if (weekday !== input.longRunDay) liftDays++;
         days.push(`${date} (${DAY_NAMES[weekday]})${weekday === input.longRunDay ? ' — long-run day' : ''}`);
     }
+    // A partial week can have too few days for its target; asking for more makes a rule-breaking week.
+    const strengthSessions = Math.min(week.strengthSessionTarget, liftDays);
 
     const weekKind = [week.isCutback && 'cutback week', week.isTaper && 'taper week'].filter(Boolean).join(', ');
     const sections = [
@@ -139,7 +145,10 @@ export function buildWeekPrompt(input: WeekPromptInput): AiRequestInput {
         `Phase: ${phase.name}${phase.source === 'LEAD_IN' ? ` (GymCraft lead-in, shaped to fit ${school.name}: ${school.leadIn.split.value}; neuromuscular touch: ${school.leadIn.touch.value})` : ''}. Intent: ${phase.intent}`,
         `Week: ${week.from} to ${week.to}${weekKind ? ` (${weekKind})` : ''}.`,
         `Running volume target: ${formatVolume(week.volumeTarget, week.volumeUnit)}.`,
-        `Strength sessions: exactly ${week.strengthSessionTarget}.`,
+        `Strength sessions: exactly ${strengthSessions}.`,
+        input.sameDaySessions
+            ? ''
+            : 'Never put a run and a strength session on the same day. If the days run out, write fewer strength sessions.',
         input.outlook && input.outlook !== 'NORMAL' ? OUTLOOK_LINES[input.outlook] : '',
         week.timeTrialDistanceM
             ? `Schedule a ${week.timeTrialDistanceM / 1000} km time trial as one running session, all-out after a warm-up.`

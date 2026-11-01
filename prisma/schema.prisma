@@ -54,6 +54,13 @@ model Roles {
     User User[]
 }
 
+enum GymLevel {
+    NONE
+    MINIMAL
+    STANDARD
+    MORE
+}
+
 // A bounded horizon working toward one goal (ADRs 0008, 0012). One ACTIVE plan per user,
 // enforced by a partial unique index in the migration. Table name avoids the legacy "Plan".
 model Plan {
@@ -67,6 +74,10 @@ model Plan {
     availability      Json
     // 0 = Monday … 6 = Sunday.
     longRunDay        Int
+    // How much gym work the athlete wants; each phase turns it into a strength target (#452).
+    gymLevel          GymLevel    @default(STANDARD)
+    // Whether one day may hold both a run and a lift (#452).
+    sameDaySessions   Boolean     @default(true)
     // How the athlete's data shaped the layout (PlanRationale), frozen at creation.
     rationale         Json?
     // Start of the drift week the athlete dismissed the recut suggestion for (ADR 0015).

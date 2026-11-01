@@ -11,6 +11,7 @@ import { explainPlan, type PlanRationale } from '$lib/planner/core/explain';
 import { WEEKDAYS } from '$lib/planner/wizard';
 import type { CreatePlanInput, RaceResultInput } from './validation';
 import { buildWeekPrompt, type AiRequestInput } from './week-prompt';
+import type { GymLevel } from '$lib/planner/core/layout';
 import { fixturesBetween, toFixtureGoal } from '$lib/planner/core/fixtures';
 
 export interface ContextGoal {
@@ -40,6 +41,8 @@ export interface PlanningContext {
 }
 
 export interface NewPlanRecord {
+    gymLevel: GymLevel;
+    sameDaySessions: boolean;
     goalId: string;
     startDate: string;
     endDate: string;
@@ -123,6 +126,7 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
         compression: input.compression ?? undefined,
         recentVolume,
         runsPerWeek,
+        gymLevel: input.gymLevel,
         anchorPresent: anchor != null,
     });
     if (!result.ok) return result;
@@ -157,6 +161,7 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
         },
         availability: input.availability,
         longRunDay: input.longRunDay,
+        sameDaySessions: input.sameDaySessions,
         anchor,
         fixtures: fixturesBetween(
             context.goals.filter((g) => !g.archivedAt).map(toFixtureGoal),
@@ -176,6 +181,8 @@ export function buildPlan(context: PlanningContext, input: CreatePlanInput, toda
             endDate,
             availability: input.availability,
             longRunDay: input.longRunDay,
+            gymLevel: input.gymLevel,
+            sameDaySessions: input.sameDaySessions,
             hrZoneBounds: input.hrZoneBounds,
             raceResults: input.raceResults,
             layout: result.layout,

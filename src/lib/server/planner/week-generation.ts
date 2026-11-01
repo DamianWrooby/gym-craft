@@ -37,7 +37,16 @@ export async function readWeekOutput(
     userId: string,
     week: {
         startDate: Date;
-        phase: { school: string; plan: { startDate: Date; endDate: Date; availability: unknown; longRunDay: number } };
+        phase: {
+            school: string;
+            plan: {
+                startDate: Date;
+                endDate: Date;
+                availability: unknown;
+                longRunDay: number;
+                sameDaySessions: boolean;
+            };
+        };
     },
     request: { input: unknown; output: string | null },
     from: string,
@@ -64,6 +73,7 @@ export async function readWeekOutput(
             to: planEnd < weekEnd ? planEnd : weekEnd,
             availability: readAvailability(plan.availability),
             longRunDay: plan.longRunDay,
+            sameDaySessions: plan.sameDaySessions,
             keySessions: school.keySessions.map((k) => k.key),
         },
     });

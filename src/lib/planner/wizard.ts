@@ -4,6 +4,7 @@ import type { HrZoneBound } from './core/zones';
 import { MAX_ZONE_BPM, zonesIssue, type ZoneIssue } from './core/zones';
 import type { Compression } from './core/layout';
 import type { SchoolId } from './schools/types';
+import type { GymLevel } from './core/layout';
 
 export const WIZARD_STEPS = ['goal', 'school', 'horizon', 'zones', 'results', 'availability'] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
@@ -35,6 +36,8 @@ export interface WizardState {
     availability: AvailabilityMap;
     /** 0 = Monday … 6 = Sunday. */
     longRunDay: number | null;
+    gymLevel: GymLevel;
+    sameDaySessions: boolean;
 }
 
 export function initialWizardState(zones: HrZoneBound[] | null): WizardState {
@@ -50,6 +53,8 @@ export function initialWizardState(zones: HrZoneBound[] | null): WizardState {
         raceResults: [],
         availability: { mon: true, tue: false, wed: true, thu: false, fri: true, sat: false, sun: true },
         longRunDay: 6,
+        gymLevel: 'STANDARD',
+        sameDaySessions: true,
     };
 }
 
