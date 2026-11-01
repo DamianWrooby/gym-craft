@@ -25,7 +25,7 @@ export const actions: Actions = {
             path: '/',
             expires: new Date(0),
             httpOnly: true,
-            sameSite: 'strict',
+            sameSite: 'lax',
             secure: isProduction(),
         });
 

@@ -53,7 +53,7 @@ describe('logout route', () => {
                 path: '/',
                 expires: new Date(0),
                 httpOnly: true,
-                sameSite: 'strict',
+                sameSite: 'lax',
                 secure: true,
             });
             expect(e).toMatchObject({ status: 302, location: '/app/login' });
