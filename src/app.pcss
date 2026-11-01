@@ -31,16 +31,20 @@ body {
         height: auto;
         min-height: 100vh;
         min-height: 100dvh;
+        /* Clip stray horizontal overflow without making #appShell a scroll container, so
+           the document keeps scrolling vertically. (overflow-x: hidden on body does not
+           stop iOS Safari from zooming out to fit wide content.) */
         overflow: visible;
+        overflow-x: clip;
     }
+    /* Without a clipping overflow, a flex item's min-width falls back to its content's
+       width, so #page would grow past the screen and leave the top bar and footer
+       narrower than the content. min-width: 0 keeps it at the screen width. */
     #appShell > .flex-auto,
     #appShell #page {
         height: auto;
+        min-width: 0;
         overflow: visible;
-    }
-    /* Overflow is no longer clipped by #page, so clip stray horizontal overflow here. */
-    body {
-        overflow-x: hidden;
     }
 }
 

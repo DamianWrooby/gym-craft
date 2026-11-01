@@ -57,7 +57,11 @@
 
 <AppShell>
     <svelte:fragment slot="header">
-        <AppBar background="bg-primary-500">
+        <AppBar
+            background="bg-primary-500"
+            padding="px-2 py-3 sm:p-4"
+            gap="gap-2 sm:gap-4"
+            slotTrail="!space-x-1 sm:!space-x-4">
             <svelte:fragment slot="lead">
                 <a class="px-2 sm:px-4 text-surface-500 hover:text-tertiary-500 block md:hidden" href="/app">
                     <HomeIcon />
