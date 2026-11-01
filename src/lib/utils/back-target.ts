@@ -1,7 +1,7 @@
 /**
  * Resolves where a detail page's "back" button should navigate.
  *
- * Detail pages under /app/running/analytics are reachable from more than one
+ * Detail pages under /app/analytics are reachable from more than one
  * place (the dashboard preview and the full list). The back button should
  * return to wherever the user actually came from, so we use the referring
  * path when it is inside the analytics area and fall back to the list page
@@ -13,7 +13,7 @@
  * the list as they left it.
  */
 export function resolveBackTarget(fromPath: string | null | undefined, fallback: string): string {
-    if (fromPath && fromPath.startsWith('/app/running/analytics')) {
+    if (fromPath && fromPath.startsWith('/app/analytics')) {
         return fromPath;
     }
     return fallback;

@@ -60,7 +60,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-describe('load /app/running/analytics (dashboard)', () => {
+describe('load /app/analytics (dashboard)', () => {
     it('redirects to /app/login when there is no session user', async () => {
         const noLocals = { user: undefined } as unknown as App.Locals;
         await expect(load({ locals: noLocals })).rejects.toMatchObject({ status: 302 });

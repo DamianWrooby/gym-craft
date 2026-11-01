@@ -49,7 +49,7 @@
 <li
     class="group !m-0 text-surface-500 dark:text-tertiary-500 border-b-1 first:rounded-t-2xl last:rounded-b-2xl rounded-none odd:bg-surface-200 dark:odd:bg-surface-900 even:bg-surface-300 dark:even:bg-surface-800 hover:bg-white dark:hover:bg-surface-600">
     <a
-        href="/app/running/analytics/activities/{activity.garminActivityId}"
+        href="/app/analytics/activities/{activity.garminActivityId}"
         data-sveltekit-preload-data="hover"
         class="block px-4 py-3 no-underline text-inherit">
         <div class="flex flex-row items-center gap-3 flex-wrap">

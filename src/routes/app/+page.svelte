@@ -4,11 +4,10 @@
     import { page } from '$app/stores';
     import { getModalStore } from '@skeletonlabs/skeleton';
     import type { ModalSettings } from '@skeletonlabs/skeleton';
-    import { ArrowRightIcon } from 'svelte-feather-icons';
+    import { ArrowRightIcon, BarChart2Icon, CalendarIcon } from 'svelte-feather-icons';
     import Logo from '$lib/images/gym-craft-logo-crop.png';
     import { getToastStore } from '@skeletonlabs/skeleton';
     import { makeToast } from '$lib/utils/toasts.js';
-    import SportIcon from '@components/sport-icon/SportIcon.svelte';
 
     const user = $page.data.user;
     const modalStore = getModalStore();
@@ -74,29 +73,29 @@
         </div>
         <div class="p-5 text-center">
             {#if user}
-                <p class="text-surface-500 dark:text-surface-300 text-sm pb-4">{m.home_choose_sport()}</p>
+                <p class="text-surface-500 dark:text-surface-300 text-sm pb-4">{m.home_choose_section()}</p>
                 <div class="flex flex-col sm:flex-row items-stretch justify-center gap-3 sm:gap-4">
                     <a
-                        href="/app/gym"
+                        href="/app/plan"
                         data-sveltekit-preload-data="hover"
                         class="group card variant-soft-surface hover:variant-soft-tertiary transition-colors p-5 flex flex-col items-center gap-2 no-underline min-w-[140px]">
                         <span class="text-tertiary-500 group-hover:text-tertiary-400">
-                            <SportIcon sport="gym" size={36} />
+                            <CalendarIcon size="36" />
                         </span>
-                        <span class="font-semibold">{m.nav_gym()}</span>
+                        <span class="font-semibold">{m.nav_plan()}</span>
                         <span class="text-xs text-surface-500 dark:text-surface-300 flex items-center gap-1">
                             {m.home_open()}
                             <ArrowRightIcon size="12" />
                         </span>
                     </a>
                     <a
-                        href="/app/running"
+                        href="/app/analytics"
                         data-sveltekit-preload-data="hover"
                         class="group card variant-soft-surface hover:variant-soft-tertiary transition-colors p-5 flex flex-col items-center gap-2 no-underline min-w-[140px]">
                         <span class="text-tertiary-500 group-hover:text-tertiary-400">
-                            <SportIcon sport="running" size={36} />
+                            <BarChart2Icon size="36" />
                         </span>
-                        <span class="font-semibold">{m.nav_running()}</span>
+                        <span class="font-semibold">{m.nav_analytics()}</span>
                         <span class="text-xs text-surface-500 dark:text-surface-300 flex items-center gap-1">
                             {m.home_open()}
                             <ArrowRightIcon size="12" />

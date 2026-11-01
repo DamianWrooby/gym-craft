@@ -22,6 +22,6 @@ describe('ActivityRow', () => {
         render(ActivityRow, { activity });
         expect(screen.getByText('Morning Run')).toBeInTheDocument();
         expect(screen.getByText('5.00 km')).toBeInTheDocument();
-        expect(screen.getByRole('link')).toHaveAttribute('href', '/app/running/analytics/activities/111');
+        expect(screen.getByRole('link')).toHaveAttribute('href', '/app/analytics/activities/111');
     });
 });

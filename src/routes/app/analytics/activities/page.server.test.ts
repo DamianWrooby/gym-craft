@@ -18,7 +18,7 @@ import { ACTIVITY_MAX_SHOWN, ACTIVITY_PAGE_SIZE } from '$lib/utils/activity-list
 const userId = 'user-1';
 const locals = { user: { id: userId } } as unknown as App.Locals;
 
-const url = (search = '') => new URL(`http://localhost/app/running/analytics/activities${search}`);
+const url = (search = '') => new URL(`http://localhost/app/analytics/activities${search}`);
 
 /** Only the columns `activityListSelect` asks for — which is all the query returns. */
 const row = (id: string, startTime: string) => ({
@@ -60,7 +60,7 @@ afterEach(() => {
     vi.clearAllMocks();
 });
 
-describe('load /app/running/analytics/activities', () => {
+describe('load /app/analytics/activities', () => {
     it('redirects to /app/login when there is no session user', async () => {
         const noLocals = { user: undefined } as unknown as App.Locals;
         await expect(load({ locals: noLocals, url: url() })).rejects.toMatchObject({ status: 302 });

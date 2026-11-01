@@ -3,8 +3,7 @@
     import { Avatar, getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
     import { page } from '$app/stores';
     import type { User } from '@/models/user/user.model';
-    import SportIcon from '@components/sport-icon/SportIcon.svelte';
-    import { CalendarIcon, LogOutIcon } from 'svelte-feather-icons';
+    import { BarChart2Icon, CalendarIcon, LogOutIcon } from 'svelte-feather-icons';
 
     export let user: User;
 
@@ -56,17 +55,10 @@
         </a>
         <a
             class="px-2 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
-            class:text-tertiary-500={isActive('/app/gym')}
-            href="/app/gym">
-            <SportIcon sport="gym" size={18} />
-            <span class="hidden sm:inline">{m.nav_gym()}</span>
-        </a>
-        <a
-            class="px-2 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
-            class:text-tertiary-500={isActive('/app/running')}
-            href="/app/running">
-            <SportIcon sport="running" size={18} />
-            <span class="hidden sm:inline">{m.nav_running()}</span>
+            class:text-tertiary-500={isActive('/app/analytics')}
+            href="/app/analytics">
+            <BarChart2Icon size="18" />
+            <span class="hidden sm:inline">{m.nav_analytics()}</span>
         </a>
         <span class="hidden sm:block text-surface-300 select-none">|</span>
         <form action="/app/logout" method="POST" bind:this={logoutForm} on:submit|preventDefault={confirmLogout}>

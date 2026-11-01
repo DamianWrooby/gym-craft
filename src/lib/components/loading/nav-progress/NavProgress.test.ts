@@ -61,7 +61,7 @@ describe('NavProgress', () => {
         const { container } = render(NavProgress);
         const { track, width } = elements(container);
 
-        await navigateTo(navigation('/app/running/analytics'));
+        await navigateTo(navigation('/app/analytics'));
         expect(vi.getTimerCount()).toBe(1); // reveal timer armed, nothing shown yet
 
         await advance(REVEAL_DELAY_MS - 1);
