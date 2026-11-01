@@ -4,7 +4,7 @@
     import { page } from '$app/stores';
     import type { User } from '@/models/user/user.model';
     import SportIcon from '@components/sport-icon/SportIcon.svelte';
-    import { CalendarIcon } from 'svelte-feather-icons';
+    import { CalendarIcon, LogOutIcon } from 'svelte-feather-icons';
 
     export let user: User;
 
@@ -48,21 +48,21 @@
                 width="w-8" />
         </a>
         <a
-            class="px-3 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
+            class="px-2 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
             class:text-tertiary-500={isActive('/app/plan')}
             href="/app/plan">
             <CalendarIcon size="18" />
             <span class="hidden sm:inline">{m.nav_plan()}</span>
         </a>
         <a
-            class="px-3 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
+            class="px-2 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
             class:text-tertiary-500={isActive('/app/gym')}
             href="/app/gym">
             <SportIcon sport="gym" size={18} />
             <span class="hidden sm:inline">{m.nav_gym()}</span>
         </a>
         <a
-            class="px-3 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
+            class="px-2 sm:px-4 hover:text-tertiary-500 flex items-center gap-1.5"
             class:text-tertiary-500={isActive('/app/running')}
             href="/app/running">
             <SportIcon sport="running" size={18} />
@@ -70,7 +70,15 @@
         </a>
         <span class="hidden sm:block text-surface-300 select-none">|</span>
         <form action="/app/logout" method="POST" bind:this={logoutForm} on:submit|preventDefault={confirmLogout}>
-            <button class="px-2 sm:px-4 hover:text-tertiary-500" type="submit">{m.nav_logout()}</button>
+            <!-- Icon-only on phones, where the full label pushes the bar past the screen edge. -->
+            <button
+                class="px-2 sm:px-4 hover:text-tertiary-500 flex items-center"
+                type="submit"
+                title={m.nav_logout()}
+                aria-label={m.nav_logout()}>
+                <LogOutIcon size="18" class="sm:hidden" />
+                <span class="hidden sm:inline">{m.nav_logout()}</span>
+            </button>
         </form>
     {/if}
 </nav>
