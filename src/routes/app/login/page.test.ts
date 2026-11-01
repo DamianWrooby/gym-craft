@@ -132,7 +132,7 @@ ActionFailure {
             expect(event.cookies.set).toHaveBeenCalledWith('session', 'test-uuid', {
                 path: '/',
                 httpOnly: true,
-                sameSite: 'strict',
+                sameSite: 'lax',
                 secure: true,
                 maxAge: 60 * 60 * 24 * 30,
             });

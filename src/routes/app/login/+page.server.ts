@@ -45,7 +45,7 @@ const login: Action = async ({ cookies, request }) => {
     cookies.set('session', rawToken, {
         path: '/',
         httpOnly: true,
-        sameSite: 'strict',
+        sameSite: 'lax',
         secure: isProduction(),
         maxAge: 60 * 60 * 24 * 30,
     });
