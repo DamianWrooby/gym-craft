@@ -16,6 +16,34 @@ body {
         background-color: transparent;
     }
 }
+/* ---- Mobile layout ----
+   Skeleton's AppShell pins the top bar and footer and scrolls only the content between
+   them, which leaves little room for content on phones. Below md the whole document
+   scrolls instead: the top bar and footer move with the page, and mobile browsers can
+   collapse their own address bar as the user scrolls. */
+@media (max-width: 767.98px) {
+    html,
+    body {
+        height: auto;
+        min-height: 100%;
+    }
+    #appShell {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: visible;
+    }
+    #appShell > .flex-auto,
+    #appShell #page {
+        height: auto;
+        overflow: visible;
+    }
+    /* Overflow is no longer clipped by #page, so clip stray horizontal overflow here. */
+    body {
+        overflow-x: hidden;
+    }
+}
+
 .list li {
     margin: 0;
     border-radius: 0;
