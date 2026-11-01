@@ -48,9 +48,9 @@
         createdAt: string;
     };
 
-    let backTarget = '/app/running/analytics/reports';
+    let backTarget = '/app/analytics/reports';
     afterNavigate(({ from }) => {
-        backTarget = resolveBackTarget(from?.url.pathname, '/app/running/analytics/reports');
+        backTarget = resolveBackTarget(from?.url.pathname, '/app/analytics/reports');
     });
 
     const toastStore = getToastStore();

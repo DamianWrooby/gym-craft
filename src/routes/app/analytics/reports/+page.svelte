@@ -126,7 +126,7 @@
             buttonTextConfirm: m.reports_exists_overwrite(),
             response: async (confirmed: boolean) => {
                 if (!confirmed) {
-                    goto(`/app/running/analytics/reports/${existingId}`);
+                    goto(`/app/analytics/reports/${existingId}`);
                     return;
                 }
                 if (pendingRequest) {
@@ -167,7 +167,7 @@
             makeToast(toastStore, m.reports_ready(), 'variant-filled-success');
             generating = false;
             pendingRequest = null;
-            goto(`/app/running/analytics/reports/${data.data.id}`);
+            goto(`/app/analytics/reports/${data.data.id}`);
             return;
         }
 
@@ -212,7 +212,7 @@
 
 <Card width="3/4">
     <div class="flex justify-between items-center pb-2">
-        <button type="button" on:click={() => goto('/app/running/analytics')} aria-label={m.activities_back()}>
+        <button type="button" on:click={() => goto('/app/analytics')} aria-label={m.activities_back()}>
             <ArrowLeftIcon class="cursor-pointer text-surface-400 hover:text-surface-300" />
         </button>
     </div>
@@ -239,7 +239,7 @@
             <div class="mb-6">
                 <LoadBarChart
                     {timeline}
-                    on:open={(e) => goto(`/app/running/analytics/reports/${e.detail.reportId}`)}
+                    on:open={(e) => goto(`/app/analytics/reports/${e.detail.reportId}`)}
                     on:generate={(e) => openGenerateModal(e.detail.periodStart)} />
             </div>
         {/if}
@@ -268,7 +268,7 @@
                         <button
                             type="button"
                             class="w-full text-left rounded-xl border border-surface-300 dark:border-surface-700 border-l-4 {style.accent} {style.card} p-4 transition-colors"
-                            on:click={() => goto(`/app/running/analytics/reports/${report.id}`)}>
+                            on:click={() => goto(`/app/analytics/reports/${report.id}`)}>
                             <div class="flex justify-between items-baseline gap-2">
                                 <h3 class="font-semibold">
                                     Week of {formatReportPeriod(report.periodStart, report.periodEnd)}

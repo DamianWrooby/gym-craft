@@ -34,13 +34,13 @@
     const modalStore = getModalStore();
     const toastStore = getToastStore();
 
-    let backTarget = '/app/running/analytics/activities';
+    let backTarget = '/app/analytics/activities';
     afterNavigate(({ from }) => {
         // Includes the search string: the list page keeps its date window and revealed row
         // count there, so dropping it would send the user back to a reset list.
         backTarget = resolveBackTarget(
             from ? `${from.url.pathname}${from.url.search}` : undefined,
-            '/app/running/analytics/activities',
+            '/app/analytics/activities',
         );
     });
 
